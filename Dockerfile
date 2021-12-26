@@ -35,7 +35,11 @@ COPY DockerUbuntu/tmux.conf /root/.tmux.conf
 COPY Kernel/config/ /root/.config/
 COPY DockerUbuntu/config/powershell /root/.config/powershell
 COPY Kernel/shell/ /root/.shell/
-COPY Kernel/vim/ /root/.vim/
+COPY Kernel/vim /root/.vim/
+COPY Kernel/vim /root/.config/nvim
+COPY Kernel/vim/autoload /root/.local/share/nvim/site
+
+RUN pwsh -c 'nvim -es -u init.vim -i NONE -c "PlugInstall" -c "qa"'
 
 WORKDIR /root/git
 
