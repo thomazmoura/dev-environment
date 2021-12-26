@@ -1,0 +1,332 @@
+# for examples
+
+# If not running interactively, don't do anything
+[ -z "$PS1" ] && return
+
+# don't put duplicate lines in the history. See bash(1) for more options
+# ... or force ignoredups and ignorespace
+HISTCONTROL=ignoredups:ignorespace
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+	# We have color support; assume it's compliant with Ecma-48
+	# (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+	# a case would tend to support setf rather than setaf.)
+	color_prompt=yes
+    else
+	color_prompt=
+    fi
+fi
+
+PS1='\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    #alias dir='dir --color=auto'
+    #alias vdir='vdir --color=auto'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# some more ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+#if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+#    . /etc/bash_completion
+#fi
+
+# Globalization settings
+export LANGUAGE="C.UTF-8"
+export LANG="C.UTF-8"
+export LC_ALL="C.UTF-8"
+
+# Case insensitive glob
+shopt -s nocaseglob 
+
+# VI keybindings for BASH
+set -o vi
+
+# .inputrc settings
+export INPUTRC=$HOME/.shell/inputrc
+
+ssh-key() {
+  eval `ssh-agent`
+  ssh-add ~/.ssh/id_rsa
+}
+
+wtmux () {
+	tmux new-session \; \
+	  new-window \; \
+	  send-keys "$1" C-m \; \
+	  new-window \; \
+	  send-keys "htop" C-m \; \
+	  new-window \; \
+	  select-window -t :0 \; \
+	  send-keys "nvim" C-m 
+}
+
+htmux () {
+	tmux new-session \; \
+	  split-window -h -p 20 \; \
+	  select-pane -t 1 \; \
+	  send-keys "$2" C-m \; \
+	  split-window -v -p 50 \; \
+	  select-pane -t 2 \; \
+	  send-keys "$1" C-m \; \
+	  select-pane -t 1 \; \
+	  new-window \; \
+	  send-keys "htop" C-m \; \
+	  select-window -t 0 \; \
+	  select-pane -t 0 \; \
+    send-keys "nvim \$(fsi .)" C-m 
+}
+
+dhtmux () {
+	tmux new-session \; \
+	  split-window -h -p 20 \; \
+	  select-pane -t 1 \; \
+    send-keys "cd $1" C-m \; \
+	  send-keys "$2" C-m \; \
+	  select-pane -t 0 \; \
+    send-keys "cd $1" C-m \; \
+    send-keys "nvim \$(fsi .)" C-m \; \
+	  new-window \; \
+	  split-window -h -p 20 \; \
+	  select-pane -t 1 \; \
+    send-keys "cd $3" C-m \; \
+	  send-keys "$4" C-m \; \
+	  select-pane -t 0 \; \
+    send-keys "cd $3" C-m \; \
+    send-keys "nvim \$(fsi .)" C-m \; \
+	  new-window \; \
+	  send-keys "htop" C-m \; \
+	  select-window -t 0
+}
+
+vtmux () {
+	tmux new-session \; \
+	  split-window -v -p 80 \; \
+	  select-pane -t 0 \; \
+	  send-keys "$1" C-m \; \
+	  select-pane -t 1
+}
+
+svim () {
+	sudo ~/local/nvim/bin/nvim "$1"
+}
+
+fsi() {
+  fd --type f . ${1:-"$HOME/git"} | fzf
+}
+
+fsl() {
+  fd --type d . ${1:-"$HOME/git"} | fzf
+}
+
+ftmux() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(htmux)
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fcd() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+
+fls() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    ls $dir
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fvim() {
+  file=$(fsi ${1:-"$HOME/git"})
+    if [ ! -z "$file" ]; then
+      nvim $file
+    else
+      nvim .
+    echo 'Operation cancelled'
+  fi
+}
+
+fvimd() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir
+    file=$(fsi .)
+    if [ ! -z "$file" ]; then
+      nvim $file
+    else
+      nvim .
+    fi
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fnpm() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(htmux-npm)
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fnpm-test() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(htmux-test)
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fyarn() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(htmux-yarn)
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fangular() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(dhtmux '*angular' 'npm start' '*api' 'dotnet watch run')
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+freact() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(dhtmux '*react' 'yarn start' '*api' 'yarn start')
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+fyarn-test() {
+  dir=$(fsl ${1:-"$HOME/git"})
+  if [ ! -z "$dir" ]; then
+    cd $dir && $(htmux-ytest)
+  else
+    echo 'Operation cancelled'
+  fi
+}
+
+
+
+# Path to NeoVim
+export PATH="$PATH:$HOME/local/nvim/bin"
+
+# Path to FZF
+export PATH="$PATH:$HOME/.fzf/bin"
+
+# Add .local/bin to PATH
+export PATH="$HOME/.local/bin:$PATH"
+
+# NVM settings
+if [ -d "$HOME/.nvm" ]; then
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+fi
+
+# FD settings
+# Setting fd as the default source for fzf
+export FZF_DEFAULT_COMMAND='fdfind --type f'
+# To apply the command to CTRL-T as well
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+# Bash-Git
+if [ -d "$HOME/.bashgit" ]; then
+	source ~/.bashgit/gitprompt.sh
+fi
+
+# FZF plugins
+if [ -d "$HOME/.fzf" ]; then
+  source "$HOME/.fzf/shell/key-bindings.bash"
+  source "$HOME/.fzf/shell/completion.bash"
+fi
+
+# Aliases
+alias nodejs='node'
+alias clean-swaps='~/Scripts/clean-swaps.sh'
+alias shut='sudo /sbin/shutdown -h now'
+alias htmux-npm="htmux 'npm start -- --host 0.0.0.0 --poll 2000'"
+alias htmux-test="htmux 'npm test -- --poll 2000'"
+alias htmux-yarn="htmux 'yarn start'"
+alias htmux-ytest="htmux 'yarn test'"
+
+alias gitdf="git diff --ignore-all-space --ignore-blank-lines --ignore-space-at-eol"
+alias gitdfc="git diff --cached --ignore-all-space --ignore-blank-lines --ignore-space-at-eol"
+
