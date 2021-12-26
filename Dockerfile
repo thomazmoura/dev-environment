@@ -32,11 +32,12 @@ RUN pwsh -c 'Install-Module nvm -Force; \
 COPY DockerUbuntu/vimrc /root/.vimrc
 COPY DockerUbuntu/bashrc /root/.bashrc
 COPY DockerUbuntu/tmux.conf /root/.tmux.conf
-COPY DockerUbuntu/config/powershell/profile.ps1 /opt/microsoft/powershell/7/profile.ps1
 COPY Kernel/config/ /root/.config/
+COPY DockerUbuntu/config/powershell /root/.config/powershell
 COPY Kernel/shell/ /root/.shell/
+COPY Kernel/vim/ /root/.vim/
 
 WORKDIR /root/git
 
-CMD ["bash"]
+CMD ["pwsh"]
 

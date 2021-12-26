@@ -16,6 +16,18 @@ try {
   Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
 }
 
+function Import-PsNvm() {
+  Write-Verbose "`n->> Importing NVM"
+  Import-Module nvm
+  if ( !($?) ) {
+    Write-Verbose "`n->> NVM module not found. Installing"
+    Install-Module nvm
+    Import-Module nvm
+  } 
+  Write-Verbose "`n->> Setting Node Version"
+  Set-NodeVersion 16
+}
+
 Write-Verbose "`n->> Set update notifications to LTS only"
 [System.Environment]::SetEnvironmentVariable('POWERSHELL_UPDATECHECK', 'LTS')
 $stopwatch.Stop(); Write-Verbose "`n-->> Configurações básicas demorou: $($stopwatch.ElapsedMilliseconds)"

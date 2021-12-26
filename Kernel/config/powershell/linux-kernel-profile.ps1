@@ -19,17 +19,6 @@ function Import-PoshGit() {
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
-function Import-PsNvm() {
-  Write-Verbose "`n->> Importing NVM"
-  Import-Module nvm
-  if ( !($?) ) {
-    Write-Information "`n->> NVM module not found. Installing"
-    Install-Module nvm
-    Import-Module nvm
-		Set-NodeVersion 16
-  }
-}
-
 Write-Verbose "`n->> Setting .NET variables"
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
