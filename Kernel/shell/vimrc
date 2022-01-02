@@ -54,8 +54,8 @@ autocmd VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)'))
   \| PlugInstall --sync | source $MYVIMRC
 \| endif
 
-# Plug setup
-source ./plug.vimrc
+" Plug setup
+source $HOME/.vim/plug.vimrc
 
 " Custom Keymaps
 "  Set space as the leader
