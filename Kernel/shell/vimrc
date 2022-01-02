@@ -63,9 +63,9 @@ let mapleader = " "
 
 " Define which keybindings file to load
 if exists('g:azuredatastudio')
-  source $HOME/.shell/azuredatastudio-keybindings.vimrc
+  source $HOME/.vim/azuredatastudio-keybindings.vimrc
 elseif exists('g:vscode')
-  source $HOME/.shell/vscode-keybindings.vimrc
+  source $HOME/.vim/vscode-keybindings.vimrc
 else
   " COC.NVIM default settings
   source $HOME/.vim/coc-config.vimrc
