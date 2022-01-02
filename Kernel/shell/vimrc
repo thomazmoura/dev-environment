@@ -154,8 +154,6 @@ if !exists('g:vscode')
   colorscheme one
   set background=dark
 
-  " OS Specific configuration
-  source $HOME/.shell/vimrc
 endif
 
 " Client agnostic keybinngs
