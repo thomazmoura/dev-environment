@@ -46,7 +46,5 @@ ENV TERM xterm-256color
 
 WORKDIR /root/git
 
-ENTRYPOINT ["pwsh", "-c", "vtmux"]
-
-CMD ["pwsh"]
+CMD ["pwsh", "-c", "vtmux", "nvim", "pwsh"]
 
