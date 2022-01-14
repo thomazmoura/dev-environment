@@ -29,11 +29,14 @@ RUN pwsh -c 'Install-Module nvm -Force; \
   Install-NodeVersion 16; \
   Set-NodeVersion 16;'
 
+RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
+
 COPY DockerUbuntu/vimrc /root/.vimrc
 COPY DockerUbuntu/bashrc /root/.bashrc
 COPY DockerUbuntu/tmux.conf /root/.tmux.conf
 COPY Kernel/config/ /root/.config/
-COPY DockerUbuntu/config/powershell /root/.config/powershell
+COPY DockerUbuntu/config/powershell/ /root/.config/powershell/
+COPY DockerUbuntu/init/ /root/.config/init/
 COPY Kernel/shell/ /root/.shell/
 COPY Kernel/vim /root/.vim/
 COPY Kernel/vim /root/.config/nvim
@@ -41,8 +44,6 @@ COPY Kernel/vim/autoload /root/.local/share/nvim/site
 
 RUN pwsh -c 'nvim -es -u /root/.vim/plug.vimrc -i NONE -c "PlugInstall" -c "qa"'
 RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
-
-RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 ENV TERM xterm-256color
 

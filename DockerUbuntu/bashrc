@@ -1,4 +1,7 @@
 source /root/.shell/bashrc
+if ! git config --global user.name &> /dev/null; then
+  source /root/.config/init/git-setup.sh
+fi
 
 export NVM_DIR="/root/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
