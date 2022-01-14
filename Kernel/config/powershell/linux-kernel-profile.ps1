@@ -24,13 +24,6 @@ $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-Write-Verbose "`n->> Checking if ssh key is set"
-if(Test-Path ~/.ssh) {
-	Add-SshKey
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
-
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
