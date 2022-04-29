@@ -1,4 +1,4 @@
-. "/root/.config/powershell/linux-kernel-profile.ps1"
+. "/home/user/.config/powershell/linux-kernel-profile.ps1"
 
 Import-PoshGit
 Import-PsNvm

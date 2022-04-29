@@ -81,6 +81,26 @@ if has('clipboard') || exists('g:vscode')
             \ },
             \ 'cache_enabled': 0,
         \ }
+    else
+      " copy to attached terminal using the yank(1) script:
+      " https://github.com/sunaku/home/blob/master/bin/yank
+      function! Yank(text) abort
+        let escape = system('yank', a:text)
+        if v:shell_error
+          echoerr escape
+        else
+          call writefile([escape], '/dev/tty', 'b')
+        endif
+      endfunction
+      vnoremap <silent> <Leader>Y y:<C-U>call Yank(@0)<CR>
+
+      " automatically run yank(1) whenever yanking in Vim with the + register
+      function! CopyYank() abort
+        if(v:event.regname == '+')
+          call Yank(join(v:event.regcontents, "\n"))
+        endif
+      endfunction
+      autocmd TextYankPost * call CopyYank()
     endif
 endif
 
@@ -140,7 +160,7 @@ if !exists('g:vscode')
   " Colorscheme
   syntax enable
   let g:one_allow_italics = 1 
-  colorscheme one
+  silent! colorscheme one
   set background=dark
 
 endif

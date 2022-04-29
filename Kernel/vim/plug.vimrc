@@ -31,7 +31,6 @@ if !exists('g:vscode')
 
   " Colorschemes
   Plug 'joshdick/onedark.vim'
-  Plug 'rakr/vim-one'
 else
   Plug 'asvetliakov/vim-easymotion', { 'dir': '~/.vim/.plugged/vim-easymotion-vscode' } 
 endif

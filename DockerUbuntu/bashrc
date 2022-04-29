@@ -1,9 +1,12 @@
-source /root/.shell/bashrc
+PATH="/home/user/.shell/bin:$PATH"
+export PATH
+
+source /home/user/.shell/bashrc
 if ! git config --global user.name &> /dev/null; then
-  source /root/.config/init/git-setup.sh
+  source /home/user/.config/init/git-setup.sh
 fi
 
-export NVM_DIR="/root/.nvm"
+export NVM_DIR="/home/user/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
