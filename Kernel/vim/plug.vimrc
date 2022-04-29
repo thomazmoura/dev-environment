@@ -6,34 +6,38 @@ Plug 'wellle/targets.vim'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
-Plug 'machakann/vim-highlightedyank'
+Plug 'tpope/vim-fugitive'
+Plug 'lewis6991/impatient.nvim'
 
-" HTML editing
-Plug 'mattn/emmet-vim', { 'for': 'html' }
+" Jump motion
+Plug 'phaazon/hop.nvim'
 
-if !exists('g:vscode')
-  " General Settings
-  Plug 'christoomey/vim-tmux-navigator'
-  Plug 'easymotion/vim-easymotion'
-  Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-  Plug 'junegunn/fzf.vim'
-  Plug 'preservim/nerdtree'
-  Plug 'xuyuanp/nerdtree-git-plugin'
-  Plug 'luochen1990/rainbow'
-  Plug 'itchyny/lightline.vim'
-  Plug 'sheerun/vim-polyglot'
-  Plug 'tmux-plugins/vim-tmux-focus-events'
-  Plug 'roxma/vim-tmux-clipboard'
-  Plug 'antoinemadec/coc-fzf'
+" General Settings
+Plug 'christoomey/vim-tmux-navigator'
+Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+Plug 'junegunn/fzf.vim'
+Plug 'luochen1990/rainbow'
+Plug 'nvim-lualine/lualine.nvim'
+Plug 'tmux-plugins/vim-tmux-focus-events'
+Plug 'roxma/vim-tmux-clipboard'
+Plug 'antoinemadec/coc-fzf'
 
-  " Overhaul
-  Plug 'neoclide/coc.nvim', {'branch': 'release'}
+" Overhaul
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
-  " Colorschemes
-  Plug 'joshdick/onedark.vim'
-else
-  Plug 'asvetliakov/vim-easymotion', { 'dir': '~/.vim/.plugged/vim-easymotion-vscode' } 
-endif
+" Colorschemes
+Plug 'joshdick/onedark.vim'
+Plug 'rakr/vim-one'
+Plug 'folke/tokyonight.nvim', { 'branch': 'main' }
+Plug 'catppuccin/nvim'
+
+" Highlighting
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+
+" Tree Explorer
+Plug 'kyazdani42/nvim-web-devicons'
+Plug 'kyazdani42/nvim-tree.lua'
 
 call plug#end()
 

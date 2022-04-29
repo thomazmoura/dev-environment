@@ -33,7 +33,12 @@ RUN pwsh -c 'Install-Module nvm -Force -Scope AllUsers; \
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 RUN useradd -ms /bin/bash user
-RUN usermod -a -G root user
+
+# Setup Plug and CoC plugins
+COPY Kernel/vim/plug.vimrc /home/user/.vim/plug.vimrc
+
+RUN pwsh -c 'nvim -es -u /home/user/.shell/plugin-setup.vimrc -i NONE -c "PlugInstall" -c "qa"'
+RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
 
 COPY DockerUbuntu/vimrc /home/user/.vimrc
 COPY DockerUbuntu/bashrc /home/user/.bashrc
@@ -49,9 +54,6 @@ COPY Kernel/vim/autoload /home/user/.local/share/nvim/site
 RUN chown -R user:user /home/user
 
 USER user:user
-
-RUN pwsh -c 'nvim -es -u /home/user/.vim/plug.vimrc -i NONE -c "PlugInstall" -c "qa"'
-RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
 
 ENV TERM xterm-256color
 

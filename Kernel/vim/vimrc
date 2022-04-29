@@ -1,0 +1,155 @@
+set number
+set relativenumber
+set encoding=UTF-8
+set linebreak
+
+set tabstop=2
+set shiftwidth=2
+set expandtab
+
+set ignorecase
+set smartcase
+
+set cursorline
+set cursorcolumn
+
+set foldmethod=syntax
+set foldlevel=4
+
+set noshowmode
+set laststatus=2
+
+set mouse=a
+
+set hlsearch
+
+" Set default directory for the swap files
+set directory=$HOME/.vim/swapfiles/
+
+set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
+  \,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor
+  \,sm:block-blinkwait175-blinkoff150-blinkon175
+set termguicolors
+
+set wildignore+=*.png
+set wildignore+=*.jpg
+set wildignore+=*/node_modules/**
+set wildignore+=*/bin/**
+set wildignore+=*/obj/**
+
+" Custom Registers
+" Convert SQL Column to C# property
+let @s = "^Wdi]^Pa wdi]hPlD:s/numeric/decimal/e:s/bit/bool/e:s/nvarchar/string/e:s/varchar/string/e:s/float/double/e:s/datetime2/datetime/e:s/bigint/float/e:s/text/string/e:s/datetime/DateTime/eA { get; set; }Ipublic j"
+" Merge SQL mapping and C# properties
+let @c = "^d2Wf{hDIbuilder.Property(pe€kb€kbusuario => usuario.A)o.HasColumnName();hi\"\"mz}j^yi]dd`z^f\"\"0pj"
+let @z = "\"zyiwb\"x y\"xyiwOprivate readonly \"xpa \"zpbi_A;/{%O\"zpI_A = \"zpA;=="
+set autowrite
+set autowriteall
+
+source $HOME/.vim/plug.vimrc
+
+" Custom Keymaps
+"  Set space as the leader
+let mapleader = " "
+
+" COC.NVIM default settings
+source $HOME/.vim/coc-config.vimrc
+
+" NeoVim Custom keybindings
+source $HOME/.vim/nvim-keybindings.vimrc
+
+" Yank highlight
+autocmd TextYankPost * silent! lua vim.highlight.on_yank { higroup="TabLineSel", timeout=450 }
+
+" Set coc-config path
+let g:coc_config_home = "$HOME/.config/nvim"
+
+" copy to attached terminal using the yank(1) script:
+" https://github.com/sunaku/home/blob/master/bin/yank
+function! Yank(text) abort
+  let escape = system('yank', a:text)
+  if v:shell_error
+    echoerr escape
+  else
+    call writefile([escape], '/dev/tty', 'b')
+  endif
+endfunction
+vnoremap <silent> <Leader>Y y:<C-U>call Yank(@0)<CR>
+
+" automatically run yank(1) whenever yanking in Vim with the + register
+function! CopyYank() abort
+  if(v:event.regname == '+')
+    call Yank(join(v:event.regcontents, "\n"))
+  endif
+endfunction
+autocmd TextYankPost * call CopyYank()
+
+" Transparent floating windows
+set winblend=30
+set pumblend=30
+
+" Rainbow brackets
+let g:rainbow_conf = {
+\	'separately': {
+\		'*': {},
+\		'html': 0
+\	}
+\}
+let g:rainbow_active = 1
+
+" vim-markdown Settings
+let g:vim_markdown_folding_disabled = 1
+
+" Write all buffers before navigating from Vim to tmux pane
+let g:tmux_navigator_save_on_switch = 2
+
+" FZF configuration
+let g:fzf_layout = { 'window': { 'width': 0.85, 'height': 0.85 } }
+
+" Colorscheme
+syntax enable
+set background=dark
+let g:tokyonight_style = "storm"
+colorscheme tokyonight
+highlight Normal guibg=none
+set fillchars+=vert:¿
+highlight VertSplit guibg=none guifg=#414868
+
+"lua configuration
+source $HOME/.vim/setup.lua
+
+" Client agnostic keybinngs
+nnoremap <Leader>g  :r!uuidgen<CR>y$dd`z"0p
+nnoremap <Leader>G  :r!uuidgen<CR>y$dd`z"0P
+noremap <Leader>y "+y
+noremap <Leader>p "+p
+noremap <Leader>Y "+Y
+noremap <Leader>P "+P
+noremap <Leader>0p "0p
+noremap <Leader>0P "0P
+nnoremap <Leader>\  :vsplit<CR>
+
+" Automatically close the explorer when it's the last window
+autocmd BufEnter * ++nested if winnr('$') == 1 && bufname() == 'NvimTree_' . tabpagenr() | quit | endif
+
+" Macros
+" Class boilerplate
+nnoremap <leader>mn inamespace %F/ly$hD:s/\//./go{}Opublic class "0pF.Do{}OI		:noh<CR>
+nnoremap <leader>mN inamespace %F/ly$hD:s/\//./go{}Opublic class "0pF.Do{}OI		ggjddGddoggokA;<G/{:nohjA
+" Convert SQL Column to C# property (n - supported)
+nnoremap <leader>ms @="^Wdi]^Pa\<lt>Space>\<lt>Esc>wdi]hPlD:s/numeric/decimal/e\<lt>CR>:s/bit/bool/e\<lt>CR>:s/nvarchar/string/e\<lt>CR>:s/varchar/string/e\<lt>CR>:s/float/double/e\<lt>CR>:s/datetime2/datetime/e\<lt>CR>:s/bigint/float/e\<lt>CR>:s/text/string/e\<lt>CR>:s/datetime/DateTime/e\<lt>CR>A\<lt>Space>{\<lt>Space>get;\<lt>Space>set;\<lt>Space>}\<lt>Esc>Ipublic\<lt>Space>\<lt>Esc>j"<CR>
+" Merge SQL mapping and C# properties (n - supported)
+nnoremap <leader>mc @="^d2Wf{hDIbuilder.Property(\<lt>Esc>\"0pa\<lt>Space>=>\<lt>Space>\<lt>Esc>\"0pa.\<lt>Esc>A)\<lt>Esc>o.HasColumnName();\<lt>Esc>hi\"\"\<lt>Esc>mz}j^\"zyi]dd`z^f\"\"0\"zpj"<CR>
+" Add parameter injection
+nnoremap <leader>mp @="\"zyiwb\"xyiw?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>=="<CR>
+" Sort Global usings
+nnoremap <leader>mu @="Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>"<CR>
+nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>:b#\<lt>CR>:wa\<lt>CR>"<CR>
+
+" Filetype detections
+autocmd BufNewFile,BufRead *.code-snippets set filetype=json
+autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
+autocmd BufNewFile,BufRead *.config,*.csproj set filetype=xml
+
+" Disable modelines for security reasons
+set nomodeline
