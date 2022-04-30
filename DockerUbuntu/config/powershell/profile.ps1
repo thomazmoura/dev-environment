@@ -1,4 +1,4 @@
-. "/home/user/.config/powershell/linux-kernel-profile.ps1"
+. "/home/developer/.config/powershell/linux-profile.ps1"
 
+Import-OhMyPosh
 Import-PoshGit
-Import-PsNvm

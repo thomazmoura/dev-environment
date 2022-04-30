@@ -6,24 +6,43 @@ function Import-PoshGit() {
   Import-Module posh-git
   if ( !($?) ) {
     Write-Information "`n->> Posh-git not found. Installing"
-    Install-Module posh-git
+    Install-Module -Force -AcceptLicense posh-git -Scope CurrentUser
   }
-	if($env:WSL_DISTRO_NAME) {
-		$Label = $env:WSL_DISTRO_NAME
-	} else {
-		$Label = ' 🐳 '
-	}
-  $GitPromptSettings.DefaultPromptPrefix = '$('''+ "(🐧$Label🐧) " + '>>='') '
-	$GitPromptSettings.DefaultPromptSuffix = '$('' ==>'' * ($nestedPromptLevel + 1))`n>=> '
-	$GitPromptSettings.DefaultPromptAbbreviateHomeDirectory = $true
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
-Write-Verbose "`n->> Setting .NET variables"
+function Import-OhMyPosh() {
+  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+  Write-Verbose "`n->> Activating oh-my-posh"
+  if( !(Get-Command oh-my-posh -ErrorAction SilentlyContinue) ) {
+    if(!(Test-Path "$HOME/.local/bin") ) {
+      New-Item -Force -ItemType Directory -Name "$HOME/.local/bin";
+    }
+    "wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O $HOME/.local/bin/oh-my-posh" | Invoke-Expression
+    "chmod +x $HOME/.local/bin/oh-my-posh" | Invoke-Expression
+  } else {
+    Write-Verbose "OhMyPosh instalado corretamente"
+  }
+  & $HOME/.local/bin/oh-my-posh init pwsh --config $HOME/.config/powershell/linux.omp.json | Invoke-Expression
+  Write-Information "Carregado o arquivo $HOME/.config/powershell/linux.omp.json"
+  $stopwatch.Stop(); Write-Information "`n-->> Importação do Oh-My-Posh demorou: $($stopwatch.ElapsedMilliseconds)"
+}
+
+Write-Verbose "`n->> Setting environment variables"
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
+$env:NVS_HOME="$env:HOME/.nvs"
+$env:PATH="$($env:PATH):$HOME/.local/bin"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+Write-Verbose "`n->> Checking if ssh key is set"
+if(Test-Path ~/.ssh) {
+	Add-SshKey
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
+
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
@@ -79,11 +98,11 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 	Write-Information "Cancelled by user"
 }
 
-function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'psgit') {
+function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'psomp && psgit') {
   $location = FuzzySearch-Location
 	if($location) {
 		Set-Location $location
-		$currentDirectory = ($pwd.Path.Split("/") | Select -Last 1)
+		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
 			split-window -v -p 20 `; `
@@ -143,10 +162,9 @@ function Get-TmuxSession ($Session=$null) {
 		}
 	}
 }
-$stopwatch.Stop(); Write-Verbose "`n-->> Definições de funcions do Linux demorou:: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if((Get-Content /etc/issue) -match 'ubuntu') { 
+if((cat /etc/issue) -match 'ubuntu') { 
 	New-Alias -Force bat batcat
 	New-Alias -Force fd fdfind
 }
@@ -158,7 +176,16 @@ New-Alias -Force dhtmux New-HorizontalDoubleTmuxSession
 New-Alias -Force vtmux New-VerticalTmuxSession
 New-Alias -Force tmuxa Get-TmuxSession
 New-Alias -Force duhs Get-ChildItemsSize
-
+New-Alias -Force nvs "$env:NVS_HOME/nvs.ps1"
 New-Alias -Force svim New-SudoVimSession
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
 
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+if(Get-Command nvs -ErrorAction SilentlyContinue) {
+  nvs auto on
+	nvs use lts
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
+
+Import-OhMyPosh

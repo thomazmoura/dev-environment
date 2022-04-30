@@ -1,36 +1,44 @@
 $InformationPreference = "Continue";
 
+# Vi style cursor
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-Set-PSReadlineOption -EditMode vi
+if($PSVersionTable.PSVersion.Major -ge 6){
+  Write-Host -NoNewLine "`e[5 q"
+  $OnViModeChange = [scriptblock]{
+    if ($args[0] -eq 'Command') {
+      # Set the cursor to a blinking block.
+      Write-Host -NoNewLine "`e[1 q"
+    }
+    else {
+      # Set the cursor to a blinking line.
+      Write-Host -NoNewLine "`e[5 q"
+    }
+  }
+  Set-PSReadLineOption -ViModeIndicator Script -ViModeChangeHandler $OnViModeChange
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Troca automática de cursor demorou: $($stopwatch.ElapsedMilliseconds)"
+
+# VI mode editing
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+Set-PsReadLineOption -EditMode Vi
 Set-PSReadlineOption -BellStyle None
+$stopwatch.Stop(); Write-Verbose "`n-->> Ativar o modo VI demorou: $($stopwatch.ElapsedMilliseconds)"
+
+# Enable prediction
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 try {
   Set-PSReadLineOption -PredictionSource History
   Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699"}
   Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
   Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
 } catch {
-  Install-Module PSReadLine -Force
+  Install-Module -Force -AcceptLicense PSReadLine 
   Set-PSReadLineOption -PredictionSource History
   Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699"}
   Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
   Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
 }
-
-function Import-PsNvm() {
-  Write-Verbose "`n->> Importing NVM"
-  Import-Module nvm
-  if ( !($?) ) {
-    Write-Verbose "`n->> NVM module not found. Installing"
-    Install-Module nvm
-    Import-Module nvm
-  } 
-  Write-Verbose "`n->> Setting Node Version"
-  Set-NodeVersion 16
-}
-
-Write-Verbose "`n->> Set update notifications to LTS only"
-[System.Environment]::SetEnvironmentVariable('POWERSHELL_UPDATECHECK', 'LTS')
-$stopwatch.Stop(); Write-Verbose "`n-->> Configurações básicas demorou: $($stopwatch.ElapsedMilliseconds)"
+$stopwatch.Stop(); Write-Verbose "`n-->> Ativar predição demorou: $($stopwatch.ElapsedMilliseconds)"
 
 function Import-PsFzf() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
@@ -38,24 +46,36 @@ function Import-PsFzf() {
   Import-Module PSFzf -ArgumentList 'Ctrl+t', 'Ctrl+r'
   if ( !($?) ) {
     Write-Information "`n->> PSFzf not found. Installing"
-    Install-Module PSFzf
+    Install-Module -Force -AcceptLicense PSFzf 
     Import-Module PSFzf -ArgumentList 'Ctrl+t', 'Ctrl+r'
   }
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do PsFzf demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
-function Import-DotnetCompletion() {
+function Import-PsAWS([string]$region = "sa-east-1") {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-    if(Get-Command dotnet -ErrorAction SilentlyContinue) {
-      Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
-        param($commandName, $wordToComplete, $cursorPosition)
-          dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
-            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-          }
-      }
-    }
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
+  Write-Verbose "`n->> Importing AWS CLI"
+  Import-Module -Name AWSPowerShell.NetCore
+  if ( !($?) ) {
+    Write-Information "`n->> AWSPowerShell.NetCore not found. Installing"
+    Install-Module -Force -AcceptLicense -Name AWSPowerShell.NetCore
+    Import-Module -Name AWSPowerShell.NetCore
+  }
+  Set-DefaultAWSRegion -Region $region -Scope Global
+  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do PsAWS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
+
+# dotnet autocomplete
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+if(Get-Command dotnet -ErrorAction SilentlyContinue) {
+  Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
+    param($commandName, $wordToComplete, $cursorPosition)
+      dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+      }
+  }
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
 
 function Import-DockerCompletion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
@@ -64,7 +84,7 @@ function Import-DockerCompletion() {
     Import-Module DockerCompletion
     if ( !($?) ) {
       Write-Information "`n->> DockerCompletion not found. Installing"
-      Install-Module DockerCompletion
+      Install-Module -Force -AcceptLicense DockerCompletion
       Import-Module DockerCompletion
     }
   } else {
@@ -74,16 +94,27 @@ function Import-DockerCompletion() {
 }
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if(! ($env:GIT_FOLDER) -or !($env:LINUX_RESOURCES_FOLDER)) {
-  if( Test-Path "~/git") {
-    Write-Verbose "`n->> git folder found on home. Setting GIT_FOLDER"
-    $env:GIT_FOLDER = "~/git"
+if(! ($env:CODE_FOLDER)) {
+  if( Test-Path "~/code") {
+    Write-Verbose "`n->> code folder found on home. Setting CODE_FOLDER"
+    $env:CODE_FOLDER = "~/git"
+  } elseif( Test-Path "~/git") {
+    Write-Verbose "`n->> git folder found on home. Setting CODE_FOLDER"
+    $env:CODE_FOLDER = "~/git"
   } elseif ( Test-Path "/Git") { 
-    Write-Verbose "`n->> Git folder found on root. Setting GIT_FOLDER"
-    $env:GIT_FOLDER = "/Git"
+    Write-Verbose "`n->> Git folder found on root. Setting CODE_FOLDER"
+    $env:CODE_FOLDER = "/Git"
   }
 }
-$stopwatch.Stop(); Write-Verbose "`n-->> Definição da GIT_FOLDER demorou: $($stopwatch.ElapsedMilliseconds)"
+$stopwatch.Stop(); Write-Verbose "`n-->> Definição da CODE_FOLDER demorou: $($stopwatch.ElapsedMilliseconds)"
+
+# Definição de scripts padrões
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+if ( Test-Path "~/git/CI-CD"  ) {
+  Write-Verbose "`n->> CI-CD folder found, adding Utilitarios to PATH"
+  $env:PATH = "~/git/CI-CD/Utilitarios:~/git/CI-CD/QuickStarts/Scripts:${env:PATH}"
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Definição de caminho de scripts padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Setting Util functions"
@@ -107,36 +138,35 @@ function Clean-SwapFiles {
   }
 }
 
-function FuzzySearch-Item($dir = "$env:GIT_FOLDER") {
+function FuzzySearch-Item($dir = "$env:CODE_FOLDER") {
   return (fd . $dir --type f --follow | fzf)
 }
-
-function FuzzySearch-Location($dir = "$env:GIT_FOLDER") {
+function FuzzySearch-Location($dir = "$env:CODE_FOLDER") {
   return (fd . $dir --type d --follow | fzf)
 }
 
-function FuzzyGet-ChildItem($dir = "$env:GIT_FOLDER") {
+function FuzzyGet-ChildItem($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     Get-ChildItem $selectedItem
   }
 }
 
-function FuzzyInvoke-Item($dir = "$env:GIT_FOLDER") {
+function FuzzyInvoke-Item($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem) {
     Invoke-Item $selectedItem
   }
 }
 
-function FuzzyInvoke-Expression($dir = "$env:GIT_FOLDER") {
+function FuzzyInvoke-Expression($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem) {
     Invoke-Expression $selectedItem
   }
 }
 
-function FuzzyOpenOnCode-Location($dir = "$env:GIT_FOLDER") {
+function FuzzyOpenOnCode-Location($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     code -r $selectedItem
@@ -144,35 +174,28 @@ function FuzzyOpenOnCode-Location($dir = "$env:GIT_FOLDER") {
   }
 }
 
-function FuzzyOpenOnCode-Item($dir = "$env:GIT_FOLDER") {
+function FuzzyOpenOnCode-Item($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem) {
     code $selectedItem
   }
 }
 
-function FuzzyOpenOnVisualStudio-Solution($dir = "$env:GIT_FOLDER") {
+function FuzzyOpenOnVisualStudio-Solution($dir = "$env:CODE_FOLDER") {
   $selectedItem = (fd sln $dir --type f --follow | fzf)
   if ($selectedItem) {
     Invoke-Item ($selectedItem)
   }
 }
 
-function FuzzyOpenOnVim-Item($dir = "$env:GIT_FOLDER") {
-  $selectedItem = (FuzzySearch-Item $dir)
-  if ($selectedItem) {
-    gvim $selectedItem
-  }
-}
-
-function FuzzySet-Location($dir = "$env:GIT_FOLDER") {
+function FuzzySet-Location($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     Set-Location $selectedItem
   }
 }
 
-function FuzzyRun-DotNet($dir = "$env:GIT_FOLDER") {
+function FuzzyRun-DotNet($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     Set-Location $selectedItem
@@ -180,7 +203,7 @@ function FuzzyRun-DotNet($dir = "$env:GIT_FOLDER") {
   dotnet watch run
 }
 
-function FuzzyRun-DotNetTest($dir = "$env:GIT_FOLDER") {
+function FuzzyRun-DotNetTest($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     Set-Location $selectedItem
@@ -188,7 +211,7 @@ function FuzzyRun-DotNetTest($dir = "$env:GIT_FOLDER") {
   dotnet watch test
 }
 
-function FuzzyStart-NPM($dir = "$env:GIT_FOLDER") {
+function FuzzyStart-NPM($dir = "$env:CODE_FOLDER") {
   $selectedItem = (FuzzySearch-Location $dir)
   if ($selectedItem) {
     Set-Location $selectedItem
@@ -224,7 +247,21 @@ function GitFuzzyCheckout-Branch() {
   }
 }
 
-function GitFuzzyReset-File($branch="master", $dir=".") {
+function GitFuzzyAdd-File() {
+  $fileToAdd = (GitList-ModifiedFiles)
+  if ($fileToAdd) {
+    & git add $fileToAdd
+  }
+}
+
+function GitFuzzyReset-File() {
+  $selectedItem = (GitList-ModifiedFiles)
+  if ($selectedItem -and (Test-Path $selectedItem)) {
+    git reset $selectedItem
+  }
+}
+
+function GitFuzzyCheckout-File($branch="", $dir=".") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem -and (Test-Path $selectedItem)) {
     git checkout --force $branch -- $selectedItem
@@ -337,9 +374,8 @@ function GitList-ModifiedFiles() {
   $selectedFile = (git status --short | fzf)
   if ($selectedFile) {
     $selectedFile = $selectedFile.Trim().Replace('  ', ' ').Split(' ')[1]
-  }
-  Write-Information $selectedFile
     return $selectedFile
+  }
 }
 
 function GitPush-UpstreamBranch() {
@@ -386,9 +422,9 @@ function Update-SessionPath () {
 
 function Get-PathEntries() {
   Update-SessionPath
-  $env:Path.Split(";") |
-  Sort-Object |
-  Get-Unique
+    $env:Path.Split(";") |
+    Sort-Object |
+    Get-Unique
 }
 
 function Add-PathEntry($NewEntry) {
@@ -415,17 +451,17 @@ function Update-PathEntries($PreviousText, $SubstituteText) {
   }
 
   $PreviousText = $PreviousText.Replace("/","\")
-  $SubstituteText = $SubstituteText.Replace("/","\")
-  $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-  $UpdatedEntries = ($CurrentUserPath.Split(";") |
-      Sort-Object |
-      Get-Unique |
-      Foreach-Object { $_.Replace($PreviousText, $SubstituteText) })
-  $NewPath = [string]::Join(";", $UpdatedEntries)
-  Write-Information "`n ->> New Path: ($NewPath)"
-  [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
-  [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
-  Update-SessionPath
+    $SubstituteText = $SubstituteText.Replace("/","\")
+    $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $UpdatedEntries = ($CurrentUserPath.Split(";") |
+        Sort-Object |
+        Get-Unique |
+        Foreach-Object { $_.Replace($PreviousText, $SubstituteText) })
+    $NewPath = [string]::Join(";", $UpdatedEntries)
+    Write-Information "`n ->> New Path: ($NewPath)"
+    [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
+    [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+    Update-SessionPath
 }
 
 function Remove-PathEntries($PathToBeRemoved) {
@@ -502,30 +538,25 @@ function Start-NpmInstallDockerContainer($Version="lts-alpine") {
   docker container run --rm -v ${pwd}:/app/ -w /app -it node:$Version npm install
 }
 
-if(!($env:SqlServerDockerPassword)) {
-  Write-Verbose "`n->> Setting default password for SqlServerContainers on dev environment"
-  $env:SqlServerDockerPassword="L0c4lD3v!"
-}
-
 function Start-SqlServerDockerContainer($Version="2017-latest",[switch]$Interactive) {
-
   if($Interactive) {
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$SqlServerDockerPassword" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   } else {
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=$SqlServerDockerPassword" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
-function Set-LocalContextDatabase($DatabaseName="contexto", $ContextName="Contexto", $DataSourceName="localhost", $UserId="sa", $Password=$null){
-  if(!($Password)) {
-    $Password = $env:SqlServerDockerPassword
-  }
+function Set-LocalContextDatabase($DatabaseName="contexto", $ContextName="Contexto", $DataSourceName="localhost", $UserId="sa", $Password="L0c4lD3v!") {
   if(!$DatabaseName) {
     $env:ConnectionStrings__Contexto=$null
   }
   else {
     [Environment]::SetEnvironmentVariable("ConnectionStrings__$ContextName","Data Source=$DataSourceName;Initial Catalog=$DatabaseName;Persist Security Info=True;User Id=$UserId;Password=$Password")
   }
+}
+
+function Exit-Session() {
+  exit
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
@@ -541,7 +572,6 @@ New-Alias -Force fsl FuzzySearch-Location
 New-Alias -Force fcode FuzzyOpenOnCode-Item
 New-Alias -Force fcoder FuzzyOpenOnCode-Location
 New-Alias -Force fvs FuzzyOpenOnVisualStudio-Solution
-New-Alias -Force fvim FuzzyOpenOnVim-Item
 New-Alias -Force fii FuzzyInvoke-Item
 New-Alias -Force fiex FuzzyInvoke-Expression
 New-Alias -Force fh FuzzyInvoke-History
@@ -567,7 +597,9 @@ New-Alias -Force gitpu GitPush-UpstreamBranch
 New-Alias -Force gitc- GitCheckout-Previous
 New-Alias -Force gitcb GitCheckout-Branch
 New-Alias -Force gith GitGet-History
+New-Alias -Force gitfa GitFuzzyAdd-File
 New-Alias -Force gitfr GitFuzzyReset-File
+New-Alias -Force gitfc GitFuzzyCheckout-File
 New-Alias -Force gitfdf GitFuzzyDiff-File
 New-Alias -Force gitc Git-Commit
 New-Alias -Force gitam Git-AmendCommit
@@ -598,14 +630,23 @@ New-Alias -Force ddwr Start-DockerDotnetWatchRun
 
 New-Alias -Force poshgit Import-PoshGit
 New-Alias -Force psgit Import-PoshGit
+New-Alias -Force psomp Import-OhMyPosh
+New-Alias -Force omp Import-OhMyPosh
+New-Alias -Force psh Import-OhMyPosh
 New-Alias -Force psfzf Import-PsFzf
+New-Alias -Force psaws Import-PsAWS
 New-Alias -Force psnvm Import-PsNvm
 New-Alias -Force psdocker Import-DockerCompletion
 
 New-Alias -Force npms Start-Npm
 New-Alias -Force yarns Start-Yarn
+New-Alias -Force :q Exit-Session
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases do kernel demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$env:FZF_DEFAULT_COMMAND='fdfind --type f --follow'
-$env:FZF_CTRL_T_COMMAND='fdfind --type f --follow'
 
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$env:FZF_DEFAULT_COMMAND='fd --type f --follow'
+$env:FZF_CTRL_T_COMMAND='fd --type f --follow'
+Write-Verbose "`n->> Set update notifications to LTS only"
+[System.Environment]::SetEnvironmentVariable('POWERSHELL_UPDATECHECK', 'LTS')
+$stopwatch.Stop(); Write-Verbose "`n-->> Definir variáveis de ambiente demorou: $($stopwatch.ElapsedMilliseconds)"

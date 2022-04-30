@@ -6,7 +6,5 @@ if ! git config --global user.name &> /dev/null; then
   source /home/user/.config/init/git-setup.sh
 fi
 
-export NVM_DIR="/home/user/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+export NVS_HOME="$HOME/.nvs"
 

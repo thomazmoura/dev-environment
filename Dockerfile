@@ -1,5 +1,4 @@
 FROM mcr.microsoft.com/powershell:7.2.0-ubuntu-20.04
-
   
 RUN apt update \
   && apt install -y \
@@ -22,42 +21,62 @@ RUN apt update \
     wget \
     ;
 
-RUN pwsh -c 'Install-Module nvm -Force -Scope AllUsers; \
-  Install-Module posh-git -Force -Scope AllUsers; \
-  Import-Module nvm; \
-  Install-NodeVersion 12; \
-  Install-NodeVersion 14; \
-  Install-NodeVersion 16; \
-  Set-NodeVersion 16;'
+# Create the developer user to be used dynamically
+RUN useradd --user-group --system --create-home --no-log-init developer
+USER developer
 
-RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
+# Node installation
+COPY --chown=developer:developer Kernel/install /home/developer/.install
+RUN chmod +x /home/developer/.install/nvs-setup.ps1 && pwsh -c /home/developer/.install/nvs-setup.ps1
 
-RUN useradd -ms /bin/bash user
+# Shell config folders
+COPY --chown=developer:developer Kernel/shell /home/developer/.shell
+COPY --chown=developer:developer Kernel/config /home/developer/.config
 
-# Setup Plug and CoC plugins
-COPY Kernel/vim/plug.vimrc /home/user/.vim/plug.vimrc
+# PowerShell configuration
+COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
+RUN pwsh -c /home/developer/.install/pwsh-setup.ps1
+CMD ["/opt/microsoft/powershell/7/pwsh"]
 
-RUN pwsh -c 'nvim -es -u /home/user/.shell/plugin-setup.vimrc -i NONE -c "PlugInstall" -c "qa"'
-RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
 
-COPY DockerUbuntu/vimrc /home/user/.vimrc
-COPY DockerUbuntu/bashrc /home/user/.bashrc
-COPY DockerUbuntu/tmux.conf /home/user/.tmux.conf
-COPY Kernel/config/ /home/user/.config/
-COPY DockerUbuntu/config/powershell/ /home/user/.config/powershell/
-COPY DockerUbuntu/init/ /home/user/.config/init/
-COPY Kernel/shell/ /home/user/.shell/
-COPY Kernel/vim /home/user/.vim/
-COPY Kernel/vim /home/user/.config/nvim
-COPY Kernel/vim/autoload /home/user/.local/share/nvim/site
 
-RUN chown -R user:user /home/user
+#RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
-USER user:user
 
-ENV TERM xterm-256color
+## Setup Plug and CoC plugins
+#COPY Kernel/vim/plug.vimrc /home/developer/.vim/plug.vimrc
+#COPY Kernel/vim/autoload/plug.vim /home/developer/.vim/autoload/plug.vim
 
-WORKDIR /home/user/git
+#RUN pwsh -c 'nvim -u /home/developer/.vim/plug-setup.vimrc -i NONE -c "qa"'
 
-CMD ["/opt/microsoft/powershell/7/pwsh", "-c", "vtmux"]
+#RUN cp -rf /home/developer/.vim /home/user/.vim
+#RUN cp -rf /home/developer/.config /home/user/.config
+#RUN chown -R 1000:1000 /home/user
+
+#CMD ["/opt/microsoft/powershell/7/pwsh"]
+
+
+
+#RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
+
+#COPY DockerUbuntu/vimrc /home/user/.vimrc
+#COPY DockerUbuntu/bashrc /home/user/.bashrc
+#COPY DockerUbuntu/tmux.conf /home/user/.tmux.conf
+#COPY Kernel/config/ /home/user/.config/
+#COPY DockerUbuntu/config/powershell/ /home/user/.config/powershell/
+#COPY DockerUbuntu/init/ /home/user/.config/init/
+#COPY Kernel/shell/ /home/user/.shell/
+#COPY Kernel/vim /home/user/.vim/
+#COPY Kernel/vim /home/user/.config/nvim
+#COPY Kernel/vim/autoload /home/user/.local/share/nvim/site
+
+#RUN chown -R user:user /home/user
+
+#USER user:user
+
+#ENV TERM xterm-256color
+
+#WORKDIR /home/user/git
+
+#CMD ["/opt/microsoft/powershell/7/pwsh", "-c", "vtmux"]
 
