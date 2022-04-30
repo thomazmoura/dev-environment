@@ -41,7 +41,7 @@ test -n "$DISPLAY" && alive xhost && {
 # copy via OSC 52
 printf_escape() {
   esc=$1
-  test -n "$TMUX" -o -z "${TERM##screen*}" && esc="\033Ptmux;\033$esc\033\\"
+  esc="\033Ptmux;\033$esc\033\\"
   printf "$esc"
 }
 len=$( input | wc -c ) max=74994

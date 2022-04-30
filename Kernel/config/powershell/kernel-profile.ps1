@@ -467,7 +467,7 @@ function Stop-ProcessByName($processName) {
 }
 
 function Copy-NewGuidToClipboard() {
-  (New-Guid).Guid | Set-Clipboard
+  (New-Guid).Guid | clip
 }
 
 function Add-SshKey() {
@@ -523,7 +523,11 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($st
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Debug "`n->> Setting Aliases"
-New-Alias -Force clip Set-Clipboard
+
+if( !(Test-Path "/usr/bin/clip") -and !(Test-Path "$HOME/.local/bin/clip") ) {
+  New-Alias -Force clip Set-Clipboard
+}
+
 New-Alias -Force guid Copy-NewGuidToClipboard
 
 New-Alias -Force fgi FuzzySearch-Item

@@ -21,6 +21,14 @@ RUN apt update \
     wget \
     ;
 
+# Make fdfind be callable as fd
+RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
+
+# Tools for command line available to every user
+COPY Kernel/modules/bin /usr/bin
+# Make terminal-based yank accessible both as yank and clip
+RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer
 USER developer
@@ -38,12 +46,10 @@ COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /hom
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
-COPY --chown=developer:developer Kernel/install /home/developer/.install
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 
 
-#RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 
 ## Setup Plug and CoC plugins
