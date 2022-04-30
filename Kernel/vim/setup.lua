@@ -2,7 +2,7 @@
 require('impatient')
 
 --require custom modules
-package.path = package.path .. ";" .. vim.env.LINUX_RESOURCES_FOLDER .. "/Kernel/shell/lua/?.lua"
+package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 require('icons')
 
 --lualine settings

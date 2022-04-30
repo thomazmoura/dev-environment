@@ -41,12 +41,13 @@ set wildignore+=*/obj/**
 " Convert SQL Column to C# property
 let @s = "^Wdi]^Pa wdi]hPlD:s/numeric/decimal/e:s/bit/bool/e:s/nvarchar/string/e:s/varchar/string/e:s/float/double/e:s/datetime2/datetime/e:s/bigint/float/e:s/text/string/e:s/datetime/DateTime/eA { get; set; }Ipublic j"
 " Merge SQL mapping and C# properties
-let @c = "^d2Wf{hDIbuilder.Property(pe€kb€kbusuario => usuario.A)o.HasColumnName();hi\"\"mz}j^yi]dd`z^f\"\"0pj"
+let @c = "^d2Wf{hDIbuilder.Property(peÂ€kbÂ€kbusuario => usuario.A)o.HasColumnName();hi\"\"mz}j^yi]dd`z^f\"\"0pj"
 let @z = "\"zyiwb\"x y\"xyiwOprivate readonly \"xpa \"zpbi_A;/{%O\"zpI_A = \"zpA;=="
 set autowrite
 set autowriteall
 
 source $HOME/.modules/neovim-plug/plug.vimrc
+source $HOME/.vim/coc-plugins.vimrc
 
 " Custom Keymaps
 "  Set space as the leader
@@ -58,11 +59,14 @@ source $HOME/.vim/coc-config.vimrc
 " NeoVim Custom keybindings
 source $HOME/.vim/nvim-keybindings.vimrc
 
-" Yank highlight
-autocmd TextYankPost * silent! lua vim.highlight.on_yank { higroup="TabLineSel", timeout=450 }
+"lua configuration
+source $HOME/.vim/setup.lua
 
 " Set coc-config path
 let g:coc_config_home = "$HOME/.config/nvim"
+
+" Yank highlight
+autocmd TextYankPost * silent! lua vim.highlight.on_yank { higroup="TabLineSel", timeout=450 }
 
 " copy to attached terminal using the yank(1) script:
 " https://github.com/sunaku/home/blob/master/bin/yank
@@ -88,13 +92,14 @@ autocmd TextYankPost * call CopyYank()
 set winblend=30
 set pumblend=30
 
-" Rainbow brackets
 let g:rainbow_conf = {
 \	'separately': {
 \		'*': {},
 \		'html': 0
 \	}
 \}
+
+" Rainbow brackets
 let g:rainbow_active = 1
 
 " vim-markdown Settings
@@ -109,18 +114,19 @@ let g:fzf_layout = { 'window': { 'width': 0.85, 'height': 0.85 } }
 " Colorscheme
 syntax enable
 set background=dark
-let g:tokyonight_style = "storm"
+let g:one_allow_italics = 1 " One colorscheme configuration
+let g:tokyonight_style = "storm" " Tokyo Night colorscheme configuration
+
 colorscheme tokyonight
 highlight Normal guibg=none
-set fillchars+=vert:¿
+highlight MsgArea guibg=#1a1b26
+set fillchars+=vert:â”‚
 highlight VertSplit guibg=none guifg=#414868
-
-"lua configuration
-source $HOME/.vim/setup.lua
 
 " Client agnostic keybinngs
 nnoremap <Leader>g  :r!uuidgen<CR>y$dd`z"0p
 nnoremap <Leader>G  :r!uuidgen<CR>y$dd`z"0P
+
 noremap <Leader>y "+y
 noremap <Leader>p "+p
 noremap <Leader>Y "+Y
@@ -130,12 +136,14 @@ noremap <Leader>0P "0P
 nnoremap <Leader>\  :vsplit<CR>
 
 " Automatically close the explorer when it's the last window
-autocmd BufEnter * ++nested if winnr('$') == 1 && bufname() == 'NvimTree_' . tabpagenr() | quit | endif
+" autocmd BufEnter * ++nested if winnr('$') == 1 && bufname() == 'NvimTree_' . tabpagenr() | quit | endif
 
 " Macros
 " Class boilerplate
-nnoremap <leader>mn inamespace %F/ly$hD:s/\//./go{}Opublic class "0pF.Do{}OI		:noh<CR>
-nnoremap <leader>mN inamespace %F/ly$hD:s/\//./go{}Opublic class "0pF.Do{}OI		ggjddGddoggokA;<G/{:nohjA
+nnoremap <leader>mn inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic class 0F/ldBf.Do{o}O
+nnoremap <leader>mN inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic class 0F/ldBf.Do{o}gg$xji{Go}>i{jo
+nnoremap <leader>mi inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic interface 0F/ldBf.Do{o}O
+nnoremap <leader>mI inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic interface 0F/ldBf.Do{o}gg$xji{Go}>i{jo
 " Convert SQL Column to C# property (n - supported)
 nnoremap <leader>ms @="^Wdi]^Pa\<lt>Space>\<lt>Esc>wdi]hPlD:s/numeric/decimal/e\<lt>CR>:s/bit/bool/e\<lt>CR>:s/nvarchar/string/e\<lt>CR>:s/varchar/string/e\<lt>CR>:s/float/double/e\<lt>CR>:s/datetime2/datetime/e\<lt>CR>:s/bigint/float/e\<lt>CR>:s/text/string/e\<lt>CR>:s/datetime/DateTime/e\<lt>CR>A\<lt>Space>{\<lt>Space>get;\<lt>Space>set;\<lt>Space>}\<lt>Esc>Ipublic\<lt>Space>\<lt>Esc>j"<CR>
 " Merge SQL mapping and C# properties (n - supported)

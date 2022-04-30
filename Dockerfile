@@ -1,21 +1,30 @@
 FROM mcr.microsoft.com/powershell:7.2.0-ubuntu-20.04
   
-RUN apt update \
-  && apt install -y \
+RUN apt-get update \
+  && apt-get install -y \
     software-properties-common \
   && add-apt-repository ppa:neovim-ppa/unstable \
-  && apt update \
-  && apt install -y \
+  && apt-get update \
+  && apt-get install -y \
+    apt-transport-https \
+    apt-utils \
     bash-completion \
     bat \
+    build-essential \
     curl \
     fd-find \
     fzf \
     git \
+    icu-devtools \
     less \
+    lsb-release \
     neovim \
     openssh-server \
+    python \
+    python3 \
+    python3-pip \
     silversearcher-ag \
+    strace \
     tmux \
     unzip \
     wget \
@@ -34,6 +43,7 @@ RUN useradd --user-group --system --create-home --no-log-init developer
 USER developer
 
 # Node installation
+RUN mkdir -p /home/developer/.modules
 COPY --chown=developer:developer Kernel/modules/node /home/developer/.modules/node
 RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Command /home/developer/.modules/node/nvs-setup.ps1
 
@@ -42,18 +52,23 @@ COPY --chown=developer:developer Kernel/modules/powershell /home/developer/.modu
 RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
 # Shell config folders
+RUN mkdir -p /home/developer/.config/powershell
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
 # NeoVim Plug Modules installation
+RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer Kernel/vim/autoload /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer Kernel/modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
-RUN pwsh -c 'nvim -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
 
 # NeoVim CoC Modules installation
+COPY --chown=developer:developer Kernel/modules/neovim-coc /home/developer/.modules/neovim-coc
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-omnisharp coc-git" +qall'
 
 # NeoVim Settings
+WORKDIR /home/developer/code
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
@@ -73,7 +88,7 @@ CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 
 
-#RUN pwsh -c 'nvim +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-yaml coc-omnisharp coc-git" +qall'
+
 
 #COPY DockerUbuntu/vimrc /home/user/.vimrc
 #COPY DockerUbuntu/bashrc /home/user/.bashrc
