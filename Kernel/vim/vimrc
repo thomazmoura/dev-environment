@@ -46,7 +46,7 @@ let @z = "\"zyiwb\"x y\"xyiwOprivate readonly \"xpa \"zpbi_A;/{%O\"zpI_A
 set autowrite
 set autowriteall
 
-source $HOME/.vim/plug.vimrc
+source $HOME/.modules/neovim-plug/plug.vimrc
 
 " Custom Keymaps
 "  Set space as the leader

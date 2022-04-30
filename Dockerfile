@@ -46,17 +46,24 @@ COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /hom
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
+# NeoVim Plug Modules installation
+COPY --chown=developer:developer Kernel/vim/autoload /home/developer/.local/share/nvim/site/autoload
+COPY --chown=developer:developer Kernel/modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
+RUN pwsh -c 'nvim -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
+
+# NeoVim CoC Modules installation
+
+# NeoVim Settings
+COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
+COPY --chown=developer:developer Kernel/vim /home/developer/.vim
+
+
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 
 
 
 
-## Setup Plug and CoC plugins
-#COPY Kernel/vim/plug.vimrc /home/developer/.vim/plug.vimrc
-#COPY Kernel/vim/autoload/plug.vim /home/developer/.vim/autoload/plug.vim
-
-#RUN pwsh -c 'nvim -u /home/developer/.vim/plug-setup.vimrc -i NONE -c "qa"'
 
 #RUN cp -rf /home/developer/.vim /home/user/.vim
 #RUN cp -rf /home/developer/.config /home/user/.config
