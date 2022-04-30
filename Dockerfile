@@ -26,16 +26,19 @@ RUN useradd --user-group --system --create-home --no-log-init developer
 USER developer
 
 # Node installation
-COPY --chown=developer:developer Kernel/install /home/developer/.install
-RUN chmod +x /home/developer/.install/nvs-setup.ps1 && pwsh -c /home/developer/.install/nvs-setup.ps1
+COPY --chown=developer:developer Kernel/modules/node /home/developer/.modules/node
+RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Command /home/developer/.modules/node/nvs-setup.ps1
+
+# PowerShell modules installation
+COPY --chown=developer:developer Kernel/modules/powershell /home/developer/.modules/powershell
+RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
 # Shell config folders
+COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
-# PowerShell configuration
-COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
-RUN pwsh -c /home/developer/.install/pwsh-setup.ps1
+COPY --chown=developer:developer Kernel/install /home/developer/.install
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 

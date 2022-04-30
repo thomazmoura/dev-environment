@@ -1,33 +1,5 @@
 . "$PSScriptRoot/kernel-profile.ps1"
 
-function Import-PoshGit() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  Write-Verbose "`n->> Importing posh-git"
-  Import-Module posh-git
-  if ( !($?) ) {
-    Write-Information "`n->> Posh-git not found. Installing"
-    Install-Module -Force -AcceptLicense posh-git -Scope CurrentUser
-  }
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
-}
-
-function Import-OhMyPosh() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  Write-Verbose "`n->> Activating oh-my-posh"
-  if( !(Get-Command oh-my-posh -ErrorAction SilentlyContinue) ) {
-    if(!(Test-Path "$HOME/.local/bin") ) {
-      New-Item -Force -ItemType Directory -Name "$HOME/.local/bin";
-    }
-    "wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O $HOME/.local/bin/oh-my-posh" | Invoke-Expression
-    "chmod +x $HOME/.local/bin/oh-my-posh" | Invoke-Expression
-  } else {
-    Write-Verbose "OhMyPosh instalado corretamente"
-  }
-  & $HOME/.local/bin/oh-my-posh init pwsh --config $HOME/.config/powershell/linux.omp.json | Invoke-Expression
-  Write-Information "Carregado o arquivo $HOME/.config/powershell/linux.omp.json"
-  $stopwatch.Stop(); Write-Information "`n-->> Importação do Oh-My-Posh demorou: $($stopwatch.ElapsedMilliseconds)"
-}
-
 Write-Verbose "`n->> Setting environment variables"
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
@@ -42,7 +14,6 @@ if(Test-Path ~/.ssh) {
 $stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
@@ -188,4 +159,5 @@ if(Get-Command nvs -ErrorAction SilentlyContinue) {
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 
-Import-OhMyPosh
+Import-OhMyPoshOnLinux
+

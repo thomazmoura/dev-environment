@@ -1,5 +1,7 @@
 $InformationPreference = "Continue";
 
+. $HOME/.modules/powershell/pwsh-modules.ps1
+
 # Vi style cursor
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if($PSVersionTable.PSVersion.Major -ge 6){
@@ -40,31 +42,6 @@ try {
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativar predição demorou: $($stopwatch.ElapsedMilliseconds)"
 
-function Import-PsFzf() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  Write-Verbose "`n->> Importing PSFzf"
-  Import-Module PSFzf -ArgumentList 'Ctrl+t', 'Ctrl+r'
-  if ( !($?) ) {
-    Write-Information "`n->> PSFzf not found. Installing"
-    Install-Module -Force -AcceptLicense PSFzf 
-    Import-Module PSFzf -ArgumentList 'Ctrl+t', 'Ctrl+r'
-  }
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do PsFzf demorou: $($stopwatch.ElapsedMilliseconds)"
-}
-
-function Import-PsAWS([string]$region = "sa-east-1") {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  Write-Verbose "`n->> Importing AWS CLI"
-  Import-Module -Name AWSPowerShell.NetCore
-  if ( !($?) ) {
-    Write-Information "`n->> AWSPowerShell.NetCore not found. Installing"
-    Install-Module -Force -AcceptLicense -Name AWSPowerShell.NetCore
-    Import-Module -Name AWSPowerShell.NetCore
-  }
-  Set-DefaultAWSRegion -Region $region -Scope Global
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do PsAWS demorou: $($stopwatch.ElapsedMilliseconds)"
-}
-
 # dotnet autocomplete
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(Get-Command dotnet -ErrorAction SilentlyContinue) {
@@ -76,22 +53,6 @@ if(Get-Command dotnet -ErrorAction SilentlyContinue) {
   }
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
-
-function Import-DockerCompletion() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if(Get-Command docker -ErrorAction SilentlyContinue) {
-    Write-Verbose "`n->> Importing DockerCompletion"
-    Import-Module DockerCompletion
-    if ( !($?) ) {
-      Write-Information "`n->> DockerCompletion not found. Installing"
-      Install-Module -Force -AcceptLicense DockerCompletion
-      Import-Module DockerCompletion
-    }
-  } else {
-      Write-Verbose "`n->> Docker not found. Skipping DockerCompletion"
-  }
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do docker demorou: $($stopwatch.ElapsedMilliseconds)"
-}
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(! ($env:CODE_FOLDER)) {
@@ -630,9 +591,8 @@ New-Alias -Force ddwr Start-DockerDotnetWatchRun
 
 New-Alias -Force poshgit Import-PoshGit
 New-Alias -Force psgit Import-PoshGit
-New-Alias -Force psomp Import-OhMyPosh
-New-Alias -Force omp Import-OhMyPosh
-New-Alias -Force psh Import-OhMyPosh
+New-Alias -Force psomp Import-OhMyPoshOnLinux
+New-Alias -Force omp Import-OhMyPoshOnLinux
 New-Alias -Force psfzf Import-PsFzf
 New-Alias -Force psaws Import-PsAWS
 New-Alias -Force psnvm Import-PsNvm
