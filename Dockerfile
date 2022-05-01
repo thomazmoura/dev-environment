@@ -86,9 +86,11 @@ RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-se
 COPY --chown=developer:developer Kernel/modules/neovim-coc /home/developer/.modules/neovim-coc
 RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-omnisharp coc-git" +qall'
 
-# Shell config folders
+# Shell config folders and .files
 RUN mkdir -p /home/developer/.config/powershell
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
+COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
+COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
@@ -105,39 +107,4 @@ ENV TERM xterm-256color
 RUN mkdir /home/developer/code && mkdir /home/developer/.ssh
 WORKDIR /home/developer/code
 CMD ["/opt/microsoft/powershell/7/pwsh"]
-
-
-
-
-
-
-#RUN cp -rf /home/developer/.vim /home/user/.vim
-#RUN cp -rf /home/developer/.config /home/user/.config
-#RUN chown -R 1000:1000 /home/user
-
-#CMD ["/opt/microsoft/powershell/7/pwsh"]
-
-
-
-
-
-#COPY DockerUbuntu/vimrc /home/user/.vimrc
-#COPY DockerUbuntu/bashrc /home/user/.bashrc
-#COPY DockerUbuntu/tmux.conf /home/user/.tmux.conf
-#COPY Kernel/config/ /home/user/.config/
-#COPY DockerUbuntu/config/powershell/ /home/user/.config/powershell/
-#COPY DockerUbuntu/init/ /home/user/.config/init/
-#COPY Kernel/shell/ /home/user/.shell/
-#COPY Kernel/vim /home/user/.vim/
-#COPY Kernel/vim /home/user/.config/nvim
-#COPY Kernel/vim/autoload /home/user/.local/share/nvim/site
-
-#RUN chown -R user:user /home/user
-
-#USER user:user
-
-
-#WORKDIR /home/user/git
-
-#CMD ["/opt/microsoft/powershell/7/pwsh", "-c", "vtmux"]
 
