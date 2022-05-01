@@ -21,6 +21,7 @@ Plug 'nvim-lualine/lualine.nvim'
 Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
 Plug 'antoinemadec/coc-fzf'
+Plug 'karb94/neoscroll.nvim'
 
 " Overhaul
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
