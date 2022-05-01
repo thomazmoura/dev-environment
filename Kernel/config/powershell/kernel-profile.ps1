@@ -58,7 +58,7 @@ $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(! ($env:CODE_FOLDER)) {
   if( Test-Path "~/code") {
     Write-Verbose "`n->> code folder found on home. Setting CODE_FOLDER"
-    $env:CODE_FOLDER = "~/git"
+    $env:CODE_FOLDER = "~/code"
   } elseif( Test-Path "~/git") {
     Write-Verbose "`n->> git folder found on home. Setting CODE_FOLDER"
     $env:CODE_FOLDER = "~/git"
