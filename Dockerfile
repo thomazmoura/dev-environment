@@ -8,6 +8,7 @@ RUN apt-get update \
   && apt-get install -y \
     apt-transport-https \
     apt-utils \
+    automake \
     bash-completion \
     bat \
     build-essential \
@@ -18,8 +19,10 @@ RUN apt-get update \
     icu-devtools \
     less \
     lsb-release \
+    make \
     neovim \
     openssh-server \
+    pkg-config \
     python \
     python3 \
     python3-pip \
@@ -38,6 +41,10 @@ COPY Kernel/modules/bin /usr/bin
 # Make terminal-based yank accessible both as yank and clip
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
 
+# NeoVim Universal-ctags requirement
+COPY Kernel/modules/universal-ctags/ctags-setup.sh /root/ctags-setup.sh
+RUN chmod +x /root/ctags-setup.sh && /root/ctags-setup.sh
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer
 USER developer
@@ -52,8 +59,8 @@ COPY --chown=developer:developer Kernel/modules/powershell /home/developer/.modu
 RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
 # NeoVim Requirements
-RUN python3 -m pip install --user --upgrade pynvim
-RUN pwsh -c "/home/developer/.nvs/nvs.ps1 use lts && npm install --global neovim"
+COPY --chown=developer:developer Kernel/modules/neovim-base /home/developer/.modules/neovim-base
+RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
@@ -89,8 +96,13 @@ COPY --chown=developer:developer Kernel/config /home/developer/.config
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
+# Make PowerShell history inside the container easier to map to volumes
+RUN mkdir /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
+
+
 # Start the environment
 ENV TERM xterm-256color
+RUN mkdir /home/developer/code && mkdir /home/developer/.ssh
 WORKDIR /home/developer/code
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
