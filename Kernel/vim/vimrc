@@ -47,7 +47,6 @@ set autowrite
 set autowriteall
 
 source $HOME/.modules/neovim-plug/plug.vimrc
-source $HOME/.vim/coc-plugins.vimrc
 
 " Custom Keymaps
 "  Set space as the leader

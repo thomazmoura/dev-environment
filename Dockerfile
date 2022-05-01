@@ -51,11 +51,9 @@ RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Com
 COPY --chown=developer:developer Kernel/modules/powershell /home/developer/.modules/powershell
 RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
-# Shell config folders
-RUN mkdir -p /home/developer/.config/powershell
-COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
-COPY --chown=developer:developer Kernel/shell /home/developer/.shell
-COPY --chown=developer:developer Kernel/config /home/developer/.config
+# NeoVim Requirements
+RUN python3 -m pip install --user --upgrade pynvim
+RUN pwsh -c "/home/developer/.nvs/nvs.ps1 use lts && npm install --global neovim"
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
@@ -63,16 +61,37 @@ COPY --chown=developer:developer Kernel/vim/autoload /home/developer/.local/shar
 COPY --chown=developer:developer Kernel/modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
 RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
 
+# NeoVim TreeSitter compilation
+COPY --chown=developer:developer Kernel/modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync c_sharp" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync cpp" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync css" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync dockerfile" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync html" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync json" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync lua" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync regex" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync typescript" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync vim" +qall'
+RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync yaml" +qall'
+
 # NeoVim CoC Modules installation
 COPY --chown=developer:developer Kernel/modules/neovim-coc /home/developer/.modules/neovim-coc
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-omnisharp coc-git" +qall'
+RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-omnisharp coc-git" +qall'
+
+# Shell config folders
+RUN mkdir -p /home/developer/.config/powershell
+COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
+COPY --chown=developer:developer Kernel/shell /home/developer/.shell
+COPY --chown=developer:developer Kernel/config /home/developer/.config
 
 # NeoVim Settings
-WORKDIR /home/developer/code
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
-
+# Start the environment
+ENV TERM xterm-256color
+WORKDIR /home/developer/code
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 
@@ -105,7 +124,6 @@ CMD ["/opt/microsoft/powershell/7/pwsh"]
 
 #USER user:user
 
-#ENV TERM xterm-256color
 
 #WORKDIR /home/user/git
 
