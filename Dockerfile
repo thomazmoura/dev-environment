@@ -45,6 +45,10 @@ RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' 
 COPY Kernel/modules/universal-ctags/ctags-setup.sh /root/ctags-setup.sh
 RUN chmod +x /root/ctags-setup.sh && /root/ctags-setup.sh
 
+# dotnet installation
+COPY Kernel/modules/dotnet /root/.modules/dotnet
+RUN pwsh -c /root/.modules/dotnet-setup.ps1
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer
 USER developer
@@ -100,7 +104,6 @@ COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
 # Make PowerShell history inside the container easier to map to volumes
 RUN mkdir /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
-
 
 # Start the environment
 ENV TERM xterm-256color
