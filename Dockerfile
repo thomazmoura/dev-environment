@@ -94,6 +94,10 @@ RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setu
 COPY --chown=developer:developer Kernel/modules/neovim-coc /home/developer/.modules/neovim-coc
 RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-git" +qall'
 
+# Delta diff installation
+COPY --chown=developer:developer Kernel/modules/git /home/developer/.modules/git
+RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
+
 # Shell config folders and .files
 RUN mkdir -p /home/developer/.config/powershell
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
