@@ -105,6 +105,7 @@ COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.co
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
+COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
 # Tmux plugins installation
 COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux

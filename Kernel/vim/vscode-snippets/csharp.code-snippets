@@ -1,0 +1,226 @@
+{
+	"Multiline Documentation Summary": {
+		"prefix": "msum",
+		"body": [
+			"/// <summary>",
+      "/// ${1:Descricao}",
+			"/// </summary>"
+		],
+		"description": "Creates a new private const field"
+	},
+	"Inline Documentation Summary": {
+		"prefix": "isum",
+		"body": [
+			"/// <summary> ${1:Descricao} </summary>"
+		],
+		"description": "Creates a new private const field"
+	},
+	"Private Constant Field": {
+		"prefix": "constf",
+		"body": [
+			"private const ${1:Type} ${2:Name};"
+		],
+		"description": "Creates a new private const field"
+	},
+	"Private Readonly Field": {
+		"prefix": "read",
+		"body": [
+			"private readonly ${1:Class} _${2:name};"
+		],
+		"description": "Creates a new private readonly field"
+	},
+	"Private Field": {
+		"prefix": "field",
+		"body": [
+			"private ${1:Type} _${2:name};"
+		],
+		"description": "Creates a new private field"
+	},
+	"Unit Test": {
+		"prefix": "ut",
+		"body": [
+			"[Fact]",
+			"public void ${1:Método}_${2:SituaçãoSimulada}_${3:ResultadoEsperado}()",
+			"{",
+			"    $0",
+			"}"
+		],
+		"description": "Cria um teste unitário utilizando o XUnit."
+	},
+	"Simple Class": {
+		"prefix": "cls",
+		"body": [
+			"namespace $0${TM_DIRECTORY/[\\/\\\\]/./g}",
+			"{",
+			"    public class ${TM_FILENAME_BASE:Class}",
+			"    {",
+			"        ${1}",
+			"    }",
+			"}"
+		],
+		"description": "Cria uma configuração de entidade do EF Core"
+	},
+	"Entity Type Configuration (.NET 6)": {
+		"prefix": "efconfig",
+		"body": [
+			"namespace ${2:Namespace}.Dados.Configuracao;",
+			"",
+			"public class ${1:Entidade}Configuracao : IEntityTypeConfiguration<${1:Entidade}>",
+			"{",
+			"    public void Configure(EntityTypeBuilder<${1:Entidade}> builder)",
+			"    {",
+			"        builder.ToTable(nameof(${1:Entidade}));",
+			"    }",
+			"}"
+		],
+		"description": "Cria uma configuração de entidade do EF Core (.NET 6)"
+	},
+	"Entity Type Configuration": {
+		"prefix": "efconf-old",
+		"body": [
+			"using Microsoft.EntityFrameworkCore;",
+			"using Microsoft.EntityFrameworkCore.Metadata.Builders;",
+			"using ${2:Namespace}.Entidades;",
+			" ",
+			"namespace ${2:Namespace}.Dados.Configuracao",
+			"{",
+			"    public class ${1:Entidade}Configuracao : IEntityTypeConfiguration<${1:Entidade}>",
+			"    {",
+			"        public void Configure(EntityTypeBuilder<${1:Entidade}> builder)",
+			"        {",
+			"            builder.ToTable(\"${1:Entidade}\");",
+			"        }",
+			"    }",
+			"}"
+		],
+		"description": "Cria uma configuração de entidade do EF Core"
+	},
+	"Extensions Method Filter": {
+		"prefix": "effilter",
+		"body": [
+			"public IQueryable<${1:Entidade}> Filtrar(this IQueryable<${1:Entidade}> ${2:entidade})",
+			"{",
+			"    return ${2:entidade}.Where(${2:entidade}s => ${2:entidade}s.${3:Condicao});",
+			"}"
+		],
+		"description": "Cria uma configuração de entidade do EF Core"
+	},
+  "Empty Constructor": {
+    "prefix": "econstructor",
+    "body": [ 
+      "public ${TM_FILENAME_BASE:Classe}() { }",
+      "${1}"
+    ]
+  },
+  "Constructor": {
+    "prefix": "constructor",
+    "body": [ 
+      "public ${TM_FILENAME_BASE:Classe}()",
+      "{",
+      "    ${1}",
+      "}",
+      ""
+    ]
+  },
+	"API Controller": {
+		"prefix": "apicontroller",
+		"body": [
+			"using System;",
+			"using ${1:Namespace}.Dados;",
+			"using ${1:Namespace}.Entidades;",
+			"using Microsoft.AspNetCore.Mvc;",
+			"",
+			"namespace ${1:Namespace}.Controllers",
+			"{",
+			"    [Route(\"api/${3:entidade}s\")]",
+			"    public class ${2:Entidade}Controller : Controller, IEntidadeApi<${2:Entidade}>",
+			"    {",
+			"        private const string NomeDaRotaDeConsulta = \"Consultar${2:Entidade}\";",
+			"",
+			"        private readonly Contexto _contexto;",
+			"        public ${2:Entidade}Controller(Contexto contexto)",
+			"        {",
+			"            _contexto = contexto;",
+			"        }",
+			"",
+			"        [HttpGet]",
+			"        public IActionResult Get()",
+			"        {",
+			"            var ${3:entidade}s = _contexto.${2:Entidade}s;",
+			"            return Ok(${3:entidade}s);",
+			"        }",
+			"",
+			"        [HttpGet(\"{id}\", Name = NomeDaRotaDeConsulta)]",
+			"        public IActionResult Get(Guid id)",
+			"        {",
+			"            if (!_contexto.${2:Entidade}s.ConstaNoBanco(id))",
+			"                return NotFound();",
+			"",
+			"            var ${3:entidade} = _contexto.${2:Entidade}s.PorId(id);",
+			"",
+			"            return Ok(${3:entidade});",
+			"        }",
+			"",
+			"        [HttpPost]",
+			"        public IActionResult Post([FromBody] ${2:Entidade} ${3:entidade})",
+			"        {",
+			"            if (${3:entidade} == null)",
+			"                return BadRequest();",
+			"",
+			"            if (!${3:entidade}.EstaValidoParaInsercao)",
+			"                return BadRequest();",
+			"",
+			"            _contexto.Add(${3:entidade});",
+			"",
+			"            return CreatedAtRoute(NomeDaRotaDeConsulta, ${3:entidade}.Id, ${3:entidade});",
+			"        }",
+			"",
+			"        [HttpPut]",
+			"        public IActionResult Put([FromBody] ${2:Entidade} ${3:entidade})",
+			"        {",
+			"            if (${3:entidade} == null)",
+			"                return BadRequest();",
+			"",
+			"            if (!${3:entidade}.EstaValidoParaAtualizacao)",
+			"                return BadRequest();",
+			"",
+			"            if (!_contexto.${2:Entidade}s.ConstaNoBanco(${3:entidade}.Id))",
+			"                return NotFound();",
+			"",
+			"            _contexto.Update(${3:entidade});",
+			"",
+			"            return NoContent();",
+			"        }",
+			"",
+			"        [HttpDelete]",
+			"        public IActionResult Delete(Guid id)",
+			"        {",
+			"            if (!_contexto.${2:Entidade}s.ConstaNoBanco(id))",
+			"                return NotFound();",
+			"",
+			"            _contexto.Remove<${2:Entidade}>(id);",
+			"",
+			"            return NoContent();",
+			"        }",
+			"    }",
+			"}"
+		]
+	},
+	"Public Property": {
+		"prefix": "prop",
+		"body": [
+			"public ${1:Class} ${2:Name} { get; set; }"
+		],
+		"description": "Creates a new public property"
+	},
+	"Foreach Statement": {
+		"prefix": "foreach",
+		"body": [
+			"foreach(var ${1:variable} in ${2:collection})",
+			"{",
+			"    ${3}",
+			"}"
+		],
+		"description": "Creates a new foreach statement"
+	}
+}

@@ -13,8 +13,13 @@ Write-Output "Installing delta"
 Invoke-WebRequest https://github.com/dandavison/delta/releases/download/0.12.1/delta-0.12.1-x86_64-unknown-linux-gnu.tar.gz -OutFile "$HOME/delta.tar.gz"
 Set-Location $HOME
 & tar -xzf ./delta.tar.gz -C delta-folder
-Move-Item ./delta-folder/*/delta "$HOME/.local/bin/delta"
+Set-Location delta-folder/*
+if( !(Test-Path delta) ) {
+  Write-Error "Delta bin not found!" -ErrorAction Stop
+}
+Move-Item delta "$HOME/.local/bin/delta"
 Remove-Item -Recurse -Force delta*
+Set-Location -
 Set-Location -
 
 Write-Output "Settings delta options"
