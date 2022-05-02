@@ -1,9 +1,9 @@
-PATH="/home/user/.shell/bin:$PATH"
+PATH="/home/developer/.shell/bin:$PATH"
 export PATH
 
-source /home/user/.shell/bashrc
+source /home/developer/.shell/bashrc
 if ! git config --global user.name &> /dev/null; then
-  source /home/user/.config/init/git-setup.sh
+  source /home/developer/.config/init/git-setup.sh
 fi
 
 export NVS_HOME="$HOME/.nvs"
