@@ -3,7 +3,7 @@ export PATH
 
 source /home/developer/.shell/bashrc
 if ! git config --global user.name &> /dev/null; then
-  source /home/developer/.config/init/git-setup.sh
+  source /home/developer/.shell/git-setup.sh
 fi
 
 export NVS_HOME="$HOME/.nvs"
