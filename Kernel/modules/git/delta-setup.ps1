@@ -10,10 +10,12 @@ git config --global fetch.prune true
 git config --global core.excludesFile $HOME/.shell/gitignore
 
 Write-Output "Installing delta"
-Invoke-WebRequest https://github.com/dandavison/delta/releases/download/0.12.1/delta-0.12.1-x86_64-unknown-linux-gnu.tar.gz -OutFile delta.tar.gz
+Invoke-WebRequest https://github.com/dandavison/delta/releases/download/0.12.1/delta-0.12.1-x86_64-unknown-linux-gnu.tar.gz -OutFile "$HOME/delta.tar.gz"
+Set-Location $HOME
 & tar -xzf ./delta.tar.gz -C delta-folder
 Move-Item ./delta-folder/*/delta "$HOME/.local/bin/delta"
 Remove-Item -Recurse -Force delta*
+Set-Location -
 
 Write-Output "Settings delta options"
 git config --global core.pager 'delta'
