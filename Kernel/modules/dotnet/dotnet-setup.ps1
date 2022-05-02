@@ -11,6 +11,4 @@ Write-Output ">>> Installing .NET Core SDK"
 & apt-get install -y apt-transport-https
 & apt-get update
 & apt-get install -y dotnet-sdk-2.1 dotnet-sdk-3.1 dotnet-sdk-5.0 dotnet-sdk-6.0
-& dotnet tool install --global csharp-ls
-& dotnet tool install --global dotnet-ef
-& dotnet tool install --global dotnet-outdated-tool
+

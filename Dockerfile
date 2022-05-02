@@ -50,7 +50,7 @@ COPY Kernel/modules/dotnet /root/.modules/dotnet
 RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 
 # Create the developer user to be used dynamically
-RUN useradd --user-group --system --create-home --no-log-init developer
+RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 USER developer
 
 # Node installation
@@ -86,9 +86,13 @@ RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-se
 RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync vim" +qall'
 RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync yaml" +qall'
 
+# Dotnet tools instalation
+COPY --chown=developer:developer Kernel/modules/dotnet-tools /home/developer/.modules/dotnet-tools
+RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setup.ps1
+
 # NeoVim CoC Modules installation
 COPY --chown=developer:developer Kernel/modules/neovim-coc /home/developer/.modules/neovim-coc
-RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-omnisharp coc-git" +qall'
+RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync coc-angular coc-css coc-emmet coc-html coc-json coc-prettier coc-eslint coc-tsserver coc-powershell coc-snippets coc-yaml coc-git" +qall'
 
 # Shell config folders and .files
 RUN mkdir -p /home/developer/.config/powershell
