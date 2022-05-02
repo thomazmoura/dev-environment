@@ -66,12 +66,6 @@ RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 COPY --chown=developer:developer Kernel/modules/neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
-# Tmux plugins installation
-COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux
-RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
-
-
-
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer Kernel/vim/autoload /home/developer/.local/share/nvim/site/autoload
@@ -111,6 +105,10 @@ COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.co
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
+
+# Tmux plugins installation
+COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux
+RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
 
 # NeoVim Settings
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim

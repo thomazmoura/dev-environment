@@ -1,5 +1,5 @@
 Write-Output "`n->> Installing tpm"
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm --depth 1
 
 # start a server but don't attach to it
 tmux start-server
