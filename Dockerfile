@@ -109,6 +109,9 @@ COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 # Make PowerShell history inside the container easier to map to volumes
 RUN mkdir /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
 
+RUN git config --global user.name "$GIT_USERNAME"
+RUN git config --global user.email "$GIT_EMAIL"
+
 # Start the environment
 ENV TERM xterm-256color
 RUN mkdir /home/developer/code && mkdir /home/developer/.ssh
