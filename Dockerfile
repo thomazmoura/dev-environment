@@ -49,6 +49,10 @@ RUN chmod +x /root/ctags-setup.sh && /root/ctags-setup.sh
 COPY Kernel/modules/dotnet /root/.modules/dotnet
 RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 
+# Azure CLI installation
+COPY Kernel/modules/azure-cli /root/.modules/azure-cli
+RUN pwsh -c /root/.modules/azure-cli/Install-AzureCLI.ps1
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 USER developer
