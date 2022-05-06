@@ -100,7 +100,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
 # Shell config folders and .files
 RUN mkdir -p /home/developer/.config/powershell
-RUN pwsh -c "Move-Item -Force -Recurse /home/developer/.vim/* /home/developer/.local/share/nvim/site/ && Remove-Item -Force /home/developer/.vim && New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
+RUN pwsh -c "Move-Item -Force /home/developer/.vim/* /home/developer/.local/share/nvim/site/ && Remove-Item -Force /home/developer/.vim && New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
