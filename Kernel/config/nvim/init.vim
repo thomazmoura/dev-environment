@@ -1,2 +1,2 @@
-source ~/.vimrc
+source ~/.local/share/nvim/site/vimrc
 

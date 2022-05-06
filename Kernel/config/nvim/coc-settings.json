@@ -27,7 +27,7 @@
   "snippets.loadFromExtensions": true,
   "snippets.loadVSCodeProjectSnippets": true,
   "snippets.textmateSnippetsRoots": [
-    "$HOME/.vim/vscode-snippets/"
+    "$HOME/.local/share/nvim/site/vscode-snippets/"
   ],
   "snippets.ultisnips.enable": false,
   "suggest.autoTrigger": "always",

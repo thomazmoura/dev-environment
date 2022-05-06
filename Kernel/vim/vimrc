@@ -25,7 +25,7 @@ set hlsearch
 set filetype plugin on
 
 " Set default directory for the swap files
-set directory=$HOME/.vim/swapfiles/
+set directory=$HOME/.local/share/nvim/site/swapfiles/
 
 set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
   \,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor
@@ -54,13 +54,13 @@ source $HOME/.modules/neovim-plug/plug.vimrc
 let mapleader = " "
 
 " COC.NVIM default settings
-source $HOME/.vim/coc-config.vimrc
+source $HOME/.local/share/nvim/site/coc-config.vimrc
 
 " NeoVim Custom keybindings
-source $HOME/.vim/nvim-keybindings.vimrc
+source $HOME/.local/share/nvim/site/nvim-keybindings.vimrc
 
 "lua configuration
-source $HOME/.vim/setup.lua
+source $HOME/.local/share/nvim/site/setup.lua
 
 " Set coc-config path
 let g:coc_config_home = "$HOME/.config/nvim"

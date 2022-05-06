@@ -1,4 +1,4 @@
-call plug#begin('~/.vim/.plugged')
+call plug#begin('~/.local/share/nvim/site/.plugged')
 
 " General Settings
 Plug 'preservim/nerdcommenter'

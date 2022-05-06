@@ -92,7 +92,7 @@ function Confirm-Action($Message) {
 }
 
 function Clean-SwapFiles {
-  $swapDirectory = '~/.vim/swapfiles'
+  $swapDirectory = '~/.local/share/nvim/site/swapfiles'
   If(Test-Path $swapDirectory) {
     Write-Information "Current swap files on $swapDirectory will be deleted"
     Remove-Item -Recurse -Force "$swapDirectory/*"

@@ -1,4 +1,4 @@
-call plug#begin('~/.vim/.plugged')
+call plug#begin('~/.local/share/nvim/site/.plugged')
 
 " Highlighting
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSInstall'}
