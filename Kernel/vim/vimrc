@@ -133,6 +133,7 @@ noremap <Leader>P "+P
 noremap <Leader>0p "0p
 noremap <Leader>0P "0P
 nnoremap <Leader>\  :vsplit<CR>
+nnoremap <Leader><CR>  i<CR><ESC>
 
 " Automatically close the explorer when it's the last window
 " autocmd BufEnter * ++nested if winnr('$') == 1 && bufname() == 'NvimTree_' . tabpagenr() | quit | endif
