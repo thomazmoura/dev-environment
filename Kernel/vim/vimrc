@@ -22,7 +22,7 @@ set laststatus=2
 set mouse=a
 
 set hlsearch
-set filetype plugin on
+filetype plugin indent on
 
 " Set default directory for the swap files
 set directory=$HOME/.local/share/nvim/site/swapfiles/
