@@ -22,6 +22,7 @@ set laststatus=2
 set mouse=a
 
 set hlsearch
+set filetype plugin on
 
 " Set default directory for the swap files
 set directory=$HOME/.vim/swapfiles/

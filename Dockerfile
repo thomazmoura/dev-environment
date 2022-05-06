@@ -100,12 +100,12 @@ RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
 # Shell config folders and .files
 RUN mkdir -p /home/developer/.config/powershell
+RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
-COPY --chown=developer:developer Kernel/vim /home/developer/.vim
 
 # Tmux plugins installation
 COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux
@@ -113,7 +113,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
 
 # NeoVim Settings
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
-COPY --chown=developer:developer Kernel/vim /home/developer/.vim
+COPY --chown=developer:developer Kernel/vim /home/developer/local/share/nvim/site
 
 # Make PowerShell history inside the container easier to map to volumes
 RUN mkdir /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
