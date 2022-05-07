@@ -8,7 +8,7 @@ $env:PATH="$($env:PATH):$HOME/.local/bin"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Checking if ssh key is set"
-$SshKeyFolder = "$HOME/.storage/ssh"
+$SshKeyFolder = "$HOME/.ssh"
 if(Test-Path $SshKeyFolder) {
 	Add-SshKey -SshKeyFolder $SshKeyFolder -Comment "$(whoami)@docker@$env:HOSTNAME"
 }
