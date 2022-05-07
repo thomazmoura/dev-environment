@@ -15,3 +15,6 @@ echo "Updating apt-get and installing azure-cli"
 apt-get update
 apt-get install azure-cli
 
+echo "Adding azure devops extensions"
+az extension add --name azure-devops
+

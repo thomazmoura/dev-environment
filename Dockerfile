@@ -52,6 +52,7 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 # Azure CLI installation
 COPY Kernel/modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
+ENTRYPOINT ["pwsh", "-c", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
@@ -77,10 +78,10 @@ RUN mkdir -p /home/developer/.storage/ssh && \
   pwsh -c 'New-Item -Force -Type SymbolicLink -Path /home/developer/.ssh -Target /home/developer/.storage/ssh -ErrorAction Stop'
 # Put powershell history on .storage to persist it between instances with same storage volume
 RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && \
-  pwsh -c 'New-Item -Force -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine -ErrorAction Stop'
+  pwsh -c 'New-Item -Force -Type SymbolicLink -Path /home/developer/.local/share/powershell/PSReadLine -Target /home/developer/.storage/powershell_history -ErrorAction Stop'
 # Put .azure on storage so it can persist azure login between instances with same storage volume
 RUN mkdir -p /home/developer/.azure && \
-  pwsh -c "New-Item -Force -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure -ErrorAction Stop"
+  pwsh -c "New-Item -Force -ItemType SymbolicLink -Path /home/developer/.azure -Target /home/developer/.storage/azure -ErrorAction Stop"
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
