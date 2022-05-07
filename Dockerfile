@@ -70,6 +70,15 @@ RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 COPY --chown=developer:developer Kernel/modules/neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
+RUN mkdir -p /home/developer/code
+RUN mkdir -p /home/developer/.storage
+# Put powershell history on .storage to persist it between instances
+RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
+# Put .ssh on storage to be able to persist ssh keys between instances
+RUN mkdir -p /home/developer/.ssh && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh"
+# Put .azure on storage so it can persist azure login between instances
+RUN mkdir -p /home/developer/.azure && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure"
+
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer Kernel/vim/autoload /home/developer/.local/share/nvim/site/autoload
@@ -78,17 +87,7 @@ RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE 
 
 # NeoVim TreeSitter compilation
 COPY --chown=developer:developer Kernel/modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync c_sharp" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync cpp" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync css" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync dockerfile" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync html" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync json" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync lua" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync regex" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync typescript" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync vim" +qall'
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-treesitter/treesitter-setup.vimrc +"TSInstallSync yaml" +qall'
+RUN chmod +x /home/developer/.modules/neovim-treesitter/treesitter-install.sh && /home/developer/.modules/neovim-treesitter/treesitter-install.sh
 
 # Dotnet tools instalation
 COPY --chown=developer:developer Kernel/modules/dotnet-tools /home/developer/.modules/dotnet-tools
@@ -101,14 +100,6 @@ RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/
 # Delta diff installation
 COPY --chown=developer:developer Kernel/modules/git /home/developer/.modules/git
 RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
-
-RUN mkdir -p /home/developer/.storage
-# Put powershell history on .storage to persist it between instances
-RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
-# Put .ssh on storage to be able to persist ssh keys between instances
-RUN mkdir -p /home/developer/.ssh && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh"
-# Put .azure on storage so it can persist azure login between instances
-RUN mkdir -p /home/developer/.azure && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure"
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
@@ -130,7 +121,6 @@ COPY --chown=developer:developer Kernel/vim /home/developer/.local/share/nvim/si
 
 # Start the environment
 ENV TERM xterm-256color
-RUN mkdir /home/developer/code && mkdir /home/developer/.ssh
 WORKDIR /home/developer/code
 CMD ["/opt/microsoft/powershell/7/pwsh"]
 
