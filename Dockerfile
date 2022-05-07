@@ -73,11 +73,14 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 RUN mkdir -p /home/developer/code
 RUN mkdir -p /home/developer/.storage
 # Put .ssh on .storage to persist ssh keys between instances with same storage volume
-RUN mkdir -p /home/developer/.storage/ssh && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh -ErrorAction Stop'
+RUN mkdir -p /home/developer/.storage/ssh && \
+  pwsh -c 'New-Item -Force -Type SymbolicLink -Path /home/developer/.storage/ssh \-Target /home/developer/.ssh -ErrorAction Stop'
 # Put powershell history on .storage to persist it between instances with same storage volume
-RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
+RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && \
+  pwsh -c 'New-Item -Force -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine -ErrorAction Stop'
 # Put .azure on storage so it can persist azure login between instances with same storage volume
-RUN mkdir -p /home/developer/.azure && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure"
+RUN mkdir -p /home/developer/.azure && \
+  pwsh -c "New-Item -Force -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure -ErrorAction Stop"
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
