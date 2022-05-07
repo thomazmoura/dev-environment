@@ -5,7 +5,6 @@ on: [push]
 env:
   CACHE_IMAGE: thomazmoura/dev-environment
   DOCKER_BUILDKIT: 1
-  GIT_BRANCH: ${{ github.ref.name }}
 
 jobs:
   build:
@@ -32,4 +31,6 @@ jobs:
       - name: Push to docker hub as branch name
         if: ${{ github.ref.name != 'main' }}
         run: docker push $CACHE_IMAGE:$GIT_BRANCH
+        env:
+          GIT_BRANCH: ${{ github.ref.name }}
 
