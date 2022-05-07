@@ -102,9 +102,17 @@ RUN pwsh -c '/home/developer/.nvs/nvs.ps1 use lts && nvim -n -u /home/developer/
 COPY --chown=developer:developer Kernel/modules/git /home/developer/.modules/git
 RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
+RUN mkdir -p /home/developer/.storage
+# Put powershell history on .storage to persist it between instances
+RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
+# Put .ssh on storage to be able to persist ssh keys between instances
+RUN mkdir -p /home/developer/.ssh && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh"
+# Put .azure on storage so it can persist azure login between instances
+RUN mkdir -p /home/developer/.azure && pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.storage/azure -Target /home/developer/.azure"
+
 # Shell config folders and .files
-RUN mkdir -p /home/developer/.config/powershell
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
+RUN mkdir -p /home/developer/.config/powershell
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
@@ -119,8 +127,6 @@ RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer Kernel/vim /home/developer/.local/share/nvim/site
 
-# Make PowerShell history inside the container easier to map to volumes
-RUN mkdir /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
 
 # Start the environment
 ENV TERM xterm-256color
