@@ -8,8 +8,9 @@ $env:PATH="$($env:PATH):$HOME/.local/bin"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Checking if ssh key is set"
-if(Test-Path ~/.ssh) {
-	Add-SshKey
+$SshKeyFolder = "$HOME/.storage/ssh"
+if(Test-Path $SshKeyFolder) {
+	Add-SshKey -SshKeyFolder $SshKeyFolder -Comment "developer@docker@$env:HOSTNAME"
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
 

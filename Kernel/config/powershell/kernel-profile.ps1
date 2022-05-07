@@ -3,10 +3,10 @@ $InformationPreference = "Continue";
 . $HOME/.modules/powershell/pwsh-modules.ps1
 
 # Vi style cursor
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if($PSVersionTable.PSVersion.Major -ge 6){
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
+if ($PSVersionTable.PSVersion.Major -ge 6) {
   Write-Host -NoNewLine "`e[5 q"
-  $OnViModeChange = [scriptblock]{
+  $OnViModeChange = [scriptblock] {
     if ($args[0] -eq 'Command') {
       # Set the cursor to a blinking block.
       Write-Host -NoNewLine "`e[1 q"
@@ -21,48 +21,51 @@ if($PSVersionTable.PSVersion.Major -ge 6){
 $stopwatch.Stop(); Write-Verbose "`n-->> Troca automática de cursor demorou: $($stopwatch.ElapsedMilliseconds)"
 
 # VI mode editing
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 Set-PsReadLineOption -EditMode Vi
 Set-PSReadlineOption -BellStyle None
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativar o modo VI demorou: $($stopwatch.ElapsedMilliseconds)"
 
 # Enable prediction
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 try {
   Set-PSReadLineOption -PredictionSource History
-  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699"}
+  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
   Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
   Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
-} catch {
+}
+catch {
   Install-Module -Force -AcceptLicense PSReadLine 
   Set-PSReadLineOption -PredictionSource History
-  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699"}
+  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
   Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
   Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativar predição demorou: $($stopwatch.ElapsedMilliseconds)"
 
 # dotnet autocomplete
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if(Get-Command dotnet -ErrorAction SilentlyContinue) {
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
+if (Get-Command dotnet -ErrorAction SilentlyContinue) {
   Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
     param($commandName, $wordToComplete, $cursorPosition)
-      dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-      }
+    dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
+      [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+    }
   }
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if(! ($env:CODE_FOLDER)) {
-  if( Test-Path "~/code") {
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
+if (! ($env:CODE_FOLDER)) {
+  if ( Test-Path "~/code") {
     Write-Verbose "`n->> code folder found on home. Setting CODE_FOLDER"
     $env:CODE_FOLDER = "~/code"
-  } elseif( Test-Path "~/git") {
+  }
+  elseif ( Test-Path "~/git") {
     Write-Verbose "`n->> git folder found on home. Setting CODE_FOLDER"
     $env:CODE_FOLDER = "~/git"
-  } elseif ( Test-Path "/Git") { 
+  }
+  elseif ( Test-Path "/Git") { 
     Write-Verbose "`n->> Git folder found on root. Setting CODE_FOLDER"
     $env:CODE_FOLDER = "/Git"
   }
@@ -70,30 +73,30 @@ if(! ($env:CODE_FOLDER)) {
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição da CODE_FOLDER demorou: $($stopwatch.ElapsedMilliseconds)"
 
 # Definição de scripts padrões
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 if ( Test-Path "~/git/CI-CD"  ) {
   Write-Verbose "`n->> CI-CD folder found, adding Utilitarios to PATH"
   $env:PATH = "~/git/CI-CD/Utilitarios:~/git/CI-CD/QuickStarts/Scripts:${env:PATH}"
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de caminho de scripts padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Setting Util functions"
 function Update-Profile () {
   . $PROFILE.CurrentUserAllHosts
 }
 
 function Confirm-Action($Message) {
-    $Question = 'Are you sure you want to continue?'
-    $Choices  = '&Yes', '&No'
+  $Question = 'Are you sure you want to continue?'
+  $Choices = '&Yes', '&No'
 
-    $Decision = $Host.UI.PromptForChoice($Message, $Question, $Choices, 1)
-    Write-Output $Decision
+  $Decision = $Host.UI.PromptForChoice($Message, $Question, $Choices, 1)
+  Write-Output $Decision
 }
 
 function Clean-SwapFiles {
   $swapDirectory = '~/.local/share/nvim/site/swapfiles'
-  If(Test-Path $swapDirectory) {
+  If (Test-Path $swapDirectory) {
     Write-Information "Current swap files on $swapDirectory will be deleted"
     Remove-Item -Recurse -Force "$swapDirectory/*"
   }
@@ -222,28 +225,28 @@ function GitFuzzyReset-File() {
   }
 }
 
-function GitFuzzyCheckout-File($branch="", $dir=".") {
+function GitFuzzyCheckout-File($branch = "", $dir = ".") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem -and (Test-Path $selectedItem)) {
     git checkout --force $branch -- $selectedItem
   }
 }
 
-function GitFuzzyDiff-File($branch="master", $dir=".") {
+function GitFuzzyDiff-File($branch = "master", $dir = ".") {
   $selectedItem = (FuzzySearch-Item $dir)
   if ($selectedItem -and (Test-Path $selectedItem)) {
     git diff $branch HEAD -- $selectedItem
   }
 }
 
-function GitUpdate-Branch($branch="homolog") {
+function GitUpdate-Branch($branch = "homolog") {
   git checkout $branch
   git merge -
   gitpu
   gitc-
 }
 
-function GitUpdate-Homolog($branch="homolog") {
+function GitUpdate-Homolog($branch = "homolog") {
   git checkout $branch
   git merge -
   gitpu
@@ -366,13 +369,13 @@ function GitGet-History() {
 function FuzzyFocus-RunningApplication() {
   $runningApplications = Get-Process | Where-Object { $_.mainwindowhandle -ne 0 }
   $chosenApplicationInput = ($runningApplications | Select-Object name, mainwindowtitle | fzf)
-    Write-Verbose "Opção escolhida: $chosenApplicationInput"
-    $chosenApplications = ($runningApplications | Where-Object { $chosenApplicationInput -match $_.name }) | Where-Object { $chosenApplicationInput -match $_.mainwindowtitle }
+  Write-Verbose "Opção escolhida: $chosenApplicationInput"
+  $chosenApplications = ($runningApplications | Where-Object { $chosenApplicationInput -match $_.name }) | Where-Object { $chosenApplicationInput -match $_.mainwindowtitle }
   Write-Verbose "Aplicações que encaixam: $chosenApplications"
-    $chosenApplication = $chosenApplications | Select-Object -first 1 | Select-Object -ExpandProperty mainwindowtitle
-    Write-Verbose "Aplicação final: $chosenApplication"
-    $wshell = New-Object -ComObject wscript.shell
-    $wshell.AppActivate($chosenApplication)
+  $chosenApplication = $chosenApplications | Select-Object -first 1 | Select-Object -ExpandProperty mainwindowtitle
+  Write-Verbose "Aplicação final: $chosenApplication"
+  $wshell = New-Object -ComObject wscript.shell
+  $wshell.AppActivate($chosenApplication)
 }
 
 function Update-SessionPath () {
@@ -383,83 +386,84 @@ function Update-SessionPath () {
 
 function Get-PathEntries() {
   Update-SessionPath
-    $env:Path.Split(";") |
-    Sort-Object |
-    Get-Unique
+  $env:Path.Split(";") |
+  Sort-Object |
+  Get-Unique
 }
 
 function Add-PathEntry($NewEntry) {
-  if(! $NewEntry){
+  if (! $NewEntry) {
     Write-Error "Cancelling Add-PathEntry because no new entry was informed" -ErrorAction Stop
   }
 
   $NewEntry = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($NewEntry)
-    $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if($CurrentUserPath.Split(";").Contains($NewEntry)) {
-      Write-Information "`n ->> O caminho solicitado ($NewEntry) já consta no Path"
-      return
-    }
-    $UpdatedUserPath = "$CurrentUserPath;$NewEntry"
-    Write-Information "`n ->> New Path: ($UpdatedUserPath)"
-    [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
-    [Environment]::SetEnvironmentVariable("Path", $UpdatedUserPath, "User")
-    Update-SessionPath
+  $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  if ($CurrentUserPath.Split(";").Contains($NewEntry)) {
+    Write-Information "`n ->> O caminho solicitado ($NewEntry) já consta no Path"
+    return
+  }
+  $UpdatedUserPath = "$CurrentUserPath;$NewEntry"
+  Write-Information "`n ->> New Path: ($UpdatedUserPath)"
+  [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
+  [Environment]::SetEnvironmentVariable("Path", $UpdatedUserPath, "User")
+  Update-SessionPath
 }
 
 function Update-PathEntries($PreviousText, $SubstituteText) {
-  if(!$PreviousText -Or !$SubstituteText ){
+  if (!$PreviousText -Or !$SubstituteText ) {
     Write-Error "Cancelling Update-PathEntries because either PreviousText or SubstituteText was not informed" -ErrorAction Stop
   }
 
-  $PreviousText = $PreviousText.Replace("/","\")
-    $SubstituteText = $SubstituteText.Replace("/","\")
-    $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    $UpdatedEntries = ($CurrentUserPath.Split(";") |
-        Sort-Object |
-        Get-Unique |
-        Foreach-Object { $_.Replace($PreviousText, $SubstituteText) })
-    $NewPath = [string]::Join(";", $UpdatedEntries)
-    Write-Information "`n ->> New Path: ($NewPath)"
-    [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
-    [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
-    Update-SessionPath
+  $PreviousText = $PreviousText.Replace("/", "\")
+  $SubstituteText = $SubstituteText.Replace("/", "\")
+  $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  $UpdatedEntries = ($CurrentUserPath.Split(";") |
+    Sort-Object |
+    Get-Unique |
+    Foreach-Object { $_.Replace($PreviousText, $SubstituteText) })
+  $NewPath = [string]::Join(";", $UpdatedEntries)
+  Write-Information "`n ->> New Path: ($NewPath)"
+  [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
+  [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+  Update-SessionPath
 }
 
 function Remove-PathEntries($PathToBeRemoved) {
-  if(! $PathToBeRemoved){
+  if (! $PathToBeRemoved) {
     Write-Error "Cancelling Remove-PathEntries because no PathToBeRemoved was informed" -ErrorAction Stop
   }
 
   $PathToBeRemoved = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($PathToBeRemoved)
-    if($PathToBeRemoved -eq $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("/")){
-      Write-Error "Cannot remove all the entries from ($PathToBeRemoved). Try a more specific path" -ErrorAction Stop
-    }
+  if ($PathToBeRemoved -eq $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("/")) {
+    Write-Error "Cannot remove all the entries from ($PathToBeRemoved). Try a more specific path" -ErrorAction Stop
+  }
 
   $CurrentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    $CurrentEntries = $CurrentUserPath.Split(";") |
-    Sort-Object |
-    Get-Unique
-    $UpdatedEntries = ( $CurrentEntries |
-        Where-Object { ! ($_.StartsWith($PathToBeRemoved))  } )
+  $CurrentEntries = $CurrentUserPath.Split(";") |
+  Sort-Object |
+  Get-Unique
+  $UpdatedEntries = ( $CurrentEntries |
+    Where-Object { ! ($_.StartsWith($PathToBeRemoved)) } )
 
-    $entriesToBeRemoved = $CurrentEntries |
-    Where-Object { $UpdatedEntries -notcontains $_ }
-  if($entriesToBeRemoved){
+  $entriesToBeRemoved = $CurrentEntries |
+  Where-Object { $UpdatedEntries -notcontains $_ }
+  if ($entriesToBeRemoved) {
     $confirmed = Confirm-Action "Entries to be removed: ( $([String]::Join("; ", $entriesToBeRemoved)) )"
-  } else {
+  }
+  else {
     Write-Error "No entries found" -ErrorAction Stop
   }
 
   Write-Verbose "Confirmation Result = ${confirmed}"
-    if($confirmed) {
-      Write-Error "Cancelled by user" -ErrorAction Stop
-    }
+  if ($confirmed) {
+    Write-Error "Cancelled by user" -ErrorAction Stop
+  }
 
   $NewPath = [string]::Join(";", $UpdatedEntries)
-    Write-Information "`n ->> Number of entries: {$($UpdatedEntries.Length)} New Path: ($NewPath)"
-    [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
-    [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
-    Update-SessionPath
+  Write-Information "`n ->> Number of entries: {$($UpdatedEntries.Length)} New Path: ($NewPath)"
+  [Environment]::SetEnvironmentVariable("PathBackup", $CurrentUserPath, "User")
+  [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+  Update-SessionPath
 }
 
 function Stop-ProcessByName($processName) {
@@ -470,49 +474,56 @@ function Copy-NewGuidToClipboard() {
   (New-Guid).Guid | clip
 }
 
-function Add-SshKey() {
-  if(!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) {
+function Add-SshKey($SshKeyFolder = "$HOME/.ssh", [string] $Comment) {
+  $sshKey = "$SshKeyFolder/id_rsa"
+  if( !(Test-Path $sshKey) ) {
+    ssh-keygen -C @Comment
+  }
+
+  if (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) {
     Write-Verbose "`n->> Adding SSH key"
-      $sshAgent = ssh-agent;
-    $env:SSH_AUTH_SOCK=$sshAgent[0].Split("=").Split(";")[1]
-      $env:SSH_AGENT_PID=$sshAgent[1].Split("=").Split(";")[1]
-      ssh-add ~/.ssh/id_rsa
-  }else {
+    $sshAgent = ssh-agent;
+    $env:SSH_AUTH_SOCK = $sshAgent[0].Split("=").Split(";")[1]
+    $env:SSH_AGENT_PID = $sshAgent[1].Split("=").Split(";")[1]
+    ssh-add $sshKey
+  }
+  else {
     Write-Verbose "`n->> SSH Agent already added"
   }
   Write-Verbose "`n->> Agent PID: $env:SSH_AGENT_PID"
 }
 
-function Start-DotnetWatchRunDockerContainer($Version="3.1", $Port="5001") {
+function Start-DotnetWatchRunDockerContainer($Version = "3.1", $Port = "5001") {
   docker container run --rm -v ${pwd}:/app/ -w /app -p ${Port}:${Port} -it mcr.microsoft.com/dotnet/sdk:$Version dotnet watch run --urls https://0.0.0.0:${Port}
 }
 
-function New-DotnetCommandDockerContainer($Version="3.1", [String]$Command) {
+function New-DotnetCommandDockerContainer($Version = "3.1", [String]$Command) {
   docker container run --rm -v ${pwd}:/app/ -w /app -it mcr.microsoft.com/dotnet/sdk:$Version dotnet ($Command -split " ")
 }
 
-function Start-NpmStartDockerContainer($Version="lts-alpine", $Port="4200", $Parameters="--host 0.0.0.0") {
+function Start-NpmStartDockerContainer($Version = "lts-alpine", $Port = "4200", $Parameters = "--host 0.0.0.0") {
   docker container run --rm -v ${pwd}:/app/ -w /app -p 4200:4200 -it node:$Version npm start -- (${Parameters} -split " ")
 }
 
-function Start-NpmInstallDockerContainer($Version="lts-alpine") {
+function Start-NpmInstallDockerContainer($Version = "lts-alpine") {
   docker container run --rm -v ${pwd}:/app/ -w /app -it node:$Version npm install
 }
 
-function Start-SqlServerDockerContainer($Version="2017-latest",[switch]$Interactive) {
-  if($Interactive) {
+function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Interactive) {
+  if ($Interactive) {
     docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
-  } else {
+  }
+  else {
     docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
-function Set-LocalContextDatabase($DatabaseName="contexto", $ContextName="Contexto", $DataSourceName="localhost", $UserId="sa", $Password="L0c4lD3v!") {
-  if(!$DatabaseName) {
-    $env:ConnectionStrings__Contexto=$null
+function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "localhost", $UserId = "sa", $Password = "L0c4lD3v!") {
+  if (!$DatabaseName) {
+    $env:ConnectionStrings__Contexto = $null
   }
   else {
-    [Environment]::SetEnvironmentVariable("ConnectionStrings__$ContextName","Data Source=$DataSourceName;Initial Catalog=$DatabaseName;Persist Security Info=True;User Id=$UserId;Password=$Password")
+    [Environment]::SetEnvironmentVariable("ConnectionStrings__$ContextName", "Data Source=$DataSourceName;Initial Catalog=$DatabaseName;Persist Security Info=True;User Id=$UserId;Password=$Password")
   }
 }
 
@@ -521,10 +532,10 @@ function Exit-Session() {
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
 Write-Debug "`n->> Setting Aliases"
 
-if( !(Test-Path "/usr/bin/clip") -and !(Test-Path "$HOME/.local/bin/clip") ) {
+if ( !(Test-Path "/usr/bin/clip") -and !(Test-Path "$HOME/.local/bin/clip") ) {
   New-Alias -Force clip Set-Clipboard
 }
 
@@ -608,9 +619,9 @@ New-Alias -Force :q Exit-Session
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases do kernel demorou: $($stopwatch.ElapsedMilliseconds)"
 
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-$env:FZF_DEFAULT_COMMAND='fd --type f --follow'
-$env:FZF_CTRL_T_COMMAND='fd --type f --follow'
+$stopwatch = [system.diagnostics.stopwatch]::StartNew()
+$env:FZF_DEFAULT_COMMAND = 'fd --type f --follow'
+$env:FZF_CTRL_T_COMMAND = 'fd --type f --follow'
 Write-Verbose "`n->> Set update notifications to LTS only"
 [System.Environment]::SetEnvironmentVariable('POWERSHELL_UPDATECHECK', 'LTS')
 $stopwatch.Stop(); Write-Verbose "`n-->> Definir variáveis de ambiente demorou: $($stopwatch.ElapsedMilliseconds)"
