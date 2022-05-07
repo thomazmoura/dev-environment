@@ -52,6 +52,7 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 # Azure CLI installation
 COPY Kernel/modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
+ENV AZURE_CONFIG_DIR home/developer/.storage/azure
 ENTRYPOINT ["pwsh", "-c", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
 
 # Create the developer user to be used dynamically
