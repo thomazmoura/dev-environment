@@ -28,9 +28,7 @@ jobs:
       - name: Push to docker hub as latest
         if: ${{ github.ref.name == 'main' }}
         run: docker push $CACHE_IMAGE:latest
-      - name: Push to docker hub as branch name
+      - name: Push to docker hub as branch name (with '/' escaped as '_')
         if: ${{ github.ref.name != 'main' }}
-        run: docker push $CACHE_IMAGE:$GIT_BRANCH
-        env:
-          GIT_BRANCH: ${{ github.ref.name }}
+        run: docker pull $CACHE_IMAGE:$(tr -s / _ <<< "$GITHUB_REF_NAME")
 
