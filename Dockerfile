@@ -73,7 +73,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 RUN mkdir -p /home/developer/code
 RUN mkdir -p /home/developer/.storage
 # Put .ssh on .storage to persist ssh keys between instances with same storage volume
-RUN mkdir -p /home/developer/.ssh && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh'
+RUN mkdir -p /home/developer/.storage/ssh && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/ssh -Target /home/developer/.ssh -ErrorAction Stop'
 # Put powershell history on .storage to persist it between instances with same storage volume
 RUN mkdir -p /home/developer/.local/share/powershell/PSReadLine && pwsh -c 'New-Item -Type SymbolicLink -Path /home/developer/.storage/powershell_history -Target /home/developer/.local/share/powershell/PSReadLine'
 # Put .azure on storage so it can persist azure login between instances with same storage volume
