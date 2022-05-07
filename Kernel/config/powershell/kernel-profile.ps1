@@ -474,10 +474,10 @@ function Copy-NewGuidToClipboard() {
   (New-Guid).Guid | clip
 }
 
-function Add-SshKey($SshKeyFolder = "$HOME/.ssh", [string] $Comment) {
+function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:HOSTNAME") {
   $sshKey = "$SshKeyFolder/id_rsa"
   if( !(Test-Path $sshKey) ) {
-    ssh-keygen -C @Comment
+    ssh-keygen -C "$Comment"
   }
 
   if (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) {
