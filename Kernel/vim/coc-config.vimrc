@@ -117,6 +117,6 @@ nmap <space>.  <Plug>(coc-codeaction)
 nmap <space>r  <Plug>(coc-rename)
 nmap gh  :call CocAction('doHover')<CR>
 
-" Activate highlight
-autocmd CursorHold * silent call CocActionAsync('highlight')
+" Activate highlight (Disabled 'cause it's not working well on some filetypes)
+" autocmd CursorHold * silent call CocActionAsync('highlight')
 
