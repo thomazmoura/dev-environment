@@ -113,8 +113,9 @@ nnoremap <silent> <space>f  :<C-u>CocCommand prettier.formatFile<CR>
 nnoremap <silent> <space>.  :<C-u><CR>
 
 " Remap for do codeAction of current line
-nmap <space>.  <Plug>(coc-codeaction)
-nmap <space>r  <Plug>(coc-rename)
+nmap <leader>.  <Plug>(coc-codeaction)
+nmap <leader>,  <Plug>(coc-action)
+nmap <leader>r  <Plug>(coc-rename)
 nmap gh  :call CocAction('doHover')<CR>
 
 " Activate highlight (Disabled 'cause it's not working well on some filetypes)
