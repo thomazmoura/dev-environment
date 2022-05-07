@@ -25,6 +25,10 @@ jobs:
             --tag $CACHE_IMAGE:latest \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             "."
-      - name: Push to docker hub
+      - name: Push to docker hub as latest
+        if: ${{ github.ref.name == 'main' }}
         run: docker push $CACHE_IMAGE:latest
+      - name: Push to docker hub as branch name
+        if: ${{ github.ref.name != 'main' }}
+        run: docker push $CACHE_IMAGE:$GITHUB_REFNAME
 
