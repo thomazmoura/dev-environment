@@ -50,8 +50,9 @@ COPY dotnet /root/.modules/dotnet
 RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 
 # Azure CLI installation
-# COPY azure-cli /root/.modules/azure-cli
-# RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
+COPY azure-cli /root/.modules/azure-cli
+RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
+ENV AZURE_CONFIG_DIR home/developer/.storage/azure
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
@@ -69,6 +70,10 @@ RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 # NeoVim Requirements
 COPY --chown=developer:developer neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
+
+# Container startup configuration
+COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entrypoint
+ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/entrypoint/Start-DevSession.ps1"]
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
@@ -108,12 +113,8 @@ COPY --chown=developer:developer powershell-config /home/developer/.config/power
 COPY --chown=developer:developer nvim-config /home/developer/.config/nvim
 COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
 
-# ENV AZURE_CONFIG_DIR home/developer/.storage/azure
-# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
-# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.config/symbolic-links/Setup-SymbolicLinks.ps1"]
-
 # Start the environment
 ENV TERM xterm-256color
 WORKDIR /home/developer/code
-CMD ["/opt/microsoft/powershell/7/pwsh"]
+CMD ["/opt/microsoft/powershell/7/pwsh", "-c", "tail", "-f", "/dev/null"]
 
