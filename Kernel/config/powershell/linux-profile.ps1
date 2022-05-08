@@ -10,7 +10,7 @@ $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Checking if ssh key is set"
 $SshKeyFolder = "$HOME/.ssh"
 if(Test-Path $SshKeyFolder) {
-	Add-SshKey -SshKeyFolder $SshKeyFolder -Comment "$(whoami)@docker@$env:HOSTNAME"
+	Add-SshKey -SshKeyFolder $SshKeyFolder
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
 
