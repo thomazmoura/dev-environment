@@ -9,7 +9,7 @@ $env:PATH="$($env:PATH):$HOME/.local/bin"
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Checking if ssh key is set"
 $SshKeyFolder = "$HOME/.ssh"
-if(Test-Path $SshKeyFolder) {
+if(Test-Path "$SshKeyFolder/id_rsa.pub") {
 	Add-SshKey -SshKeyFolder $SshKeyFolder
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
