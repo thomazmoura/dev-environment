@@ -99,12 +99,13 @@ RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
 # Tmux plugins installation
 COPY --chown=developer:developer tmux /home/developer/.modules/tmux
+COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
+ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/tpm
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
-COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 
