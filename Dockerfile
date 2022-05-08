@@ -108,7 +108,7 @@ COPY --chown=developer:developer coc-config /home/developer/.config/coc
 
 # NeoVim Settings
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
-COPY --chown=developer:developer Kernel/vim /home/developer/.local/share/nvim/site
+COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
 
 # ENV AZURE_CONFIG_DIR home/developer/.storage/azure
 # ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
