@@ -116,5 +116,5 @@ COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entr
 # Start the environment
 ENV TERM xterm-256color
 WORKDIR /home/developer/code
-CMD "pwsh -NoProfile -Command "/home/developer/.modules/entrypoint/Start-DevSession.ps1" && tail -f /dev/null"
+CMD ["/opt/microsoft/powershell/7/pwsh", "-NoProfile", "-Command", "/home/developer/.modules/entrypoint/Start-DevSession.ps1 && tail -f /dev/null"]
 
