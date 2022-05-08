@@ -47,6 +47,17 @@ function Import-PoshGit() {
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
+function Import-SqlServer() {
+  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+  if ( !(Get-Module SqlServer) ) {
+    Write-Information "`n->> SqlServer module not found. Installing"
+    Install-Module -Force -AcceptLicense SqlServer -ErrorAction Stop
+  }
+  Write-Verbose "`n->> Importing SqlServer Module"
+  Import-Module SqlServer -ErrorAction Stop
+  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do SqlServer demorou: $($stopwatch.ElapsedMilliseconds)"
+}
+
 function Import-OhMyPoshOnLinux() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   Write-Verbose "`n->> Activating oh-my-posh"

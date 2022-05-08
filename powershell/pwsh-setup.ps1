@@ -5,4 +5,5 @@ $InformationPreference="Continue"
 Import-OhMyPoshOnLinux
 Import-PoshGit
 Import-PsFzf
+Import-SqlServer
 Update-PSReadline
