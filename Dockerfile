@@ -53,7 +53,6 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 COPY Kernel/modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR home/developer/.storage/azure
-ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
@@ -103,9 +102,6 @@ COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
-# Setting up SymbolicLinks for persistence
-# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.config/symbolic-links/Setup-SymbolicLinks.ps1"]
-
 # Tmux plugins installation
 COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux
 RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
@@ -113,6 +109,9 @@ RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
 # NeoVim Settings
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer Kernel/vim /home/developer/.local/share/nvim/site
+
+# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/azure-cli/Connect-AzureDevOps.ps1"]
+# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.config/symbolic-links/Setup-SymbolicLinks.ps1"]
 
 # Start the environment
 ENV TERM xterm-256color
