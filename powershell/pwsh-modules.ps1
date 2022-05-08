@@ -40,7 +40,7 @@ function Import-PoshGit() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   if ( !(Get-Module posh-git) ) {
     Write-Information "`n->> Posh-git not found. Installing"
-    Install-Module -Force -AcceptLicense posh-git -Scope CurrentUser -ErrorAction Stop
+    Install-Module -Force -AcceptLicense posh-git -ErrorAction Stop
   }
   Write-Verbose "`n->> Importing posh-git"
   Import-Module posh-git -ErrorAction Stop
