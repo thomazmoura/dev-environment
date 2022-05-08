@@ -151,6 +151,7 @@ nnoremap <leader>ms @="^Wdi]^Pa\<lt>Space>\<lt>Esc>wdi]hPlD:s/numeric/decimal/e\
 nnoremap <leader>mc @="^d2Wf{hDIbuilder.Property(\<lt>Esc>\"0pa\<lt>Space>=>\<lt>Space>\<lt>Esc>\"0pa.\<lt>Esc>A)\<lt>Esc>o.HasColumnName();\<lt>Esc>hi\"\"\<lt>Esc>mz}j^\"zyi]dd`z^f\"\"0\"zpj"<CR>
 " Add parameter injection
 nnoremap <leader>mp @="\"zyiwb\"xyiw?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>=="<CR>
+nnoremap <leader>mP @="\"zyiwbva>ob\"xyE?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>=="<CR>
 " Sort Global usings
 nnoremap <leader>mu @="Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>"<CR>
 nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>:b#\<lt>CR>:wa\<lt>CR>"<CR>

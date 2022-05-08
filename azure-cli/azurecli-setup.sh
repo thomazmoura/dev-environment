@@ -1,5 +1,5 @@
 echo "Updating apt-get and installing dependencies" 
-apt-get update & apt-get install ca-certificates curl apt-transport-https lsb-release gnupg
+apt-get update & apt-get install ca-certificates curl apt-transport-https lsb-release gnupg -y
 
 echo "Downloading Microsoft signing key"
 curl -sL https://packages.microsoft.com/keys/microsoft.asc |
@@ -13,5 +13,8 @@ echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO 
 
 echo "Updating apt-get and installing azure-cli"
 apt-get update
-apt-get install azure-cli
+apt-get install azure-cli -y
+
+echo "Adding azure devops extensions"
+az extension add --name azure-devops
 

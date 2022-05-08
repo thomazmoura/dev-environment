@@ -58,3 +58,5 @@ nnoremap <leader>: q:i
 
 " Force quit terminal
 tnoremap <Leader><ESC> <C-\><C-N>
+
+" CocActions

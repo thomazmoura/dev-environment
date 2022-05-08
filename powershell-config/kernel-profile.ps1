@@ -474,13 +474,18 @@ function Copy-NewGuidToClipboard() {
   (New-Guid).Guid | clip
 }
 
-function Add-SshKey($SshKeyFolder = "$HOME/.ssh", [string] $Comment) {
+function Create-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:HOSTNAME") {
   $sshKey = "$SshKeyFolder/id_rsa"
   if( !(Test-Path $sshKey) ) {
-    ssh-keygen -C @Comment
+    ssh-keygen -C "$Comment"
+  } else {
+    Write-Information "There is already a ssh-key there"
   }
+}
 
-  if (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) {
+function Add-SshKey($SshKeyFolder = "$HOME/.ssh") {
+  $sshKey = "$SshKeyFolder/id_rsa"
+  if ( (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) -and (Test-Path $sshKey) ) {
     Write-Verbose "`n->> Adding SSH key"
     $sshAgent = ssh-agent;
     $env:SSH_AUTH_SOCK = $sshAgent[0].Split("=").Split(";")[1]
@@ -488,9 +493,9 @@ function Add-SshKey($SshKeyFolder = "$HOME/.ssh", [string] $Comment) {
     ssh-add $sshKey
   }
   else {
-    Write-Verbose "`n->> SSH Agent already added"
+    Write-Information "`n->> SSH Agent already added"
   }
-  Write-Verbose "`n->> Agent PID: $env:SSH_AGENT_PID"
+  Write-Information "`n->> Agent PID: $env:SSH_AGENT_PID"
 }
 
 function Start-DotnetWatchRunDockerContainer($Version = "3.1", $Port = "5001") {
