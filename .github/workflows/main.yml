@@ -36,8 +36,8 @@ jobs:
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
           docker build \
-            --cache-from $CACHE_IMAGE:$GITBRANCH \
-            --tag $CACHE_IMAGE:$GITBRANCH \
+            --cache-from $CACHE_IMAGE:$GIT_BRANCH \
+            --tag $CACHE_IMAGE:$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             "." ||
           docker build \
