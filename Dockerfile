@@ -112,10 +112,9 @@ COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
 
 # Container startup configuration
 COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entrypoint
-# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/entrypoint/Start-DevSession.ps1"]
 
 # Start the environment
 ENV TERM xterm-256color
 WORKDIR /home/developer/code
-CMD ["/opt/microsoft/powershell/7/pwsh", "-c", "tail", "-f", "/dev/null"]
+CMD "pwsh -NoProfile -Command "/home/developer/.modules/entrypoint/Start-DevSession.ps1" && tail -f /dev/null"
 
