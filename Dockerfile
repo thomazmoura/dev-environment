@@ -101,12 +101,11 @@ RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target 
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
+COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
+
 COPY --chown=developer:developer shell /home/developer/.shell
 COPY --chown=developer:developer powershell-config /home/developer/.config/powershell
 COPY --chown=developer:developer nvim-config /home/developer/.config/nvim
-
-# NeoVim Settings
-COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
 
 # ENV AZURE_CONFIG_DIR home/developer/.storage/azure
