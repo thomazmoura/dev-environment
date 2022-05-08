@@ -483,7 +483,7 @@ function Create-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:
   }
 }
 
-function Add-SshKey() {
+function Add-SshKey($SshKeyFolder = "$HOME/.ssh") {
   $sshKey = "$SshKeyFolder/id_rsa"
   if (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) {
     Write-Verbose "`n->> Adding SSH key"
