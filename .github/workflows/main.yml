@@ -42,13 +42,12 @@ jobs:
             "." ||
           docker build \
             --cache-from $CACHE_IMAGE:latest \
-            --tag $CACHE_IMAGE:latest \
+            --tag $CACHE_IMAGE:$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')
         if: ${{ github.ref.name != 'main' }}
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
-          docker image tag $CACHE_IMAGE $CACHE_IMAGE:$GIT_BRANCH &&
           docker image push $CACHE_IMAGE:$GIT_BRANCH
 
