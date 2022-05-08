@@ -104,7 +104,7 @@ COPY --chown=developer:developer Kernel/shell /home/developer/.shell
 COPY --chown=developer:developer Kernel/config /home/developer/.config
 
 # Setting up SymbolicLinks for persistence
-ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.config/symbolic-links/Setup-SymbolicLinks.ps1"]
+# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.config/symbolic-links/Setup-SymbolicLinks.ps1"]
 
 # Tmux plugins installation
 COPY --chown=developer:developer Kernel/modules/tmux /home/developer/.modules/tmux
