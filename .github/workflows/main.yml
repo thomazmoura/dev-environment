@@ -21,8 +21,8 @@ jobs:
       - name: Build from dockerfile
         run: |
           docker build \
-            --cache-from $CACHE_IMAGE:latest \
-            --tag $CACHE_IMAGE:latest \
+            --cache-from $CACHE_IMAGE:feature_central-folder \
+            --tag $CACHE_IMAGE:feature_central-folder \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             "."
       - name: Push to docker hub as latest
