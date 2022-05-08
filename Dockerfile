@@ -100,7 +100,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 # Tmux plugins installation
 COPY --chown=developer:developer tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
-ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/tpm
+ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
 
 # Shell config folders and .files
