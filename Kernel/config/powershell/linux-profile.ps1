@@ -7,14 +7,6 @@ $env:NVS_HOME="$env:HOME/.nvs"
 $env:PATH="$($env:PATH):$HOME/.local/bin"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-Write-Verbose "`n->> Checking if ssh key is set"
-$SshKeyFolder = "$HOME/.ssh"
-if(Test-Path "$SshKeyFolder/id_rsa.pub") {
-	Add-SshKey -SshKeyFolder $SshKeyFolder
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
-
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
