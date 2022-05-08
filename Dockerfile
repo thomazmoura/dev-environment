@@ -104,7 +104,6 @@ COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
 COPY --chown=developer:developer shell /home/developer/.shell
 COPY --chown=developer:developer powershell-config /home/developer/.config/powershell
 COPY --chown=developer:developer nvim-config /home/developer/.config/nvim
-COPY --chown=developer:developer coc-config /home/developer/.config/coc
 
 # NeoVim Settings
 COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
