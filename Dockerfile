@@ -94,7 +94,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
 # Tmux plugins installation
 COPY --chown=developer:developer tmux /home/developer/.modules/tmux
-RUN pwsh -NoProfile -File /home/developer/.modules/tmux/tpm-setup.ps1
+RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
