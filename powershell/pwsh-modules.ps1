@@ -1,6 +1,6 @@
 function Import-PsFzf() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if ( !(Get-Module PsFzf) ) {
+  if ( !(Get-Module PsFzf -ListAvailable) ) {
     Write-Information "`n->> PSFzf not found. Installing"
     Install-Module -Force -AcceptLicense PSFzf 
   }
@@ -11,7 +11,7 @@ function Import-PsFzf() {
 
 function Import-PsAWS([string]$region = "sa-east-1") {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if ( !(Get-Module AWSPowerShell.NetCore) ) {
+  if ( !(Get-Module AWSPowerShell.NetCore -ListAvailable) ) {
     Write-Information "`n->> AWSPowerShell.NetCore not found. Installing"
     Install-Module -Force -AcceptLicense -Name AWSPowerShell.NetCore
   }
@@ -24,7 +24,7 @@ function Import-PsAWS([string]$region = "sa-east-1") {
 function Import-DockerCompletion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   if(Get-Command docker -ErrorAction SilentlyContinue) {
-    if ( !(Get-Module DockerCompletion) ) {
+    if ( !(Get-Module DockerCompletion -ListAvailable) ) {
       Write-Information "`n->> DockerCompletion not found. Installing"
       Install-Module -Force -AcceptLicense DockerCompletion -ErrorAction Stop
     }
@@ -38,7 +38,7 @@ function Import-DockerCompletion() {
 
 function Import-PoshGit() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if ( !(Get-Module posh-git) ) {
+  if ( !(Get-Module posh-git -ListAvailable) ) {
     Write-Information "`n->> Posh-git not found. Installing"
     Install-Module -Force -AcceptLicense posh-git -ErrorAction Stop
   }
@@ -49,7 +49,7 @@ function Import-PoshGit() {
 
 function Import-SqlServer() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if ( !(Get-Module SqlServer) ) {
+  if ( !(Get-Module SqlServer -ListAvailable) ) {
     Write-Information "`n->> SqlServer module not found. Installing"
     Install-Module -Force -AcceptLicense SqlServer -ErrorAction Stop
   }
