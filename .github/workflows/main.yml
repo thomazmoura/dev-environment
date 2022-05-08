@@ -18,7 +18,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build from dockerfile
+
+      - name: Build from dockerfile with cache from latest
+        if: ${{ github.ref.name == 'main' }}
         run: |
           docker build \
             --cache-from $CACHE_IMAGE:latest \
@@ -28,9 +30,25 @@ jobs:
       - name: Push to docker hub as latest
         if: ${{ github.ref.name == 'main' }}
         run: docker push $CACHE_IMAGE:latest
+
+      - name: Build from dockerfile with cache from branch
+        if: ${{ github.ref.name != 'main' }}
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+          docker build \
+            --cache-from $CACHE_IMAGE:$GITBRANCH \
+            --tag $CACHE_IMAGE:$GITBRANCH \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            "." ||
+          docker build \
+            --cache-from $CACHE_IMAGE:latest \
+            --tag $CACHE_IMAGE:latest \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')
         if: ${{ github.ref.name != 'main' }}
-        run: GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
           docker image tag $CACHE_IMAGE $CACHE_IMAGE:$GIT_BRANCH &&
           docker image push $CACHE_IMAGE:$GIT_BRANCH
 
