@@ -71,10 +71,6 @@ RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 COPY --chown=developer:developer neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
-# Container startup configuration
-COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entrypoint
-ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/entrypoint/Start-DevSession.ps1"]
-
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer vim-autoload /home/developer/.local/share/nvim/site/autoload
@@ -113,6 +109,10 @@ COPY --chown=developer:developer shell /home/developer/.shell
 COPY --chown=developer:developer powershell-config /home/developer/.config/powershell
 COPY --chown=developer:developer nvim-config /home/developer/.config/nvim
 COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
+
+# Container startup configuration
+COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entrypoint
+# ENTRYPOINT ["pwsh", "-NoProfile", "-Command", "/home/developer/.modules/entrypoint/Start-DevSession.ps1"]
 
 # Start the environment
 ENV TERM xterm-256color
