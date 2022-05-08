@@ -6,4 +6,5 @@ Import-OhMyPoshOnLinux
 Import-PoshGit
 Import-PsFzf
 Import-SqlServer
+Import-PsAWS
 Update-PSReadline
