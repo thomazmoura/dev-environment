@@ -13,6 +13,14 @@ if(!$env:ConnectionStrings__Log) {
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de base padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+Write-Verbose "`n->> Checking if ssh key is set"
+$SshKeyFolder = "$HOME/.ssh"
+if(Test-Path "$SshKeyFolder/id_rsa.pub") {
+    Add-SshKey -SshKeyFolder $SshKeyFolder
+}
+$stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
+
+$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 function New-HorizontalTmuxSession ($FirstPaneCommand="psgit", $SecondPaneCommand="") {
   $location = FuzzySearch-Location
 	if($location) {
