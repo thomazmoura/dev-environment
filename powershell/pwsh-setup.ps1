@@ -5,3 +5,4 @@ Import-PoshGit
 Import-PsFzf
 Import-DockerCompletion
 Import-DotnetCompletion
+Update-PSReadline
