@@ -40,5 +40,8 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
 
+" Debugging
+Plug 'puremourning/vimspector'
+
 call plug#end()
 
