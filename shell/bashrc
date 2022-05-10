@@ -1,4 +1,7 @@
-# for examples
+# Check if there is any persisted bashrc on $HOME/.storage and load it if there is
+if [ -e "$HOME/.storage/bashrc" ]; then
+  source "$HOME/.storage/bashrc"
+fi
 
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
