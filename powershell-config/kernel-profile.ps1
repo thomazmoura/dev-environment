@@ -290,14 +290,24 @@ function Git-History() {
   git log --oneline --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short --author-date-order
 }
 
-function Start-DotnetWatch() {
+function Start-DotnetWatch([Switch]$SkipAutoUrls) {
+  if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
+    Write-Verbose "Skipping auto exposing URLs"
+    & dotnet watch run
+    return;
+  }
+
   $CurrentDirectory = (Get-Item $PWD).Name
-  if($CurrentDirectory.EndsWith(".APIInterface")) {
-    Start-DotnetWatchAPIInterface
-  } elseif($CurrentDirectory.EndsWith(".API")) {
-    Start-DotnetWatchAPIB2B
+  $LaunchSettings = Get-Content "./Properties/launchSettings.json" | ConvertFrom-Json
+  $ApplicationUrls = $LaunchSettings.profiles.$CurrentDirectory.applicationUrl
+
+  if($ApplicationUrls) {
+    $ExposedUrls = $ApplicationUrls.Replace("localhost", "0.0.0.0")
+    Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json and exposed to accessible from outside the container): $ExposedUrls"
+    & dotnet watch run -- --urls="$ExposedUrls"
   } else {
-    &dotnet watch run
+    Write-Verbose "Not applicationUrl detected on profile. Skipping auto exposing URLs"
+    & dotnet watch run
   }
 }
 
@@ -306,15 +316,7 @@ function Start-DotnetWatchAPI([int[]]$HttpPorts, [int[]]$HttpsPorts) {
   $Urls += @($HttpsPorts | Foreach-Object { "https://0.0.0.0:$_" })
   $FormattedUrls = [System.String]::Join(";", $Urls)
   Write-Verbose "Running with the following URLs: $FormattedUrls"
-  &dotnet watch run -- --urls=$FormattedUrls
-}
-
-function Start-DotnetWatchAPIB2B() {
-  Start-DotnetWatchAPI -HttpPorts 5000 -HttpsPorts 5001
-}
-
-function Start-DotnetWatchAPIInterface() {
-  Start-DotnetWatchAPI -HttpPorts 5500 -HttpsPorts 5501
+  & dotnet watch run -- --urls="$FormattedUrls"
 }
 
 function Test-DotnetWatch() {
@@ -624,8 +626,6 @@ New-Alias -Force adv Restart-WithAdvancedParameters
 
 New-Alias -Force dwr Start-DotnetWatch
 New-Alias -Force dwt Test-DotnetWatch
-New-Alias -Force dwrapi -Value Start-DotnetWatchAPIB2B
-New-Alias -Force dwrapii -Value Start-DotnetWatchAPIInterface
 New-Alias -Force dr Start-Dotnet
 New-Alias -Force dt Test-Dotnet
 New-Alias -Force dnetm New-DotnetEFMigration
