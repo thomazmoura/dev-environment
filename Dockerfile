@@ -56,6 +56,8 @@ ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
+# Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
+RUN chown developer:developer /etc/hosts.conf && mkdir /home/developer/.hosts && pwsh -c "New-Item -ItemType HardLink -Path /home/developer/.hosts/hosts.conf -Target /etc/host.conf"
 USER developer
 
 # Node installation
