@@ -180,7 +180,7 @@ function FuzzyStart-NPM($dir = "$env:CODE_FOLDER") {
   if ($selectedItem) {
     Set-Location $selectedItem
   }
-  npm start
+  Start-Npm
 }
 
 function FuzzyInvoke-History() {
@@ -290,8 +290,36 @@ function Git-History() {
   git log --oneline --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short --author-date-order
 }
 
-function Start-DotnetWatch() {
-  &dotnet watch run
+function Start-DotnetWatch([String]$Profile, [Switch]$SkipAutoUrls) {
+  if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
+    Write-Verbose "Skipping auto exposing URLs"
+    & dotnet watch run
+    return;
+  }
+
+  if(!($Profile)) {
+    $Profile = (Get-Item $PWD).Name
+    Write-Verbose "No Profile informed. Using $Profile as Profile"
+  }
+  $LaunchSettings = Get-Content "./Properties/launchSettings.json" | ConvertFrom-Json
+  $ApplicationUrls = $LaunchSettings.profiles.$Profile.applicationUrl
+
+  if($ApplicationUrls) {
+    $ExposedUrls = $ApplicationUrls.Replace("localhost", "0.0.0.0")
+    Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json and exposed to accessible from outside the container): $ExposedUrls"
+    & dotnet watch run -- --urls="$ExposedUrls"
+  } else {
+    Write-Verbose "No applicationUrl detected on profile. Skipping auto exposing URLs"
+    & dotnet watch run
+  }
+}
+
+function Start-DotnetWatchAPI([int[]]$HttpPorts, [int[]]$HttpsPorts) {
+  $Urls += @($HttpPorts | Foreach-Object { "http://0.0.0.0:$_" })
+  $Urls += @($HttpsPorts | Foreach-Object { "https://0.0.0.0:$_" })
+  $FormattedUrls = [System.String]::Join(";", $Urls)
+  Write-Verbose "Running with the following URLs: $FormattedUrls"
+  & dotnet watch run -- --urls="$FormattedUrls"
 }
 
 function Test-DotnetWatch() {
@@ -315,7 +343,13 @@ function Update-DotnetEFDatabase($migrationName = $null) {
 }
 
 function Start-Npm() {
-  &npm start
+  if(Test-Path "./angular.json") {
+    Write-Verbose "Angular project detected. Running watch with localhost exposed on 4200 so it can be accessed outside the container"
+    & npm start -- --host 0.0.0.0
+  } else {
+    Write-Verbose "No Angular project detected. Running normal npm start"
+    & npm start
+  }
 }
 
 function Start-Yarn() {
