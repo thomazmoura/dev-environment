@@ -290,23 +290,26 @@ function Git-History() {
   git log --oneline --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short --author-date-order
 }
 
-function Start-DotnetWatch([Switch]$SkipAutoUrls) {
+function Start-DotnetWatch([String]$Profile, [Switch]$SkipAutoUrls) {
   if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
     Write-Verbose "Skipping auto exposing URLs"
     & dotnet watch run
     return;
   }
 
-  $CurrentDirectory = (Get-Item $PWD).Name
+  if(!($Profile)) {
+    $Profile = (Get-Item $PWD).Name
+    Write-Verbose "No Profile informed. Using $Profile as Profile"
+  }
   $LaunchSettings = Get-Content "./Properties/launchSettings.json" | ConvertFrom-Json
-  $ApplicationUrls = $LaunchSettings.profiles.$CurrentDirectory.applicationUrl
+  $ApplicationUrls = $LaunchSettings.profiles.$Profile.applicationUrl
 
   if($ApplicationUrls) {
     $ExposedUrls = $ApplicationUrls.Replace("localhost", "0.0.0.0")
     Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json and exposed to accessible from outside the container): $ExposedUrls"
     & dotnet watch run -- --urls="$ExposedUrls"
   } else {
-    Write-Verbose "Not applicationUrl detected on profile. Skipping auto exposing URLs"
+    Write-Verbose "No applicationUrl detected on profile. Skipping auto exposing URLs"
     & dotnet watch run
   }
 }
