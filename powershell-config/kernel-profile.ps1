@@ -180,7 +180,7 @@ function FuzzyStart-NPM($dir = "$env:CODE_FOLDER") {
   if ($selectedItem) {
     Set-Location $selectedItem
   }
-  npm start
+  Start-Npm
 }
 
 function FuzzyInvoke-History() {
@@ -343,7 +343,13 @@ function Update-DotnetEFDatabase($migrationName = $null) {
 }
 
 function Start-Npm() {
-  &npm start
+  if(Test-Path "./angular.json") {
+    Write-Verbose "Angular project detected. Running watch with localhost exposed on 4200 so it can be accessed outside the container"
+    & npm start -- --host 0.0.0.0
+  } else {
+    Write-Verbose "No Angular project detected. Running normal npm start"
+    & npm start
+  }
 }
 
 function Start-Yarn() {
