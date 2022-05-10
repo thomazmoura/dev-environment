@@ -291,7 +291,30 @@ function Git-History() {
 }
 
 function Start-DotnetWatch() {
-  &dotnet watch run
+  $CurrentDirectory = (Get-Item $PWD).Name
+  if($CurrentDirectory.EndsWith(".APIInterface")) {
+    Start-DotnetWatchAPIInterface
+  } elseif($CurrentDirectory.EndsWith(".API")) {
+    Start-DotnetWatchAPIB2B
+  } else {
+    &dotnet watch run
+  }
+}
+
+function Start-DotnetWatchAPI([int[]]$HttpPorts, [int[]]$HttpsPorts) {
+  $Urls += @($HttpPorts | Foreach-Object { "http://0.0.0.0:$_" })
+  $Urls += @($HttpsPorts | Foreach-Object { "https://0.0.0.0:$_" })
+  $FormattedUrls = [System.String]::Join(";", $Urls)
+  Write-Verbose "Running with the following URLs: $FormattedUrls"
+  &dotnet watch run -- --urls=$FormattedUrls
+}
+
+function Start-DotnetWatchAPIB2B() {
+  Start-DotnetWatchAPI -HttpPorts 5000 -HttpsPorts 5001
+}
+
+function Start-DotnetWatchAPIInterface() {
+  Start-DotnetWatchAPI -HttpPorts 5500 -HttpsPorts 5501
 }
 
 function Test-DotnetWatch() {
@@ -601,6 +624,8 @@ New-Alias -Force adv Restart-WithAdvancedParameters
 
 New-Alias -Force dwr Start-DotnetWatch
 New-Alias -Force dwt Test-DotnetWatch
+New-Alias -Force dwrapi -Value Start-DotnetWatchAPIB2B
+New-Alias -Force dwrapii -Value Start-DotnetWatchAPIInterface
 New-Alias -Force dr Start-Dotnet
 New-Alias -Force dt Test-Dotnet
 New-Alias -Force dnetm New-DotnetEFMigration
