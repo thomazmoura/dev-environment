@@ -116,6 +116,9 @@ COPY --chown=developer:developer powershell-config /home/developer/.config/power
 COPY --chown=developer:developer nvim-config /home/developer/.config/nvim
 COPY --chown=developer:developer vim /home/developer/.local/share/nvim/site
 
+# .NET dev certificate
+RUN mkdir -p "$HOME/.storage/dev-cert/"
+
 # Container startup configuration
 COPY --chown=developer:developer entrypoint-config /home/developer/.modules/entrypoint
 
