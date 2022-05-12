@@ -1,3 +1,8 @@
+# Check if there is any persisted bashrc on $HOME/.storage and load it if there is
+if [ -e "$HOME/.storage/bashrc" ]; then
+  source "$HOME/.storage/bashrc"
+fi
+
 PATH="/home/developer/.shell/bin:$PATH"
 export PATH
 

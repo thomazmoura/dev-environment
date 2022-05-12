@@ -13,6 +13,10 @@ Write-Information "Setting up Powershell history folder (on .storage)"
 New-Item -Force -ItemType Directory -Path "$Storage/powershell_history"
 New-Item -Force -ItemType SymbolicLink -Path "$HOME/.local/share/powershell/PSReadLine" -Target "$Storage/powershell_history"
 
+Write-Information "Setting up hosts folder (on .storage)"
+New-Item -Force -ItemType Directory -Path "$Storage/hosts"
+New-Item -Force -ItemType SymbolicLink -Path "$HOME/.hosts" -Target "$Storage/hosts"
+
 Write-Information "Setting up Azure folder (on .storage)"
 if( !(Test-Path "$Storage/azure") ) {
   New-Item -Force -ItemType Directory -Path "$Storage/azure"
