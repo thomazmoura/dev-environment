@@ -1,6 +1,7 @@
 param(
-  [String] $PathToSharedCertificate = "$HOME/.shared/aspnet-localhost.pfx"
-  [SecureString] $Password
+  [String] $PathToSharedCertificate = "$HOME/.shared/aspnet-localhost.pfx",
+  [Parameter(Mandatory=$true)]
+  [String] $Password
 )
 
 if( !(Test-Path $PathToSharedCertificate) ) {
@@ -12,7 +13,7 @@ Write-Information "Importing the certificate"
 & dotnet dev-certs https --clean --import $PathToSharedCertificate -p $Password
 
 Write-Information "Trusting the certificate"
-& dotnet dev-certs https --check --trust
+& dotnet dev-certs https --trust
 
 Write-Information "Saving the default path and password for the certificate"
 [System.Environment]::SetEnvironmentVariable("ASPNETCORE_Kestrel__Certificates__Default__Path", $PathToSharedCertificate, "User")
