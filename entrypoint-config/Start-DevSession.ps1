@@ -24,9 +24,22 @@ if( !(Test-Path "$Storage/azure") ) {
 }
 New-Item -Force -ItemType SymbolicLink -Path "$HOME/.azure" -Target "$Storage/azure"
 
-if($env:AzureDevOpsOrganization -and $env:AzureDevOpsProject) {
+if($env:AZURE_DEVOPS_ORGANIZATION -and $env:AZURE_DEVOPS_PROJECT) {
   Write-Information "Azure DevOps configuration found. Setting up."
-  az devops configure --defaults organization=$env:AzureDevOpsOrganization project=$env:AzureDevOpsProject
+  az devops configure --defaults organization=$env:AZURE_DEVOPS_ORGANIZATION project=$env:AZURE_DEVOPS_PROJECT
 } else {
   Write-Information "Azure DevOps configuration not found. Skipping."
+}
+
+New-Item -Force -ItemType Directory "$HOME/.storage/dev-cert/"
+New-Item -Force -ItemType Directory "$HOME/.shared/"
+
+if( !(Test-Path $env:ASPNETCORE_Kestrel__Certificates__Default__Path) ) {
+  Write-Information "ASP .NET Core localhost certificate not found on $env:ASPNETCORE_Kestrel__Certificates__Default__Path. Creating now."
+  & dotnet dev-certs https -ep $env:ASPNETCORE_Kestrel__Certificates__Default__Path -p $env:ASPNETCORE_Kestrel__Certificates__Default__Password
+} 
+
+if( !(Test-Path "$HOME/.shared/aspnet-localhost.pfx") ) {
+  Write-Information "ASP .NET Core localhost certificate copy not found on $HOME/.shared/aspnet-localhost.pfx. Copying now."
+  Copy-Item $env:ASPNETCORE_Kestrel__Certificates__Default__Path "$HOME/.shared/aspnet-localhost.pfx"
 }
