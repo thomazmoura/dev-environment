@@ -557,7 +557,7 @@ function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Inter
   }
 }
 
-function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "localhost", $UserId = "sa", $Password = "L0c4lD3v!") {
+function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "mssql", $UserId = "sa", $Password = "L0c4lD3v!") {
   if (!$DatabaseName) {
     $env:ConnectionStrings__Contexto = $null
   }

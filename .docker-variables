@@ -1,6 +1,9 @@
-GIT_USERNAME=
-GIT_EMAIL=
-HOSTNAME=
+GIT_USERNAME=User Name
+GIT_EMAIL=user@email.com
+HOSTNAME=docker@host
 AZURE_DEVOPS_EXT_PAT=
-AzureDevOpsOrganization=
-AzureDevOpsProject=
+AZURE_DEVOPS_ORGANIZATION=azdevops.visualstudio.com
+AZURE_DEVOPS_PROJECT=Project
+ASPNETCORE_ENVIRONMENT=Development
+ASPNETCORE_Kestrel__Certificates__Default__Password=p455W0rd
+ASPNETCORE_Kestrel__Certificates__Default__Path=/home/developer/.storage/dev-cert/aspnet-localhost.pfx
