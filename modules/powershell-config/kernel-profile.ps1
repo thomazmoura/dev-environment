@@ -569,6 +569,27 @@ function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Co
 function Exit-Session() {
   exit
 }
+
+function Set-AutoNodeVersion() {
+  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+  if(!(Get-Command nvs -ErrorAction SilentlyContinue) -or !(Get-Command fd -ErrorAction SilentlyContinue)) {
+    Write-Verbose "fd or nvs not found. Skipping"
+  }
+
+  $nodeVersionFile = (fd --hidden .node-version)
+  if(!($nodeVersionFile)) {
+    Write-Verbose ".node-version not found"
+    return;
+  }
+  if($nodeVersionFile -is [array]) {
+    Write-Verbose "More than a single .node-version found"
+    return;
+  }
+
+  nvs use (Get-Content $nodeVersionFile)
+  $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
