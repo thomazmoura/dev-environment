@@ -586,7 +586,9 @@ function Set-AutoNodeVersion() {
     return;
   }
 
-  nvs use (Get-Content $nodeVersionFile)
+  $nodeVersion = Get-Content $nodeVersionFile
+  nvs add $nodeVersion
+  nvs use $nodeVersion
   $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
