@@ -161,4 +161,5 @@ if(Get-Command nvs -ErrorAction SilentlyContinue) {
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 
 Import-OhMyPoshOnLinux
+Set-AutoNodeVersion
 
