@@ -28,7 +28,7 @@ function Create-DefaultFolders() {
 
   New-Item -Force -ItemType Directory "$HOME/.storage/dev-cert/"
   New-Item -Force -ItemType Directory "$HOME/.shared/"
-  New-Item -Force -ItemType Directory "$HOME/.storage/code-scripts/"
+  New-Item -Force -ItemType Directory "$HOME/code/code-scripts/"
 
 }
 

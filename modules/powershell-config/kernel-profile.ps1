@@ -600,15 +600,20 @@ function Run-CodeFolderScripts() {
   }
     
   $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Split("/")[0]
-  $CodeScriptFolder = "$HOME/.storage/code-scripts/$CurrentFolder"
+  $CodeScriptFolder = "$HOME/code/code-scripts/$CurrentFolder"
   if(!(Test-Path $CodeScriptFolder)) {
     Write-Verbose "`n->> This folder does not have a scripts folder on ($CodeScriptFolder). Skipping"
     return
   }
 
-  $PowerShellScriptsForThisFolder = Get-ChildItem $CodeScriptFolder -Include "*.ps1"
+  $PowerShellScriptsForThisFolder = Get-ChildItem $CodeScriptFolder -Filter "*.ps1"
+  if(!$PowerShellScriptsForThisFolder) {
+    Write-Verbose "`n->> No PowerShell script found on $CodeScriptFolder"
+  }
+
   foreach($Script in $PowerShellScriptsForThisFolder) {
-    Invoke-Item $Script
+    Write-Verbose "`n->> Invoking. $Script"
+    pwsh -NoProfile -File $Script
   }
 }
 
