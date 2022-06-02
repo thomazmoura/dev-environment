@@ -162,4 +162,5 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch
 
 Import-OhMyPoshOnLinux
 Set-AutoNodeVersion
+Run-CodeFolderScripts
 
