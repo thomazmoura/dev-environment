@@ -594,12 +594,12 @@ function Set-AutoNodeVersion() {
 
 function Run-CodeFolderScripts() {
   $CodeFolder = "$HOME/code/"
-  if(!$PWD.StartsWith($CodeFolder)) {
+  if(!$PWD.Path.StartsWith($CodeFolder)) {
     Write-Verbose "`n->> This folder is not a ~/code subfolder. Skipping"
     return
   }
     
-  $CurrentFolder = $PWD.Replace($CodeFolder, "").Split("/")[0]
+  $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Split("/")[0]
   $CodeScriptFolder = "$HOME/.storage/code-scripts/$CurrentFolder"
   if(!(Test-Path $CodeScriptFolder)) {
     Write-Verbose "`n->> This folder does not have a scripts folder on ($CodeScriptFolder). Skipping"
