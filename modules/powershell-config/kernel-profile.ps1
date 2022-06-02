@@ -613,7 +613,7 @@ function Run-CodeFolderScripts() {
 
   foreach($Script in $PowerShellScriptsForThisFolder) {
     Write-Verbose "`n->> Invoking. $Script"
-    pwsh -NoProfile -File $Script
+    . $Script
   }
 }
 
