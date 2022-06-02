@@ -607,7 +607,7 @@ function Run-CodeFolderScripts() {
   }
 
   $PowerShellScriptsForThisFolder = Get-ChildItem $CodeScriptFolder -Include "*.ps1"
-  foreach($Script on $PowerShellScriptsForThisFolder) {
+  foreach($Script in $PowerShellScriptsForThisFolder) {
     Invoke-Item $Script
   }
 }
