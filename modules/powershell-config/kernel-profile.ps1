@@ -592,6 +592,31 @@ function Set-AutoNodeVersion() {
   $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
+function Run-CodeFolderScripts() {
+  $CodeFolder = "$HOME/code/"
+  if(!$PWD.Path.StartsWith($CodeFolder)) {
+    Write-Verbose "`n->> This folder is not a ~/code subfolder. Skipping"
+    return
+  }
+    
+  $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Split("/")[0]
+  $CodeScriptFolder = "$HOME/code/code-scripts/$CurrentFolder"
+  if(!(Test-Path $CodeScriptFolder)) {
+    Write-Verbose "`n->> This folder does not have a scripts folder on ($CodeScriptFolder). Skipping"
+    return
+  }
+
+  $PowerShellScriptsForThisFolder = Get-ChildItem $CodeScriptFolder -Filter "*.ps1"
+  if(!$PowerShellScriptsForThisFolder) {
+    Write-Verbose "`n->> No PowerShell script found on $CodeScriptFolder"
+  }
+
+  foreach($Script in $PowerShellScriptsForThisFolder) {
+    Write-Verbose "`n->> Invoking. $Script"
+    . $Script
+  }
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
