@@ -120,6 +120,8 @@ let g:tokyonight_style = "storm" " Tokyo Night colorscheme configuration
 colorscheme tokyonight
 highlight Normal guibg=none
 highlight MsgArea guibg=#1a1b26
+highlight LineNr guibg=#1a1b26
+highlight CursorLineNr guibg=#1a1b26
 set fillchars+=vert:│
 highlight VertSplit guibg=none guifg=#414868
 
