@@ -22,6 +22,8 @@ Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
 Plug 'antoinemadec/coc-fzf'
 Plug 'karb94/neoscroll.nvim'
+Plug 'kevinhwang91/promise-async'
+Plug 'kevinhwang91/nvim-ufo'
 
 " Overhaul
 Plug 'neoclide/coc.nvim', {'branch': 'release'}

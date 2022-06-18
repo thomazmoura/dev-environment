@@ -129,3 +129,9 @@ require'hop'.setup()
 vim.api.nvim_set_keymap('', 'gj', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = true })<cr>", {})
 vim.api.nvim_set_keymap('n', 'gj', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = false })<cr>", {})
 vim.api.nvim_set_keymap('', 'gJ', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = false })<cr>", {})
+
+-- nvim-ufo
+vim.wo.foldcolumn = '1'
+vim.wo.foldenable = true
+
+require('ufo').setup()
