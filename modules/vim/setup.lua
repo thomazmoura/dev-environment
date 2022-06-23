@@ -60,6 +60,7 @@ if not vim.env.windir then
      "html",
      "json",
      "lua",
+     "python",
      "typescript",
      "vim",
      "yaml"
