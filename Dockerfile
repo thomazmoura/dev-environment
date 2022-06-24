@@ -17,10 +17,13 @@ RUN apt-get update \
     fzf \
     git \
     icu-devtools \
+    iproute2 \
+    iputils \
     less \
     lsb-release \
     make \
     neovim \
+    net-tools \
     openssh-server \
     pkg-config \
     python \
