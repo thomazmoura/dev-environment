@@ -18,7 +18,7 @@ RUN apt-get update \
     git \
     icu-devtools \
     iproute2 \
-    iputils \
+    iputils-ping \
     less \
     lsb-release \
     make \
