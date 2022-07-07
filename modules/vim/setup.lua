@@ -55,15 +55,19 @@ if not vim.env.windir then
   require'nvim-treesitter.configs'.setup {
     -- A list of parser names, or "all" for possible list, check: https://github.com/nvim-treesitter/nvim-treesitter#supported-languages
     ensure_installed = {
-     "c_sharp",
-     "dockerfile",
-     "html",
-     "json",
-     "lua",
-     "python",
-     "typescript",
-     "vim",
-     "yaml"
+      "c",
+      "c_sharp",
+      "css",
+      "dockerfile",
+      "html",
+      "json",
+      "lua",
+      "python",
+      "regex",
+      "rust",
+      "typescript",
+      "vim",
+      "yaml"
     },
 
     -- Install parsers synchronously (only applied to `ensure_installed`)

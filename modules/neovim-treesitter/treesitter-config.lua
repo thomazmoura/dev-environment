@@ -2,18 +2,19 @@
 require'nvim-treesitter.configs'.setup {
   -- A list of parser names, or "all" for possible list, check: https://github.com/nvim-treesitter/nvim-treesitter#supported-languages
   ensure_installed = {
-   "c",
-   "cpp",
-   "c_sharp",
-   "css",
-   "dockerfile",
-   "html",
-   "json",
-   "lua",
-   "regex",
-   "typescript",
-   "vim",
-   "yaml"
+    "c",
+    "c_sharp",
+    "css",
+    "dockerfile",
+    "html",
+    "json",
+    "lua",
+    "python",
+    "regex",
+    "rust",
+    "typescript",
+    "vim",
+    "yaml"
   },
 
   -- Install parsers synchronously (only applied to `ensure_installed`)
