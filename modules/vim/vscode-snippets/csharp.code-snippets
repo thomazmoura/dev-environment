@@ -40,7 +40,7 @@
 		"prefix": "ut",
 		"body": [
 			"[Fact]",
-			"public void ${1:Método}_${2:SituaçãoSimulada}_${3:ResultadoEsperado}()",
+			"public async Task ${1:Método}_${2:SituaçãoSimulada}_${3:ResultadoEsperado}()",
 			"{",
 			"    $0",
 			"}"
