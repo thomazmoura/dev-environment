@@ -12,6 +12,7 @@ RUN apt-get update \
     bash-completion \
     bat \
     build-essential \
+    clang-12 \
     curl \
     fd-find \
     fzf \
@@ -35,6 +36,8 @@ RUN apt-get update \
     unzip \
     wget \
     ;
+
+RUN update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'

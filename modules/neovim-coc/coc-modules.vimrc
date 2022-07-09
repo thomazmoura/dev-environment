@@ -1,5 +1,6 @@
   let g:coc_global_extensions=[
   \  'coc-angular',
+  \  'coc-clangd',
   \  'coc-css',
   \  'coc-emmet',
   \  'coc-eslint',

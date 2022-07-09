@@ -8,6 +8,7 @@ Write-Output "`n->> Preinstalling coc-modules"
 nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync `
   coc-angular`
   coc-css`
+  coc-clangd`
   coc-emmet`
   coc-eslint`
   coc-git`
