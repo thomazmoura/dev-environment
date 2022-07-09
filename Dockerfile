@@ -58,8 +58,8 @@ RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
 # QMK requirements
-RUN git clone git@github.com:thomazmoura/qmk_firmware /home/developer/code/annepro2-qmk
-RUN chmod +x /home/developer/code/annepro2-qmk/util/qmk_install.sh && /home/developer/code/annepro2-qmk/util/qmk_install.sh
+RUN git clone https://github.com/thomazmoura/qmk_firmware /root/annepro2-qmk
+RUN chmod +x /root/annepro2-qmk/util/qmk_install.sh && /root/annepro2-qmk/util/qmk_install.sh
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
