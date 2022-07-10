@@ -68,6 +68,9 @@ RUN useradd --user-group --system --create-home --no-log-init developer --shell 
 RUN chown developer:developer /etc/host.conf && mkdir /home/developer/.hosts && pwsh -c "New-Item -ItemType HardLink -Path /home/developer/.hosts/host.conf -Target /etc/host.conf"
 USER developer
 
+# Rust installation
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
 # Node installation
 RUN mkdir -p /home/developer/.modules
 COPY --chown=developer:developer modules/node /home/developer/.modules/node
