@@ -74,9 +74,13 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição da CODE_FOLDER demorou: $($
 
 # Definição de scripts padrões
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
-if ( Test-Path "~/git/CI-CD"  ) {
+if ( Test-Path "$HOME/git/CI-CD"  ) {
   Write-Verbose "`n->> CI-CD folder found, adding Utilitarios to PATH"
-  $env:PATH = "~/git/CI-CD/Utilitarios:~/git/CI-CD/QuickStarts/Scripts:${env:PATH}"
+  $env:PATH = "$HOME/git/CI-CD/Utilitarios:$HOME/git/CI-CD/QuickStarts/Scripts:${env:PATH}"
+}
+if ( (Test-Path "$HOME/.cargo/bin") -and !($env:PATH.Contains("$HOME/.cargo/bin")) ) {
+  Write-Verbose "`n->> Rust's cargo folder found and not added to PATH. Adding now"
+  $env:PATH = "$HOME/.cargo/bin:${env:PATH}"
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de caminho de scripts padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
