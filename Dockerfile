@@ -63,6 +63,9 @@ ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 RUN git clone https://github.com/thomazmoura/qmk_firmware /root/annepro2-qmk
 RUN chmod +x /root/annepro2-qmk/util/qmk_install.sh && /root/annepro2-qmk/util/qmk_install.sh
 
+# Override sudoers file
+COPY modules/sudoers/sudoers /etc/sudoers
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 # Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
