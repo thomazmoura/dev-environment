@@ -32,7 +32,6 @@ RUN apt-get update \
     python3-pip \
     silversearcher-ag \
     strace \
-    sudo \
     tmux \
     unzip \
     wget \
@@ -60,11 +59,8 @@ RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
 # QMK requirements
-RUN git clone https://github.com/thomazmoura/qmk_firmware /root/annepro2-qmk
-RUN chmod +x /root/annepro2-qmk/util/qmk_install.sh && /root/annepro2-qmk/util/qmk_install.sh
-
-# Override sudoers file
-COPY modules/sudoers/sudoers /etc/sudoers
+COPY modules/qmk /root/.modules/qmk
+RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
