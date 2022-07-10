@@ -37,8 +37,6 @@ RUN apt-get update \
     wget \
     ;
 
-RUN update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
-
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
