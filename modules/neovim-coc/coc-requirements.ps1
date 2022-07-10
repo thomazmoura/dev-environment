@@ -6,16 +6,19 @@ Write-Output "`n->> Use LTS Node"
 
 Write-Output "`n->> Preinstalling coc-modules"
 nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"CocInstall -sync `
- coc-angular`
- coc-css`
- coc-emmet`
- coc-eslint`
- coc-git`
- coc-html`
- coc-json`
- coc-powershell`
- coc-prettier`
- coc-python`
- coc-snippets`
- coc-tsserver`
- coc-yaml" +qall
+  coc-angular`
+  coc-css`
+  coc-clangd`
+  coc-emmet`
+  coc-eslint`
+  coc-git`
+  coc-html`
+  coc-json`
+  coc-powershell`
+  coc-prettier`
+  coc-python`
+  coc-snippets`
+  coc-rust-analyzer`
+  coc-tsserver`
+  coc-yaml" +qall
+

@@ -12,6 +12,7 @@ RUN apt-get update \
     bash-completion \
     bat \
     build-essential \
+    clang-12 \
     curl \
     fd-find \
     fzf \
@@ -56,6 +57,10 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 COPY modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
+
+# QMK requirements
+COPY modules/qmk /root/.modules/qmk
+RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
