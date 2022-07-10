@@ -58,9 +58,12 @@ COPY modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
+# Ignore sudo on any script
+RUN echo 'alias sudo='' &&' >> /root/.bashrc
+
 # QMK requirements
 RUN git clone https://github.com/thomazmoura/qmk_firmware /root/annepro2-qmk
-RUN chmod +x /root/annepro2-qmk/util/qmk_install.sh && alias sudo='' && /root/annepro2-qmk/util/qmk_install.sh
+RUN chmod +x /root/annepro2-qmk/util/qmk_install.sh && /root/annepro2-qmk/util/qmk_install.sh
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
