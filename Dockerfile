@@ -32,6 +32,7 @@ RUN apt-get update \
     python3-pip \
     silversearcher-ag \
     strace \
+    sudo \
     tmux \
     unzip \
     wget \
@@ -57,9 +58,6 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
 COPY modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
-
-# Ignore sudo on any script
-RUN echo 'alias sudo='' &&' >> /root/.bashrc
 
 # QMK requirements
 RUN git clone https://github.com/thomazmoura/qmk_firmware /root/annepro2-qmk
