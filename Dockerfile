@@ -34,6 +34,7 @@ RUN apt-get update \
     strace \
     tmux \
     unzip \
+    uuid-runtime \
     wget \
     ;
 
