@@ -123,6 +123,8 @@ COPY --chown=developer:developer modules/vim /home/developer/.local/share/nvim/s
 # Container startup configuration
 COPY --chown=developer:developer modules/entrypoint-config /home/developer/.modules/entrypoint
 
+USER root:root
+
 # Start the environment
 ENV TERM xterm-256color
 WORKDIR /home/developer/code
