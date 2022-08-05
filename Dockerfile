@@ -23,6 +23,7 @@ RUN apt-get update \
     less \
     lsb-release \
     make \
+    man-db \
     neovim \
     net-tools \
     openssh-server \
@@ -35,7 +36,8 @@ RUN apt-get update \
     tmux \
     unzip \
     wget \
-    ;
+  && unminimize \
+  ;
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
