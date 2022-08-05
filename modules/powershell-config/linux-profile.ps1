@@ -135,6 +135,10 @@ function Get-TmuxSession ($Session=$null) {
 	}
 }
 
+function Get-OctalFilePermissions() {
+  stat -c '%a | %n' *
+}
+
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if((cat /etc/issue) -match 'ubuntu') { 
 	New-Alias -Force bat batcat
@@ -150,6 +154,7 @@ New-Alias -Force tmuxa Get-TmuxSession
 New-Alias -Force duhs Get-ChildItemsSize
 New-Alias -Force nvs "$env:NVS_HOME/nvs.ps1"
 New-Alias -Force svim New-SudoVimSession
+New-Alias -Force lso Get-OctalFilePermissions
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
 
