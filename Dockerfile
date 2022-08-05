@@ -36,7 +36,7 @@ RUN apt-get update \
     tmux \
     unzip \
     wget \
-  && unminimize \
+  && 'y' | unminimize \
   ;
 
 # Make fdfind be callable as fd
