@@ -1,19 +1,22 @@
-FROM mcr.microsoft.com/powershell:7.2.0-ubuntu-20.04
+FROM debian
   
-RUN apt-get update \
-  && apt-get install -y \
+RUN apt update \
+  && apt install -y \
+    apt-transport-https \
+    curl \
+    gnupg \
     software-properties-common \
   && add-apt-repository ppa:neovim-ppa/unstable \
-  && apt-get update \
-  && apt-get install -y \
-    apt-transport-https \
+  && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+  && sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list'
+  && apt update \
+  && apt install -y \
     apt-utils \
     automake \
     bash-completion \
     bat \
     build-essential \
     clang-12 \
-    curl \
     fd-find \
     fzf \
     git \
@@ -28,6 +31,7 @@ RUN apt-get update \
     net-tools \
     openssh-server \
     pkg-config \
+    powershell \
     python \
     python3 \
     python3-pip \
@@ -36,7 +40,6 @@ RUN apt-get update \
     tmux \
     unzip \
     wget \
-  && 'y' | unminimize \
   ;
 
 # Make fdfind be callable as fd
