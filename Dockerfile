@@ -6,21 +6,15 @@ RUN apt update \
     curl \
     gnupg \
     software-properties-common \
-  && add-apt-repository ppa:neovim-ppa/unstable \
   && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
   && sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list' \
   && apt update \
   && apt install -y \
     apt-utils \
-    automake \
-    bash-completion \
     bat \
-    build-essential \
-    clang-12 \
     fd-find \
     fzf \
     git \
-    icu-devtools \
     iproute2 \
     iputils-ping \
     less \
@@ -29,12 +23,8 @@ RUN apt update \
     man-db \
     neovim \
     net-tools \
-    openssh-server \
     pkg-config \
     powershell \
-    python \
-    python3 \
-    python3-pip \
     silversearcher-ag \
     strace \
     tmux \
@@ -47,12 +37,9 @@ RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 # Tools for command line available to every user
 COPY modules/bin-tools /usr/bin
+
 # Make terminal-based yank accessible both as yank and clip
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
-
-# NeoVim Universal-ctags requirement
-COPY modules/universal-ctags /root/.modules/ctags
-RUN chmod +x /root/.modules/ctags/ctags-setup.sh && /root/.modules/ctags/ctags-setup.sh
 
 # dotnet installation
 COPY modules/dotnet /root/.modules/dotnet
@@ -63,18 +50,11 @@ COPY modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
-# QMK requirements
-COPY modules/qmk /root/.modules/qmk
-RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
-
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 # Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
 RUN chown developer:developer /etc/host.conf && mkdir /home/developer/.hosts && pwsh -c "New-Item -ItemType HardLink -Path /home/developer/.hosts/host.conf -Target /etc/host.conf"
 USER developer
-
-# Rust installation
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Node installation
 RUN mkdir -p /home/developer/.modules
