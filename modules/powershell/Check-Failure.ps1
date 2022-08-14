@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $PSDefaultParameterValues['*:ErrorAction']='Stop'
 
-function ThrowOnNativeFailure {
+function Throw-ExceptionOnNativeFailure {
     if (-not $?)
     {
         throw 'Native Failure'
