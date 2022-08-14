@@ -13,6 +13,7 @@ RUN apt update \
   && apt install -y \
     apt-utils \
     bat \
+    build-essential \
     fd-find \
     fzf \
     git \
