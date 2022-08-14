@@ -1,3 +1,5 @@
+. "$HOME/.modules/powershell/Check-Failure"
+
 Write-Output ">>> Installing Microsoft apt repository"
 New-Item -ItemType Directory -Force ~/Downloads
 Set-Location ~/Downloads
@@ -10,3 +12,4 @@ Write-Output ">>> Installing .NET Core SDK"
 & apt-get update
 & apt-get install -y dotnet-sdk-2.1 dotnet-sdk-3.1 dotnet-sdk-5.0 dotnet-sdk-6.0
 
+ThrowOnNativeFailure

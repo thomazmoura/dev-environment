@@ -49,7 +49,7 @@ RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' 
 
 # dotnet installation
 COPY modules/dotnet /root/.modules/dotnet
-RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1
+RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1 -ErrorAction 'Stop'
 
 # Azure CLI installation
 COPY modules/azure-cli /root/.modules/azure-cli
