@@ -1,5 +1,5 @@
 # Testing is used here because of packages like neovim (7 on testing and 4 on stable)
-FROM debian:testing
+FROM debian
   
 RUN apt update \
   && apt install -y \
@@ -72,9 +72,9 @@ RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Com
 COPY --chown=developer:developer modules/powershell /home/developer/.modules/powershell
 RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
-# NeoVim Requirements
-COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
-RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
+# # NeoVim Requirements
+# COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
+# RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
@@ -82,18 +82,18 @@ COPY --chown=developer:developer modules/vim-autoload /home/developer/.local/sha
 COPY --chown=developer:developer modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
 RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
 
-# NeoVim TreeSitter compilation
-COPY --chown=developer:developer modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
-RUN chmod +x /home/developer/.modules/neovim-treesitter/treesitter-install.sh && /home/developer/.modules/neovim-treesitter/treesitter-install.sh
+# # NeoVim TreeSitter compilation
+# COPY --chown=developer:developer modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
+# RUN chmod +x /home/developer/.modules/neovim-treesitter/treesitter-install.sh && /home/developer/.modules/neovim-treesitter/treesitter-install.sh
 
 # Dotnet tools instalation
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
 RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setup.ps1
 
 # NeoVim CoC Modules installation
-COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
-RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
-RUN pwsh -c ''
+# COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
+# RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
+# RUN pwsh -c ''
 
 # Delta diff installation
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
