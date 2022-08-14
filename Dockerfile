@@ -19,6 +19,7 @@ RUN apt update \
     iproute2 \
     iputils-ping \
     less \
+    locales \
     lsb-release \
     make \
     man-db \
@@ -29,9 +30,12 @@ RUN apt update \
     silversearcher-ag \
     strace \
     tmux \
+    tzdata \
     unzip \
     wget \
-  ;
+  && locale-gen en_US.UTF-8;
+
+ENV TZ="America/Sao_Paulo"
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
