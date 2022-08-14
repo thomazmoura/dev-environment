@@ -1,4 +1,5 @@
-FROM debian
+# Testing is used here because of packages like neovim (7 on testing and 4 on stable)
+FROM debian:testing
   
 RUN apt update \
   && apt install -y \
