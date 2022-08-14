@@ -44,7 +44,6 @@ RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 # Tools for command line available to every user
 COPY modules/bin-tools /usr/bin
-
 # Make terminal-based yank accessible both as yank and clip
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
 
