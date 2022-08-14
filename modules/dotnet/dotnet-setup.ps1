@@ -1,4 +1,4 @@
-. "$HOME/.modules/powershell/Check-Failure"
+. "$HOME/.modules/powershell/Check-Failure.ps1"
 
 Write-Output ">>> Installing Microsoft apt repository"
 New-Item -ItemType Directory -Force ~/Downloads
