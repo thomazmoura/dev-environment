@@ -92,7 +92,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setu
 
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+RUN export PATH="$HOME/.local/bin:$PATH" && pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # NeoVim CoC Modules installation
 # COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
