@@ -1,7 +1,7 @@
-echo "\n->> Installing Azure CLI from pip" 
+echo "->> Installing Azure CLI from pip" 
 apt install python3 -y
 pip install azure-cli
 
-echo "\n->> Adding azure devops extensions"
+echo "->> Adding azure devops extensions"
 az extension add --name azure-devops
 

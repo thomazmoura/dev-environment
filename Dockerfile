@@ -92,6 +92,10 @@ RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE 
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
 RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setup.ps1
 
+# Azure-CLI extensions installation
+COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
+RUN chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+
 # NeoVim CoC Modules installation
 # COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
 # RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
@@ -106,10 +110,6 @@ COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
-
-# Azure-CLI extensions installation
-COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN apt install -t testing python3 -y && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
