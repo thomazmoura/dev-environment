@@ -26,12 +26,14 @@ RUN apt update \
     net-tools \
     pkg-config \
     powershell \
+    python3 \
     silversearcher-ag \
     strace \
     tmux \
     tzdata \
     unzip \
     wget \
+  && apt autoremove -y \
   && locale-gen en_US.UTF-8;
 
 ENV TZ="America/Sao_Paulo"
@@ -53,11 +55,6 @@ RUN pwsh -NoProfile -File /root/.modules/testing-packages/testing-setup.ps1 && a
 COPY modules/dotnet /root/.modules/dotnet
 COPY modules/powershell /root/.modules/powershell
 RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1 -ErrorAction 'Stop'
-
-# Azure CLI installation
-COPY modules/azure-cli /root/.modules/azure-cli
-RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
-ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
@@ -94,7 +91,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setu
 
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+RUN pip install azure-cli -y && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # NeoVim CoC Modules installation
 # COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
