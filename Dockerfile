@@ -109,7 +109,7 @@ RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modu
 
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+RUN apt install -t testing python3 -y && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
