@@ -27,7 +27,7 @@ RUN apt update \
     pkg-config \
     powershell \
     python3 \
-    pyhton3-pip \
+    python3-pip \
     silversearcher-ag \
     strace \
     tmux \
