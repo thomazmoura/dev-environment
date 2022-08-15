@@ -24,6 +24,7 @@ RUN apt update \
     make \
     man-db \
     net-tools \
+    pip3 \
     pkg-config \
     powershell \
     python3 \
