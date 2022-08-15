@@ -1,4 +1,3 @@
-# Testing is used here because of packages like neovim (7 on testing and 4 on stable)
 FROM debian
   
 RUN apt update \
@@ -24,7 +23,6 @@ RUN apt update \
     lsb-release \
     make \
     man-db \
-    neovim \
     net-tools \
     pkg-config \
     powershell \
@@ -46,6 +44,10 @@ RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 COPY modules/bin-tools /usr/bin
 # Make terminal-based yank accessible both as yank and clip
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
+
+# NeoVim Installation (from channel testing)
+COPY modules/testing-packages /root/.modules/testing-packages
+RUN pwsh -NoProfile -File /root/.modules/testing-packages/testing-setup.ps1 && apt -t testing install neovim -y
 
 # dotnet installation
 COPY modules/dotnet /root/.modules/dotnet
@@ -72,9 +74,9 @@ RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Com
 COPY --chown=developer:developer modules/powershell /home/developer/.modules/powershell
 RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 
-# # NeoVim Requirements
-# COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
-# RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
+# NeoVim Requirements
+COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
+RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
 # NeoVim Plug Modules installation
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
