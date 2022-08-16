@@ -109,6 +109,10 @@ COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.co
 ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
 
+# Azure-CLI extensions installation
+COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
+RUN chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
 COPY --chown=developer:developer DockerUbuntu/config/powershell/profile.ps1 /home/developer/.config/powershell/Microsoft.PowerShell_profile.ps1
