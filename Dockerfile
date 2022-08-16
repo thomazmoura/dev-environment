@@ -26,6 +26,7 @@ RUN apt update \
     net-tools \
     pkg-config \
     powershell \
+    procps \
     python3 \
     python3-pip \
     silversearcher-ag \
@@ -35,6 +36,7 @@ RUN apt update \
     unzip \
     wget \
   && apt autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
   && locale-gen en_US.UTF-8;
 
 ENV TZ="America/Sao_Paulo"
