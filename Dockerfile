@@ -83,8 +83,8 @@ COPY --chown=developer:developer modules/neovim-plug/plug.vimrc /home/developer/
 RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"'
 
 # # NeoVim TreeSitter compilation
-# COPY --chown=developer:developer modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
-# RUN chmod +x /home/developer/.modules/neovim-treesitter/treesitter-install.sh && /home/developer/.modules/neovim-treesitter/treesitter-install.sh
+COPY --chown=developer:developer modules/neovim-treesitter /home/developer/.modules/neovim-treesitter
+RUN chmod +x /home/developer/.modules/neovim-treesitter/treesitter-install.sh && /home/developer/.modules/neovim-treesitter/treesitter-install.sh
 
 # Dotnet tools instalation
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
@@ -95,9 +95,8 @@ COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.m
 RUN export PATH="$HOME/.local/bin:$PATH" && pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # NeoVim CoC Modules installation
-# COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
-# RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
-# RUN pwsh -c ''
+COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
+RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
 
 # Delta diff installation
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
