@@ -51,6 +51,7 @@ jobs:
 
   qmk-build:
     name: Build QMK Docker Image
+    needs: main-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master
