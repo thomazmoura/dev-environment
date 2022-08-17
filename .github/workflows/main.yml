@@ -53,6 +53,9 @@ jobs:
     name: Build QMK Docker Image
     needs: main-build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./alt/qmk
     steps:
       - name: Checkout master
         uses: actions/checkout@v1
@@ -66,7 +69,6 @@ jobs:
       - name: Build from dockerfile with cache from latest
         if: ${{ github.ref_name == 'main' }}
         run: |
-          cd ./alt/qmk
           docker build \
             --cache-from $CACHE_IMAGE:qmk \
             --tag $CACHE_IMAGE:qmk \
