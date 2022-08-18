@@ -58,10 +58,6 @@ COPY modules/azure-cli /root/.modules/azure-cli
 RUN chmod +x /root/.modules/azure-cli/azurecli-setup.sh && /root/.modules/azure-cli/azurecli-setup.sh
 ENV AZURE_CONFIG_DIR /home/developer/.storage/azure
 
-# QMK requirements
-COPY modules/qmk /root/.modules/qmk
-RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
-
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 # Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
