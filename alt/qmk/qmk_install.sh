@@ -14,7 +14,7 @@ _qmk_install_prepare() {
 _qmk_install() {
     echo "Installing dependencies"
 
-    apt-get -yq install \
+    apt -yq -t stable install \
         build-essential clang-format diffutils gcc git unzip wget zip \
         python3-pip \
         binutils-avr gcc-avr avr-libc \
