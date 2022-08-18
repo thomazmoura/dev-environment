@@ -1,7 +1,5 @@
 #!/bin/bash
 
-QMK_FIRMWARE_DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
-
 DEBIAN_FRONTEND=noninteractive
 DEBCONF_NONINTERACTIVE_SEEN=true
 export DEBIAN_FRONTEND DEBCONF_NONINTERACTIVE_SEEN
@@ -20,7 +18,7 @@ _qmk_install() {
         binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
         avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev
 
-    python3 -m pip install --user -r $QMK_FIRMWARE_DIR/requirements.txt
+    python3 -m pip install --user -r /root/.modules/qmk/requirements.txt
 }
 
 if type _qmk_install_prepare &>/dev/null; then
