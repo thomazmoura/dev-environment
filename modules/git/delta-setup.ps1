@@ -8,6 +8,7 @@ git config --global push.default simple
 git config --global core.quotepath off
 git config --global fetch.prune true
 git config --global core.excludesFile $env:HOME/.shell/gitignore
+git config --global pull.ff only
 
 Write-Output "Installing delta"
 Invoke-WebRequest https://github.com/dandavison/delta/releases/download/0.12.1/delta-0.12.1-x86_64-unknown-linux-gnu.tar.gz -OutFile "$env:HOME/delta.tar.gz"
