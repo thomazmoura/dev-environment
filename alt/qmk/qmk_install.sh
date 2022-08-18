@@ -1,7 +1,6 @@
 #!/bin/bash
 
-QMK_FIRMWARE_DIR=$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)
-QMK_FIRMWARE_UTIL_DIR=$QMK_FIRMWARE_DIR/util
+QMK_FIRMWARE_DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 
 DEBIAN_FRONTEND=noninteractive
 DEBCONF_NONINTERACTIVE_SEEN=true
@@ -14,7 +13,7 @@ _qmk_install_prepare() {
 _qmk_install() {
     echo "Installing dependencies"
 
-    apt -yq -t stable install \
+    apt -yq install \
         build-essential clang-format diffutils gcc git unzip wget zip \
         python3-pip \
         binutils-avr gcc-avr avr-libc \
