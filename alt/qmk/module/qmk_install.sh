@@ -4,10 +4,6 @@ DEBIAN_FRONTEND=noninteractive
 DEBCONF_NONINTERACTIVE_SEEN=true
 export DEBIAN_FRONTEND DEBCONF_NONINTERACTIVE_SEEN
 
-_qmk_install_prepare() {
-    apt-get update
-}
-
 _qmk_install() {
     echo "Installing dependencies"
 
@@ -20,10 +16,6 @@ _qmk_install() {
 
     python3 -m pip install --user -r /root/.modules/qmk/requirements.txt
 }
-
-if type _qmk_install_prepare &>/dev/null; then
-    _qmk_install_prepare || exit 1
-fi
 
 _qmk_install
 
