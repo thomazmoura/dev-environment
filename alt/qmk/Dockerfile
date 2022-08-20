@@ -3,7 +3,7 @@ FROM thomazmoura/dev-environment
 USER root
 
 # QMK requirements
-COPY qmk_install.sh /root/.modules/qmk/install.sh
+COPY qmk_install.sh /root/.modules/qmk/qmk_install.sh
 RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
 
 USER developer

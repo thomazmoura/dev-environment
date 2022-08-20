@@ -13,8 +13,6 @@ _qmk_install() {
         binutils-avr gcc-avr avr-libc \
         binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
         avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev
-
-    python3 -m pip install --user -r /root/.modules/qmk/requirements.txt
 }
 
 _qmk_install
