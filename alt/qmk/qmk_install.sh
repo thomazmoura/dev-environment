@@ -1,32 +1,24 @@
 #!/bin/bash
 
-QMK_FIRMWARE_DIR=$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)
-QMK_FIRMWARE_UTIL_DIR=$QMK_FIRMWARE_DIR/util
-
 DEBIAN_FRONTEND=noninteractive
 DEBCONF_NONINTERACTIVE_SEEN=true
 export DEBIAN_FRONTEND DEBCONF_NONINTERACTIVE_SEEN
 
-_qmk_install_prepare() {
-    apt-get update
-}
-
 _qmk_install() {
     echo "Installing dependencies"
 
-    apt-get -yq install \
+    apt -yq install \
         build-essential clang-format diffutils gcc git unzip wget zip \
         python3-pip \
         binutils-avr gcc-avr avr-libc \
         binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
         avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev
 
-    python3 -m pip install --user -r $QMK_FIRMWARE_DIR/requirements.txt
+    wget 'https://gitlab.com/api/v4/projects/36571310/jobs/2519076382/artifacts/gcc-arm-none-eabi-11.2-2022.02-x86_64.deb' -o /root/.modules/qmk/gcc-arm-none-eabi.deb
+    dpkg -i /root/.modules/qmk/gcc-arm-none-eabi.deb
+    apt install -f
+    rm -f /root/.modules/qmk/gcc-arm-none-eabi.deb
 }
-
-if type _qmk_install_prepare &>/dev/null; then
-    _qmk_install_prepare || exit 1
-fi
 
 _qmk_install
 
