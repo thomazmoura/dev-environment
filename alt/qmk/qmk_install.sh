@@ -18,6 +18,7 @@ _qmk_install() {
     dpkg -i /root/.modules/qmk/gcc-arm-none-eabi.deb
     apt install -f
     rm -f /root/.modules/qmk/gcc-arm-none-eabi.deb
+    apt autoremove
 }
 
 _qmk_install
