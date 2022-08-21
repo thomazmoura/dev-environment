@@ -104,7 +104,7 @@ jobs:
             --cache-from $CACHE_IMAGE:latest \
             --tag $CACHE_IMAGE:$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg DockerBase='thomazmoura/dev-environment:base_$GIT_BRANCH' \
+            --build-arg DockerBase="thomazmoura/dev-environment:base_$GIT_BRANCH" \
             --file Dockerfile \
             "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')
@@ -136,7 +136,7 @@ jobs:
             --cache-from $CACHE_IMAGE:qmk \
             --tag $CACHE_IMAGE:qmk_$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --build-arg DockerBase='thomazmoura/dev-environment:qmk_base_$GIT_BRANCH' \
+            --build-arg DockerBase="thomazmoura/dev-environment:qmk_base_$GIT_BRANCH" \
             --file Dockerfile \
             "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')
