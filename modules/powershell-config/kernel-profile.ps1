@@ -222,6 +222,13 @@ function GitFuzzyAdd-File() {
   }
 }
 
+function GitFuzzyGet-History($dir = ".") {
+  $fileToGetHistory = (FuzzyGet-ChildItem $dir)
+  if ($fileToGetHistory) {
+    & git history --follow -- $fileToGetHistory
+  }
+}
+
 function GitFuzzyReset-File() {
   $selectedItem = (GitList-ModifiedFiles)
   if ($selectedItem -and (Test-Path $selectedItem)) {
@@ -677,6 +684,7 @@ New-Alias -Force gitpl Git-Pull
 New-Alias -Force gitub GitUpdate-Branch
 New-Alias -Force gitu Git-Undo
 New-Alias -Force gitr Git-Reset
+New-Alias -Force gitfh GitFuzzyGet-History
 
 New-Alias -Force stop Stop-Process
 New-Alias -Force tasks Get-Process
