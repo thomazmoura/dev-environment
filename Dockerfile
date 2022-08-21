@@ -1,3 +1,4 @@
+ARG DockerBase
 FROM ${DockerBase}
   
 # Node installation
