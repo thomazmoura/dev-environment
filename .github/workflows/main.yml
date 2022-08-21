@@ -87,7 +87,7 @@ jobs:
             --cache-from $CACHE_IMAGE:base \
             --tag $CACHE_IMAGE:base_$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --file base.Dockerfile
+            --file base.Dockerfile \
             "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')
         run: |
