@@ -33,7 +33,7 @@ jobs:
 
       - name: Build main container from base using Dockerfile
         run: |
-          export DockerBase='thomazmoura/dev-environment:base' 
+          export DockerBase='thomazmoura/dev-environment:base' &&
           docker build \
             --cache-from $CACHE_IMAGE:latest \
             --tag $CACHE_IMAGE:latest \
@@ -56,7 +56,7 @@ jobs:
 
       - name: Build QMK container from qmk-base using Dockerfile
         run: |
-          export DockerBase='thomazmoura/dev-environment:qmk_base' 
+          export DockerBase='thomazmoura/dev-environment:qmk_base' &&
           docker build \
             --cache-from $CACHE_IMAGE:qmk \
             --tag $CACHE_IMAGE:qmk \
@@ -97,7 +97,7 @@ jobs:
       - name: Build from base using Dockerfile
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
-          export DockerBase='thomazmoura/dev-environment:base_$GIT_BRANCH' 
+          export DockerBase='thomazmoura/dev-environment:base_$GIT_BRANCH' &&
           docker build \
             --cache-from $CACHE_IMAGE:$GIT_BRANCH \
             --cache-from $CACHE_IMAGE:latest \
@@ -128,7 +128,7 @@ jobs:
       - name: Build from dockerfile with cache from branch
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
-          export DockerBase='thomazmoura/dev-environment:qmk_base_$GIT_BRANCH' 
+          export DockerBase='thomazmoura/dev-environment:qmk_base_$GIT_BRANCH' &&
           docker build \
             --cache-from $CACHE_IMAGE:qmk_$GIT_BRANCH \
             --cache-from $CACHE_IMAGE:qmk \
