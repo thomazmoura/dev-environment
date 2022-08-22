@@ -13,6 +13,7 @@ COPY modules/qmk/requirements.txt /home/developer/.modules/qmk/requirements.txt
 RUN python3 -m pip install --user -r /home/developer/.modules/qmk/requirements.txt
 
 # Rust installation
+COPY modules/powershell /home/developer/.modules/powershell
 COPY modules/rust /home/developer/.modules/rust
 RUN pwsh -NoProfile -File /home/developer/.modules/rust/Install-Rust.ps1
 
