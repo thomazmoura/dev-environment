@@ -1,5 +1,5 @@
 ARG DockerBase
-FROM ${DockerBase}
+FROM $DockerBase
   
 # Node installation
 RUN mkdir -p /home/developer/.modules

@@ -121,6 +121,7 @@ jobs:
             --cache-from $CACHE_IMAGE:latest \
             --tag $CACHE_IMAGE:qmk_base_$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:base" \
             --file qmk-base.Dockerfile \
             "."
       - name: Push to docker hub as branch name (with '/' escaped as '_')

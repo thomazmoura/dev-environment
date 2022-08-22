@@ -1,4 +1,5 @@
-FROM thomazmoura/dev-environment:base
+ARG DockerBase
+FROM $DockerBase
 
 USER root
 
