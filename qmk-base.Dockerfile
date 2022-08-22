@@ -12,5 +12,6 @@ COPY modules/qmk/requirements.txt /home/developer/.modules/qmk/requirements.txt
 RUN python3 -m pip install --user -r /home/developer/.modules/qmk/requirements.txt
 
 # Rust installation
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+COPY modules/rust /home/developer/.modules/rust
+RUN pwsh -NoProfile -File /home/developer/.modules/rust/Install-Rust.ps1
 

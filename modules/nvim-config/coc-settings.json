@@ -20,6 +20,11 @@
       "command": "csharp-ls",
       "filetypes": ["cs"],
       "rootPatterns": ["*.csproj", ".vim/", ".git/", ".hg/"]
+    },
+    "rust": {
+      "command": "rust-analyzer",
+      "filetypes": ["rust"],
+      "rootPatterns": ["Cargo.toml"]
     }
   },
   "powershell.integratedConsole.showOnStartup": false,
