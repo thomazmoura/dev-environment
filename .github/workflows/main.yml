@@ -118,6 +118,7 @@ jobs:
           docker build \
             --cache-from $CACHE_IMAGE:qmk_base_$GIT_BRANCH \
             --cache-from $CACHE_IMAGE:qmk_base \
+            --cache-from $CACHE_IMAGE:latest \
             --tag $CACHE_IMAGE:qmk_base_$GIT_BRANCH \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             --file qmk-base.Dockerfile \
