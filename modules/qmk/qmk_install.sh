@@ -7,12 +7,26 @@ export DEBIAN_FRONTEND DEBCONF_NONINTERACTIVE_SEEN
 _qmk_install() {
     echo "Installing dependencies"
 
-    apt -yq install \
-        build-essential clang-format diffutils gcc git unzip wget zip \
-        python3-pip cmake \
-        binutils-avr gcc-avr avr-libc \
-        binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
-        avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev \
+    sudo apt --quiet --yes install \
+        avr-libc \
+        avrdude \
+        binutils-arm-none-eabi \
+        binutils-avr \
+        binutils-riscv64-unknown-elf \
+        clang-format \
+        dfu-programmer \
+        dfu-util \
+        diffutils \
+        gcc \
+        gcc-arm-none-eabi \
+        libnewlib-arm-none-eabi \
+        gcc-avr \
+        gcc-riscv64-unknown-elf \
+        libhidapi-hidraw0 \
+        libusb-dev \
+        picolibc-riscv64-unknown-elf \
+        teensy-loader-cli \
+        zip \
     && apt autoremove
 }
 
