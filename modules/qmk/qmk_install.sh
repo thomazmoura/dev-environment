@@ -9,16 +9,11 @@ _qmk_install() {
 
     apt -yq install \
         build-essential clang-format diffutils gcc git unzip wget zip \
-        python3-pip \
+        python3-pip cmake \
         binutils-avr gcc-avr avr-libc \
         binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
-        avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev
-
-    wget 'https://gitlab.com/api/v4/projects/36571310/jobs/2519076382/artifacts/gcc-arm-none-eabi-11.2-2022.02-x86_64.deb' -o /root/.modules/qmk/gcc-arm-none-eabi.deb
-    dpkg -i /root/.modules/qmk/gcc-arm-none-eabi.deb
-    apt install -f
-    rm -f /root/.modules/qmk/gcc-arm-none-eabi.deb
-    apt autoremove
+        avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev \
+    && apt autoremove
 }
 
 _qmk_install
