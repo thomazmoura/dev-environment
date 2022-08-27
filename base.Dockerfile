@@ -40,7 +40,9 @@ RUN apt update \
   && locale-gen en_US.UTF-8;
 
 ENV TZ="America/Sao_Paulo"
-ENV LANG="en_us.UTF-8"
+ENV LANG="en_US.UTF-8"
+ENV LC_ALL="en_US.UTF-8"
+ENV LANGUAGE="en_US.UTF-8"
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'

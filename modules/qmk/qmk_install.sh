@@ -9,7 +9,7 @@ _qmk_install() {
 
     apt -yq install \
         build-essential clang-format diffutils gcc git unzip wget zip \
-        python3-pip \
+        python3-pip cmake \
         binutils-avr gcc-avr avr-libc \
         binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi \
         avrdude dfu-programmer dfu-util teensy-loader-cli libusb-dev
