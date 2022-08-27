@@ -49,6 +49,7 @@ jobs:
             --cache-from $CACHE_IMAGE:qmk_base \
             --tag $CACHE_IMAGE:qmk_base \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:base" \
             --file qmk-base.Dockerfile \
             "."
       - name: Push to docker hub as latest
