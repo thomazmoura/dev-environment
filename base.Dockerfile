@@ -37,12 +37,12 @@ RUN apt update \
     wget \
   && apt autoremove -y \
   && rm -rf /var/lib/apt/lists/* \
-  && locale-gen en_US.UTF-8;
+  && locale-gen C.UTF-8;
 
 ENV TZ="America/Sao_Paulo"
-ENV LANG="en_US.UTF-8"
-ENV LC_ALL="en_US.UTF-8"
-ENV LANGUAGE="en_US.UTF-8"
+ENV LANG="C.UTF-8"
+ENV LC_ALL="C.UTF-8"
+ENV LANGUAGE="C.UTF-8"
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
