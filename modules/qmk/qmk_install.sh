@@ -7,7 +7,7 @@ export DEBIAN_FRONTEND DEBCONF_NONINTERACTIVE_SEEN
 _qmk_install() {
     echo "Installing dependencies"
 
-    sudo apt --quiet --yes install \
+    apt --quiet --yes install \
         avr-libc \
         avrdude \
         binutils-arm-none-eabi \
@@ -19,10 +19,10 @@ _qmk_install() {
         diffutils \
         gcc \
         gcc-arm-none-eabi \
-        libnewlib-arm-none-eabi \
         gcc-avr \
         gcc-riscv64-unknown-elf \
         libhidapi-hidraw0 \
+        libnewlib-arm-none-eabi \
         libusb-dev \
         picolibc-riscv64-unknown-elf \
         teensy-loader-cli \
