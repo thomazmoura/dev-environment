@@ -353,6 +353,10 @@ function Update-DotnetEFDatabase($migrationName = $null) {
   &dotnet ef database update $migrationName
 }
 
+function Start-CargoWatch() {
+  &cargo watch -x run
+}
+
 function Start-Npm() {
   if(Test-Path "./angular.json") {
     Write-Verbose "Angular project detected. Running watch with localhost exposed on 4200 so it can be accessed outside the container"
@@ -700,6 +704,8 @@ New-Alias -Force dt Test-Dotnet
 New-Alias -Force dnetm New-DotnetEFMigration
 New-Alias -Force dnetu New-DotnetEFMigration
 New-Alias -Force slc Set-LocalContextDatabase
+
+New-Alias -Force cwr Start-CargoWatch
 
 New-Alias -Force ddwr Start-DockerDotnetWatchRun
 
