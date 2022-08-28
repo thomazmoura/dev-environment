@@ -95,11 +95,6 @@ function Enable-Bash ($enable = $true) {
 	}
 }
 
-function New-SudoVimSession ($File=".") {
-  $NeoVimLocation = (Get-Command nvim).Source
-	sudo $NeoVimLocation "$File"
-}
-
 function Get-ChildItemsSize() {
 	du -hs * | sort -hr | less
 }
@@ -153,7 +148,6 @@ New-Alias -Force vtmux New-VerticalTmuxSession
 New-Alias -Force tmuxa Get-TmuxSession
 New-Alias -Force duhs Get-ChildItemsSize
 New-Alias -Force nvs "$env:NVS_HOME/nvs.ps1"
-New-Alias -Force svim New-SudoVimSession
 New-Alias -Force lso Get-OctalFilePermissions
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"

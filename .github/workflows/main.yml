@@ -113,7 +113,7 @@ jobs:
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
           docker image push $CACHE_IMAGE:$GIT_BRANCH
 
-      - name: Build from base_GIT_BRANCH using base.Dockerfile
+      - name: Build from base_GIT_BRANCH using qmk-base.Dockerfile
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
           docker build \
