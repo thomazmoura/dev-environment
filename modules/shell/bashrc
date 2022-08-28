@@ -167,10 +167,6 @@ vtmux () {
 	  select-pane -t 1
 }
 
-svim () {
-	sudo ~/local/nvim/bin/nvim "$1"
-}
-
 fsi() {
   fd --type f . ${1:-"$HOME/git"} | fzf
 }
@@ -324,7 +320,6 @@ fi
 # Aliases
 alias nodejs='node'
 alias clean-swaps='~/Scripts/clean-swaps.sh'
-alias shut='sudo /sbin/shutdown -h now'
 alias htmux-npm="htmux 'npm start -- --host 0.0.0.0 --poll 2000'"
 alias htmux-test="htmux 'npm test -- --poll 2000'"
 alias htmux-yarn="htmux 'yarn start'"
