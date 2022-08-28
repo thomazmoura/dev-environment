@@ -9,9 +9,8 @@ RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install
 
 USER developer
 
-COPY modules/qmk/requirements.txt /home/developer/.modules/qmk/requirements.txt
-RUN python3 -m pip install --user -r /home/developer/.modules/qmk/requirements.txt \
-  && python3 -m pip install --user qmk 
+COPY modules/qmk /home/developer/.modules/qmk
+RUN chmod +x /home/developer/.modules/qmk/qmk_setup.sh && /home/developer/.modules/qmk/qmk_setup.sh
 
 # Rust installation
 COPY modules/powershell /home/developer/.modules/powershell
