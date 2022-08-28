@@ -82,6 +82,10 @@ if ( (Test-Path "$HOME/.cargo/bin") -and !($env:PATH.Contains("$HOME/.cargo/bin"
   Write-Verbose "`n->> Rust's cargo folder found and not added to PATH. Adding now"
   $env:PATH = "$HOME/.cargo/bin:${env:PATH}"
 }
+if ( (Test-Path "$HOME/.local/bin") -and !($env:PATH.Contains("$HOME/.local/bin")) ) {
+  Write-Verbose "`n->> ~/.local/bin folder found and not added to PATH. Adding now"
+  $env:PATH = "$HOME/.local/bin:${env:PATH}"
+}
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de caminho de scripts padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
