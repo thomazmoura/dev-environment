@@ -305,6 +305,10 @@ function Git-History() {
   git log --oneline --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short --author-date-order
 }
 
+function GitAdd-Untracked() {
+  & git ls-files -o --exclude-standard | Foreach-Object { git add $_ }
+}
+
 function Start-DotnetWatch([String]$Profile, [Switch]$SkipAutoUrls) {
   if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
     Write-Verbose "Skipping auto exposing URLs"
@@ -693,6 +697,7 @@ New-Alias -Force gitub GitUpdate-Branch
 New-Alias -Force gitu Git-Undo
 New-Alias -Force gitr Git-Reset
 New-Alias -Force gitfh GitFuzzyGet-History
+New-Alias -Force gitau GitAdd-Untracked
 
 New-Alias -Force stop Stop-Process
 New-Alias -Force tasks Get-Process
