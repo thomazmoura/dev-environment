@@ -145,6 +145,9 @@ nnoremap <Leader>\  :vsplit<CR>
 " Quickly break the line
 nnoremap <Leader><CR>  i<CR><ESC>
 
+" Quickly sort (removing duplicates)
+vnoremap <Leader>s :'<,'>sort u<CR>
+
 " Use the arrows to scroll up and down
 noremap <Down> <C-e>
 noremap <Up> <C-y>
