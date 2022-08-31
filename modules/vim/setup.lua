@@ -132,7 +132,7 @@ require'nvim-tree'.setup {
 -- auto-save
 require("auto-save").setup {
   enabled = true,
-  trigger_events = { "InsertLeave" },
+  trigger_events = { "BufLeave" },
 }
 
 require'hop'.setup()
