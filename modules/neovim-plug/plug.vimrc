@@ -8,7 +8,7 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'lewis6991/impatient.nvim'
-Plug 'Pocco81/auto-save.nvim' 
+Plug 'thomazmoura/auto-save.nvim' 
 
 " Jump motion
 Plug 'phaazon/hop.nvim'
