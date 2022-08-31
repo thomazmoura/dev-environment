@@ -129,6 +129,12 @@ require'nvim-tree'.setup {
   },
 }
 
+-- auto-save
+require("auto-save").setup {
+  enabled = true,
+  trigger_events = { "InsertLeave" },
+}
+
 require'hop'.setup()
 
 vim.api.nvim_set_keymap('', 'gj', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = true })<cr>", {})
