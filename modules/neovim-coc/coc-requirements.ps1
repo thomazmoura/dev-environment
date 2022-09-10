@@ -18,7 +18,6 @@ $CocModulesInstallCommand = "CocInstall -sync " +
   "coc-prettier " +
   "coc-python " +
   "coc-snippets " +
-  "coc-rust-analyzer " +
   "coc-tsserver " +
   "coc-yaml"
 nvim -n -u /home/developer/.modules/neovim-coc/coc-setup.vimrc +"$CocModulesInstallCommand" +qall

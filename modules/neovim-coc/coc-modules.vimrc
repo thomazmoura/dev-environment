@@ -10,7 +10,6 @@
   \  'coc-powershell',
   \  'coc-prettier',
   \  'coc-python',
-  \  'coc-rust-analyzer',
   \  'coc-snippets',
   \  'coc-tsserver',
   \  'coc-yaml',
