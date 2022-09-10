@@ -20,16 +20,15 @@
       "command": "csharp-ls",
       "filetypes": ["cs"],
       "rootPatterns": ["*.csproj", ".vim/", ".git/", ".hg/"]
+    },
+    "rust": {
+      "command": "rust-analyzer",
+      "filetypes": ["rust"],
+      "rootPatterns": ["Cargo.toml"]
     }
   },
   "powershell.integratedConsole.showOnStartup": false,
   "prettier.singleQuote": true,
-  "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.enable": true,
-  "rust-analyzer.files.watcher": "client",
-  "rust-analyzer.lens.enable": true,
-  "rust-analyzer.workspace.symbol.search.kind": "all_symbols",
-  "rust-analyzer.workspace.symbol.search.scope": "workspace_and_dependencies",
   "snippets.loadFromExtensions": true,
   "snippets.loadVSCodeProjectSnippets": true,
   "snippets.textmateSnippetsRoots": [
@@ -67,6 +66,9 @@
     "default": "\uf29c" //  question mark in circle
   },
   "suggest.detailField": "preview",
-  "suggest.enablePreselect": true,
-  "suggest.noselect": true
+  "suggest.enablePreselect": false,
+  "suggest.noselect": true,
+  "suggest.selection": "first",
+  "suggest.triggerAfterInsertEnter": true,
+  "suggest.minTriggerInputLength": 0
 }

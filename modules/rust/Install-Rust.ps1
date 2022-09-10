@@ -11,5 +11,8 @@ $UpdatedPath = "$env:PATH`:$HOME/.cargo/bin"
 Write-Information "`n->> Installing Cargo modules"
 & cargo install cargo-watch
 
+& git clone https://github.com/rust-lang/rust-analyzer.git /home/developer/code/rust-analyzer && Push-Location /home/developer/code/rust-analyzer
+& cargo xtask install --server && Pop-Location && rm -rf /home/developer/code/rust-analyzer
+
 Throw-ExceptionOnNativeFailure
 
