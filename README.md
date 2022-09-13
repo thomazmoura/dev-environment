@@ -1,7 +1,9 @@
 # dev-environment
-Dev Environment for developing with NeoVim
+Dev Environment for developing with NeoVim. From inside the container itself.
 
 ## Overview
+
+_Para a versão em português vá para: [LEIAME.md](LEIAME.md)_
 
 This is a personal project to keep my main driver tools for development both for professional use and development-oriented fun projects (usually on a different container).
 
@@ -22,7 +24,7 @@ My main intentions with this repo are:
 
 The container I use for most professional work.
 
-**Docker** - The main reason this repo exists is to try out the idea of keeping my whole development stack on a container (and develop from inside the container), so I use Docker for that.
+**Docker** - The main reason this repo exists is to try out the idea of keeping most of my development stack on a container (and develop from inside the container), so I use Docker for that.
 **NeoVim** - NeoVim is my main tool for development so it was my choice for editor/IDE-like-beast. I also use both coc.nvim and native LTS packages and many plugins to achieve the usability I need.
 **TMUX** - I use it mostly to have a dedicated pane for terminal and for quick switching between projects.
 **PowerShell** - Call me a heretic, but I'm both a Linux and a PowerShell lover, so yep, I use mostly PowerShell as my main shell and this repo reflects that. Should be easy to change that on the DockerFile if so you want.
