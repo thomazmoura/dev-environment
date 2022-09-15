@@ -60,6 +60,10 @@ COPY --chown=developer:developer modules/vim /home/developer/.local/share/nvim/s
 # Container startup configuration
 COPY --chown=developer:developer modules/entrypoint-config /home/developer/.modules/entrypoint
 
+# Add VS Code support
+COPY --chown=developer:developer modules/vscode /home/developer/.modules/vscode
+RUN chmod +x /home/developer/.modules/vscode/download-vscode-server.sh && /home/developer/.modules/vscode/download-vscode-server.sh
+
 # Start the environment
 ENV TERM xterm-256color
 WORKDIR /home/developer/code
