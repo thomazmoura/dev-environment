@@ -24,7 +24,7 @@ if [ -n "${commit_sha}" ]; then
 
     # Make the parent directory where the server should live.
     # NOTE: Ensure VS Code will have read/write access; namely the user running VScode or container user.
-    mkdir -vp ~/.vscode-server/bin/"${commit_sha}"
+    mkdir -vp ~/.vscode-server/"${commit_sha}"
 
     # Extract the tarball to the right location.
     tar --no-same-owner -xzv --strip-components=1 -C ~/.vscode-server/"${commit_sha}" -f "/tmp/${archive}"
