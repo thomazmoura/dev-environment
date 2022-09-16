@@ -29,7 +29,7 @@
             "fetch_upstream_icon": true
           },
           "style": "powerline",
-          "template": "<b> {{ .UpstreamIcon }}</b>{{ .HEAD }}{{ .BranchStatus }}{{ if .Staging.Changed }} \ue0b1 <#FFFFFF>\uf046 {{ .Staging.String }}</>{{ if and (.Working.Changed) (.Staging.Changed) }}{{ end }}{{ end }}{{ if .Working.Changed }} \ue0b1 <#AAA>\uf044 {{ .Working.String }}</>{{ end }} ",
+          "template": "<b> {{ .UpstreamIcon }}</b>{{ .HEAD }} {{ .BranchStatus }}{{ if .Staging.Changed }} \ue0b1 <#FFFFFF>\uf046 {{ .Staging.String }}</>{{ if and (.Working.Changed) (.Staging.Changed) }}{{ end }}{{ end }}{{ if .Working.Changed }} \ue0b1 <#AAA>\uf044 {{ .Working.String }}</>{{ end }} ",
           "type": "git"
         },
         {
