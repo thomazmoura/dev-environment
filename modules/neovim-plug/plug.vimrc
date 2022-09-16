@@ -1,5 +1,10 @@
 call plug#begin('~/.local/share/nvim/site/.plugged')
 
+" Lua requirements
+Plug 'nvim-lua/plenary.nvim'
+Plug 'lewis6991/impatient.nvim'
+Plug 'nvim-telescope/telescope.nvim', { 'branch': '0.1.x' }
+
 " General Settings
 Plug 'preservim/nerdcommenter'
 Plug 'wellle/targets.vim'
@@ -7,8 +12,11 @@ Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
-Plug 'lewis6991/impatient.nvim'
 Plug 'thomazmoura/auto-save.nvim' 
+
+" Telescope
+Plug 'BurntSushi/ripgrep'
+Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 
 " Jump motion
 Plug 'phaazon/hop.nvim'
