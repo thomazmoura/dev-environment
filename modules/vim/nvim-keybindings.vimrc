@@ -26,12 +26,16 @@ vnoremap <silent> # :<C-U>
 nnoremap <C-e> :NvimTreeToggle<CR>
 nnoremap <Leader><C-e> :NvimTreeFindFile<CR>
 
-" Activate fzf
+" Telescope
+nnoremap <Leader>/ <cmd>Telescope find_files<cr>
+nnoremap <Leader>* <cmd>Telescope live_grep<cr>
+nnoremap <Leader>? <cmd>Telescope buffers<cr>
+nnoremap <Leader>h <cmd>Telescope help_tags<cr>
+
+" FZF
 nnoremap <C-p> :Files<CR>
 nnoremap <Leader><C-p> :Buffers<CR>
 nnoremap <C-t> :CocFzfList symbols<CR>
-nnoremap <Leader>/ :Files<CR>
-nnoremap <Leader>? :Buffers<CR>
 nnoremap <Leader>O :CocFzfList symbols<CR>
 
 " Find everywhere

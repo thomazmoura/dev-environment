@@ -135,6 +135,7 @@ require("auto-save").setup {
   trigger_events = { "BufLeave" },
 }
 
+-- hop
 require'hop'.setup()
 
 vim.api.nvim_set_keymap('', 'gj', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = true })<cr>", {})
@@ -142,3 +143,21 @@ vim.api.nvim_set_keymap('n', 'gj', "<cmd>lua require'hop'.hint_char1({ inclusive
 vim.api.nvim_set_keymap('', 'gJ', "<cmd>lua require'hop'.hint_char1({ inclusive_jump = false })<cr>", {})
 vim.api.nvim_set_keymap('n', '<leader>j', "<cmd>HopLineStartAC<cr>", {})
 vim.api.nvim_set_keymap('n', '<leader>k', "<cmd>HopLineStartBC<cr>", {})
+
+-- telescope
+require('telescope').setup {
+  defaults = {
+    pickers = {
+      find_files = {
+        find_command = { 'fd', '--type', 'file' }
+      }
+    }
+  },
+  extensions = {
+    fzf = { }
+  }
+}
+
+
+require('telescope').load_extension('fzf')
+
