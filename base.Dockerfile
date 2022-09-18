@@ -29,6 +29,7 @@ RUN apt update \
     procps \
     python3 \
     python3-pip \
+    ripgrep \
     silversearcher-ag \
     strace \
     tmux \
