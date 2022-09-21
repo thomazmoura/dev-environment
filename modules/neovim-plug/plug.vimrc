@@ -49,5 +49,8 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
 
+" LSP
+Plug 'OmniSharp/omnisharp-vim'
+
 call plug#end()
 
