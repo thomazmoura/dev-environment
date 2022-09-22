@@ -147,17 +147,22 @@ vim.api.nvim_set_keymap('n', '<leader>k', "<cmd>HopLineStartBC<cr>", {})
 -- telescope
 require('telescope').setup {
   defaults = {
-    pickers = {
-      find_files = {
-        find_command = { 'fd', '--type', 'file' }
-      }
+    winblend = 30
+  },
+  pickers = {
+    find_files = {
+      find_command = { 'fd', '--type', 'file' }
+    },
+    buffers = {
+      ignore_current_buffer = true,
+      sort_lastused = true,
+      sort_mru = true,
     }
   },
   extensions = {
     fzf = { }
   }
 }
-
 
 require('telescope').load_extension('fzf')
 
