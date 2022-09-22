@@ -31,6 +31,7 @@ nnoremap <Leader>/ <cmd>Telescope find_files<cr>
 nnoremap <Leader>* <cmd>Telescope live_grep<cr>
 nnoremap <Leader>? <cmd>Telescope buffers<cr>
 nnoremap <Leader>h <cmd>Telescope help_tags<cr>
+nnoremap <Leader>, <cmd>Telescope find_files cwd=~/.dotfiles<cr>
 
 " FZF
 nnoremap <C-p> :Files<CR>

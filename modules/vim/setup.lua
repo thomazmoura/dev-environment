@@ -151,7 +151,7 @@ require('telescope').setup {
   },
   pickers = {
     find_files = {
-      find_command = { 'fd', '--type', 'file' }
+      find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git', '--exclude', '.plugged' }
     },
     buffers = {
       ignore_current_buffer = true,
