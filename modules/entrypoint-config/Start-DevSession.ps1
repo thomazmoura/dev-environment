@@ -57,6 +57,42 @@ function Setup-DotNetCertificate {
 
 }
 
+function Setup-DotFiles {
+
+  $DotFilesFolder = "$HOME/.dotfiles"
+  if( !(Test-Path $DotFilesFolder) ) {
+    Write-Information "Creating dotfiles folder"
+    New-Item -Type Directory -Path $DotFilesFolder
+  }
+
+  $NeoVimLocalFolder = "$HOME/.dotfiles/neovim-local"
+  if( !(Test-Path $NeoVimLocalFolder) ) {
+    Write-Information "Creating NeoVim Local Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $NeoVimLocalFolder -Target "$HOME/.local/share/nvim"
+  }
+
+  $NeoVimConfigFolder = "$HOME/.dotfiles/neovim-config"
+  if( !(Test-Path $NeoVimConfigFolder) ) {
+    Write-Information "Creating NeoVim Local Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $NeoVimConfigFolder -Target "$HOME/.config/nvim"
+  }
+
+  $PowerShellConfigFolder = "$HOME/.dotfiles/powershell-config"
+  if( !(Test-Path $PowerShellConfigFolder) ) {
+    Write-Information "Creating NeoVim Local Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $PowerShellConfigFolder -Target "$HOME/.config/powershell"
+  }
+
+  $ModulesFolder = "$HOME/.dotfiles/modules"
+  if( !(Test-Path $ModulesFolder) ) {
+    Write-Information "Creating NeoVim Local Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $ModulesFolder -Target "$HOME/.modules"
+  }
+
+}
+
 Create-DefaultFolders
 Setup-AzureDevOpsCLI
 Setup-DotNetCertificate
+Setup-DotFiles
+

@@ -80,3 +80,13 @@ function Update-PSReadline() {
   Install-Module -Name PSReadLine -Force
 }
 
+function Start-DevSession() {
+  if( !(Test-Path "$HOME/.dev-session-started") -and (Test-Path "$HOME/.modules/entrypoint/Start-DevSession.ps1") ) {
+    Write-Information "Setting initial dev-environment configuration"
+    . "$HOME/.modules/entrypoint/Start-DevSession.ps1" &&
+      Get-Date > "$HOME/.dev-session-started"
+  } else {
+    Write-Verbose "Initial dev-environment configuration already set"
+  }
+}
+
