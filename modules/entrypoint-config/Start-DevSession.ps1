@@ -68,7 +68,7 @@ function Setup-DotFiles {
   $NeoVimLocalFolder = "$HOME/.dotfiles/neovim-local"
   if( !(Test-Path $NeoVimLocalFolder) ) {
     Write-Information "Creating NeoVim Local Folder SymbolicLink"
-    New-Item -Type SymbolicLink -Path $NeoVimLocalFolder -Target "$HOME/.local/share/nvim"
+    New-Item -Type SymbolicLink -Path $NeoVimLocalFolder -Target "$HOME/.local/share/nvim/site"
   }
 
   $NeoVimConfigFolder = "$HOME/.dotfiles/neovim-config"
