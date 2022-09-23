@@ -222,5 +222,38 @@
 			"}"
 		],
 		"description": "Creates a new foreach statement"
-	}
+	},
+  "Test Sample": {
+    "prefix": "test-sample",
+    "body": [
+      "public ${1:Entity} AddNew${1:Entity}()",
+      "{",
+      "    var ${2:VariableName} = new ${1:Entity}()",
+      "    {",
+      "        ${4}",
+      "    };",
+      "    ${3:_context}.Add(${2:VariableName});",
+      "    ${3:_context}.SaveChanges();",
+      "    return ${1:Entity};",
+      "}"
+    ],
+    "description": "Create an instance of an entity and add it to the _context"
+  },
+  "Exemplo de Teste": {
+    "prefix": "test-sample-br",
+    "body": [
+      "public ${1:Entidade} Gerar${1:Entidade}()",
+      "{",
+      "    var ${2:nomeDaVariavel} = new ${1:Entidade}()",
+      "    {",
+      "        ${4}",
+      "    };",
+      "    ${3:_contexto}.Add(${2:nomeDaVariavel});",
+      "    ${3:_contexto}.SaveChanges();",
+      "    return ${2:nomeDaVariavel};",
+      "}"
+    ],
+    "description": "Cria uma instância de uma entidade e a acrescenta ao _contexto;"
+  }
 }
+
