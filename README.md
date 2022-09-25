@@ -42,7 +42,7 @@ The container I use for most professional work.
 
 I've decided to create this sub-container (which uses the Main Container as base) to be able to add the requirements for building [QMK](https://github.com/qmk/qmk_firmware) (which is a mechanical keyboard open source firmware) and Rust without having to increase too much the Main Container size (QMK has a lot of dependencies).
 
-* **C/C++** - Needed to build QMK. I use C only for customizing QMK layouts and features, so it's support is not as great as other languages here.
+* **C/C++** - Needed to build QMK. I use C only for customizing QMK layouts and features, so its support is not as great as other languages here.
 * **Rust** - Since I had to make a second container to put QMK requirements, might as well put Rust dependencies too so I can use it as a study container.
 
 ### Windows and Linux Scripts
