@@ -10,6 +10,12 @@ Esse é um projeto pessoal para manter as minhas ferramentas de desenvolvimento 
 
 Eu pretendo reduzir o tamanho de ambos os containers eventualmente, mas por enquanto, tenha em mente que eles são consideravelmente imensos (principalmente o do QMK)
 
+## Showcase
+
+Troca de projetos com tmux + fzf e busca fuzzy de arquivos dentro do container:
+
+![alt text](https://raw.githubusercontent.com/thomazmoura/image-samples/master/dev-environment/tmux_workflow.gif "Gif mostrando alguns dos recursos do meu fluxo de trabalho com o container")
+
 ## Objetivos
 
 Minhas principais intenções com esse projeto são:

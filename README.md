@@ -9,6 +9,12 @@ This is a personal project to keep my main driver tools for development both for
 
 I do intend to reduce the size of both containers eventually, but for the time being, keep in mind they're considerably huge (specially the QMK one).
 
+## Showcase
+
+Project switching with tmux + fzf and fuzzy finding files inside the container:
+
+![alt text](https://raw.githubusercontent.com/thomazmoura/image-samples/master/dev-environment/tmux_workflow.gif "Gif showing some features of the dev-environment container")
+
 ## Goals
 
 My main intentions with this repo are:
