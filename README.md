@@ -3,7 +3,7 @@ Dev Environment for developing with NeoVim. From inside the container itself.
 
 ## Overview
 
-_Para a versão em português vá para: [LEIAME.md](LEIAME.md)_
+> Para a versão em português vá para: [LEIAME.md](LEIAME.md)
 
 This is a personal project to keep my main driver tools for development both for professional use and development-oriented fun projects (usually on a different container).
 

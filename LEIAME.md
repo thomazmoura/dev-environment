@@ -4,7 +4,7 @@ Ambiente de desenvolvimento para codificar com o NeoVim. De dentro do próprio c
 
 ## Visão Geral
 
-_For the english version, check: [README.md](README.md)_
+> For the english version, check: [README.md](README.md)
 
 Esse é um projeto pessoal para manter as minhas ferramentas de desenvolvimento do dia-a-dia, tanto para uso profissional quanto para projetos interessantes mais voltados para desenvolvimento (geralmente os mantenho em um container separado nesse mesmo repositório).
 
