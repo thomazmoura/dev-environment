@@ -194,3 +194,4 @@ require 'lspconfig'.sumneko_lua.setup {
 
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
+require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
