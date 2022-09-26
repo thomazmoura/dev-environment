@@ -4,6 +4,7 @@ package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 -- Import custom sub-settings
 require('hop-settings')
 require('icons-settings')
+require('lsp-settings')
 require('lualine-settings')
 require('telescope-settings')
 require('treesitter-settings')
@@ -74,5 +75,4 @@ require('lualine').setup {
   },
   extensions = {}
 }
-
 

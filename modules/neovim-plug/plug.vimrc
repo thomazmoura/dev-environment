@@ -29,11 +29,7 @@ Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
-Plug 'antoinemadec/coc-fzf'
 Plug 'karb94/neoscroll.nvim'
-
-" Overhaul
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 " Colorschemes
 Plug 'joshdick/onedark.vim'
@@ -48,6 +44,10 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 " Tree Explorer
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
+
+" Coc-Settings - being replaced
+" Plug 'antoinemadec/coc-fzf'
+" Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 call plug#end()
 
