@@ -141,7 +141,7 @@ require'lspconfig'.omnisharp.setup {
 
   capabilities = capabilities,
 
-  cmd = { "dotnet", "/home/developer/.omnisharp/OmniSharp.dll" },
+  cmd = { "dotnet", "/home/developer/.language-servers/omnisharp/OmniSharp.dll" },
 
   -- Enables support for reading code style, naming convention and analyzer
   -- settings from .editorconfig.
