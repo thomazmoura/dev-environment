@@ -16,3 +16,6 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 Write-Output "`n->> Installing Json Language Server"
 npm install --global vscode-langservers-extracted
 
+Write-Output "`n->> Installing tsserver - TypeScript Language Server"
+npm install --global typescript typescript-language-server
+
