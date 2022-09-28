@@ -165,6 +165,7 @@ require 'lspconfig'.omnisharp.setup {
   analyze_open_documents_only = false,
 }
 
+-- lua LS settings
 require 'lspconfig'.sumneko_lua.setup {
   on_attach = on_attach,
   capabilities = capabilities,
@@ -192,6 +193,12 @@ require 'lspconfig'.sumneko_lua.setup {
   },
 }
 
+-- json LS settings
+require'lspconfig'.jsonls.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
 require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
