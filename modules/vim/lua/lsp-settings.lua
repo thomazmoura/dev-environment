@@ -207,6 +207,13 @@ require'lspconfig'.tsserver.setup{
   flags = lsp_flags,
 }
 
+-- Angular LS settings
+require'lspconfig'.angularls.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
 require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
