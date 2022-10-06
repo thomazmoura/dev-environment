@@ -223,12 +223,28 @@
 		],
 		"description": "Creates a new foreach statement"
 	},
+  "Extension Methods class": {
+    "prefix": "extension-filter-class",
+    "body": [
+      "public static class ${1:Entity}Extensions",
+      "{",
+      "",
+      "    public static IQueryable<${1:Entity}> ${2:MethodName}(this IQueryable<${1:Entity}> ${3:variable}s${4:, })",
+      "    {",
+      "        return ${3:variable}s.${5:Method}(${3:variable} => ${3:variable}.${6});",
+      "    }",
+      "",
+      "}",
+      ""
+    ],
+    "description": "Creates a class for extension methods for filtering entities"
+  },
   "Extension Method filter": {
     "prefix": "extension-filter",
     "body": [
       "public static IQueryable<${1:Entity}> ${2:MethodName}(this IQueryable<${1:Entity}> ${3:variable}s)",
       "{",
-      "    return ${3:variable}s.${4:Method}(${3:variable} => ${3:variable}.${6})",
+      "    return ${3:variable}s.${4:Method}(${3:variable} => ${3:variable}.${5});",
       "}",
       ""
     ],
