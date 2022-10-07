@@ -76,3 +76,5 @@ require('lualine').setup {
   extensions = {}
 }
 
+require("nvim-autopairs").setup ( { map_cr = false } )
+
