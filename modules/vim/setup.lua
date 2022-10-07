@@ -166,3 +166,5 @@ require('telescope').setup {
 
 require('telescope').load_extension('fzf')
 
+require("nvim-autopairs").setup ( { map_cr = false } )
+

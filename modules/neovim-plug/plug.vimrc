@@ -13,6 +13,7 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'thomazmoura/auto-save.nvim' 
+Plug 'windwp/nvim-autopairs'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'
