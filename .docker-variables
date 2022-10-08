@@ -6,4 +6,4 @@ AZURE_DEVOPS_ORGANIZATION=azdevops.visualstudio.com
 AZURE_DEVOPS_PROJECT=Project
 ASPNETCORE_ENVIRONMENT=Development
 ASPNETCORE_Kestrel__Certificates__Default__Password=p455W0rd
-ASPNETCORE_Kestrel__Certificates__Default__Path=/home/developer/.storage/dev-cert/aspnet-localhost.pfx
+ASPNETCORE_Kestrel__Certificates__Default__Path=/home/developer/.shared/aspnet-localhost.pfx
