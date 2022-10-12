@@ -129,9 +129,11 @@ require 'lspconfig'.omnisharp.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
-  cmd = { "dotnet", "/home/developer/.language-servers/omnisharp/OmniSharp.dll", "--language-server" },
+  cmd = {
+    "dotnet", "/home/developer/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
+    tostring(vim.fn.getpid())
+  },
 }
-
 -- lua LS settings
 require 'lspconfig'.sumneko_lua.setup {
   on_attach = on_attach,
