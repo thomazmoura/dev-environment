@@ -5,7 +5,7 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
 
 Write-Output "Make node available to the script"
-. "$HOME/.nvs/nvs.ps1 use lts"
+. $HOME/.nvs/nvs.ps1 use lts
 
 Write-Output "`n->> Installing Json Language Server"
 npm install --global vscode-langservers-extracted
