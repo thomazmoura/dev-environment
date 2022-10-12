@@ -4,8 +4,8 @@ Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
 
-Write-Output "Loading path"
-$env:PATH=[System.Environment]::GetEnvironmentVariable("PATH")
+Write-Output "Add nvs to local path"
+$env:PATH="${env:PATH}:$HOME/.nvs"
 
 Write-Output "Setting LTS as the default node version"
 nvs use lts
