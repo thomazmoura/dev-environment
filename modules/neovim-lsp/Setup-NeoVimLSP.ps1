@@ -1,12 +1,11 @@
 . "$HOME/.modules/powershell/Check-Failure.ps1"
 
-Write-Output "`n->> Setting up LTS node version"
-nvs use lts
-
 Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
-
 Push-Location $HOME/.language-servers
+
+Write-Output "Loading path"
+$env:PATH=[System.Environment]::GetEnvironmentVariable("PATH")
 
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
 Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.1/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
