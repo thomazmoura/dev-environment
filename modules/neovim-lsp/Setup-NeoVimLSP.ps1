@@ -22,6 +22,9 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
 & tar -xzvf "./omnisharp-linux-x64-net6.tar.gz" -C "$HOME/.language-servers/omnisharp"
 & Remove-Item "./omnisharp-linux-x64-net6.tar.gz"
 
+Write-Output "`n->> Copying custom omnisharp.json to use folder"
+Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" $HOME
+
 Write-Output "`n->> Installing Lua Language Server"
 Invoke-WebRequest "https://github.com/sumneko/lua-language-server/releases/download/3.5.6/lua-language-server-3.5.6-linux-x64.tar.gz" -OutFile "lua-language-server-3.5.6-linux-x64.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
