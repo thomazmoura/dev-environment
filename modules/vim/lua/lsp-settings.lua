@@ -194,6 +194,13 @@ require'lspconfig'.angularls.setup{
   flags = lsp_flags,
 }
 
+-- Proper icons
+local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
+for type, icon in pairs(signs) do
+  local hl = "DiagnosticSign" .. type
+  vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
+end
+
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
 require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
