@@ -3,6 +3,8 @@
 Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 
+Push-Location $HOME/.language-servers
+
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
 Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.1/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
@@ -23,6 +25,8 @@ npm install --global typescript typescript-language-server
 
 Write-Output "`n->> Installing Angular Language Server"
 npm install --global @angular/language-server
+
+Pop-Location
 
 Throw-ExceptionOnNativeFailure
 
