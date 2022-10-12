@@ -1,5 +1,8 @@
 . "$HOME/.modules/powershell/Check-Failure.ps1"
 
+Write-Output "`n->> Setting up LTS node version"
+nvs use lts
+
 Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 
