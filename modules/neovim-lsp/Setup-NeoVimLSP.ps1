@@ -23,8 +23,9 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
 & tar -xzvf "./omnisharp-linux-x64-net6.tar.gz" -C "$HOME/.language-servers/omnisharp"
 & Remove-Item "./omnisharp-linux-x64-net6.tar.gz"
 
-Write-Output "`n->> Copying custom omnisharp.json to use folder"
+Write-Output "`n->> Copying custom language config files to user folder"
 Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" $HOME
+Copy-Item "$HOME/.modules/neovim-lsp/editorconfig" "$HOME/.editorconfig"
 
 
 Write-Output "`n->> Installing PowerShell Editor Services (PowerShell LSP)"
