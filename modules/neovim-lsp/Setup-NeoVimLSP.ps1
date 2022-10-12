@@ -7,6 +7,9 @@ Push-Location $HOME/.language-servers
 Write-Output "Loading path"
 $env:PATH=[System.Environment]::GetEnvironmentVariable("PATH")
 
+Write-Output "Setting LTS as the default node version"
+nvs use lts
+
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
 Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.1/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
