@@ -16,6 +16,7 @@ npm install --global typescript typescript-language-server
 Write-Output "`n->> Installing Angular Language Server"
 npm install --global @angular/language-server
 
+
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
 Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.1/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
@@ -24,6 +25,14 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
 
 Write-Output "`n->> Copying custom omnisharp.json to use folder"
 Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" $HOME
+
+
+Write-Output "`n->> Installing PowerShell Editor Services (PowerShell LSP)"
+Invoke-WebRequest "https://github.com/PowerShell/PowerShellEditorServices/releases/download/v3.5.4/PowerShellEditorServices.zip" -OutFile "PowerShellEditorServices.zip"
+New-Item -Force -Type Directory -Path $HOME/.language-servers/powershell
+& Expand-Archive -Path "PowerShellEditorServices.zip" -DestinationPath "$HOME/.language-servers/powershell"
+& Remove-Item "PowerShellEditorServices.zip"
+
 
 Write-Output "`n->> Installing Lua Language Server"
 Invoke-WebRequest "https://github.com/sumneko/lua-language-server/releases/download/3.5.6/lua-language-server-3.5.6-linux-x64.tar.gz" -OutFile "lua-language-server-3.5.6-linux-x64.tar.gz"

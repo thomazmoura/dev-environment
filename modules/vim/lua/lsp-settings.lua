@@ -134,6 +134,15 @@ require 'lspconfig'.omnisharp.setup {
     tostring(vim.fn.getpid())
   },
 }
+
+-- powershell settings
+require 'lspconfig'.powershell_es.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+  bundle_path = '/home/developer/.language-servers/powershell',
+}
+
 -- lua LS settings
 require 'lspconfig'.sumneko_lua.setup {
   on_attach = on_attach,
@@ -163,21 +172,21 @@ require 'lspconfig'.sumneko_lua.setup {
 }
 
 -- json LS settings
-require'lspconfig'.jsonls.setup {
+require 'lspconfig'.jsonls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- TypeScript LS settings
-require'lspconfig'.tsserver.setup{
+require 'lspconfig'.tsserver.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Angular LS settings
-require'lspconfig'.angularls.setup{
+require 'lspconfig'.angularls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
