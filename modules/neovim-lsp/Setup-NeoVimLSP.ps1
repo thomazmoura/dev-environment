@@ -4,11 +4,8 @@ Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
 
-Write-Output "Make nvs available to the script"
-. "$HOME/.nvs/nvs.ps1"
-
-Write-Output "Setting LTS as the default node version"
-nvs use lts
+Write-Output "Make node available to the script"
+. "$HOME/.nvs/nvs.ps1 use lts"
 
 Write-Output "`n->> Installing Json Language Server"
 npm install --global vscode-langservers-extracted
