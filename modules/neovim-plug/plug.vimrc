@@ -15,6 +15,17 @@ Plug 'tpope/vim-fugitive'
 Plug 'thomazmoura/auto-save.nvim' 
 Plug 'windwp/nvim-autopairs'
 
+" LSP and AutoComplete configuration
+Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/cmp-cmdline'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'hrsh7th/cmp-path'
+Plug 'hrsh7th/nvim-cmp'
+Plug 'neovim/nvim-lspconfig' 
+Plug 'rafamadriz/friendly-snippets'
+Plug 'saadparwaiz1/cmp_luasnip'
+
 " Telescope
 Plug 'BurntSushi/ripgrep'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
@@ -45,10 +56,6 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 " Tree Explorer
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
-
-" Coc-Settings - being replaced
-" Plug 'antoinemadec/coc-fzf'
-" Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
 call plug#end()
 
