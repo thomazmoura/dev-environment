@@ -1,3 +1,5 @@
+. "$HOME/.modules/powershell/Check-Failure.ps1"
+
 Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 
@@ -21,4 +23,6 @@ npm install --global typescript typescript-language-server
 
 Write-Output "`n->> Installing Angular Language Server"
 npm install --global @angular/language-server
+
+Throw-ExceptionOnNativeFailure
 
