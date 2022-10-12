@@ -49,6 +49,8 @@ if cmp ~= nil then
     sources = {
       { name = 'nvim_lsp' },
       { name = 'luasnip' },
+      { name = 'buffer' },
+      { name = 'path' },
     },
   }
 
@@ -136,7 +138,7 @@ require 'lspconfig'.omnisharp.setup {
 }
 
 -- powershell settings
-require 'lspconfig'.powershell_es.setup {
+require'lspconfig'.powershell_es.setup{
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
@@ -172,21 +174,21 @@ require 'lspconfig'.sumneko_lua.setup {
 }
 
 -- json LS settings
-require 'lspconfig'.jsonls.setup {
+require'lspconfig'.jsonls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- TypeScript LS settings
-require 'lspconfig'.tsserver.setup {
+require'lspconfig'.tsserver.setup{
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Angular LS settings
-require 'lspconfig'.angularls.setup {
+require'lspconfig'.angularls.setup{
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
@@ -195,3 +197,4 @@ require 'lspconfig'.angularls.setup {
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
 require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
+
