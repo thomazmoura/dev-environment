@@ -121,6 +121,12 @@ highlight CursorLineNr guibg=#1a1b26
 set fillchars+=vert:│
 highlight VertSplit guibg=none guifg=#414868
 
+" Using underline until Windows Terminal supports undercul
+highlight DiagnosticUnderlineHint cterm=bold,underline gui=bold,underline guisp=#1abc9c guifg=#1abc9c
+highlight DiagnosticUnderlineInfo cterm=bold,underline gui=bold,underline guisp=#0db9d7 guifg=#0db9d7
+highlight DiagnosticUnderlineWarn cterm=bold,underline gui=bold,underline guisp=#e0af68 guifg=#e0af68
+highlight DiagnosticUnderlineError cterm=bold,underline gui=bold,underline guisp=#db4b4b guifg=#db4b4b
+
 " Filetype detections
 autocmd BufNewFile,BufRead *.code-snippets set filetype=json
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
