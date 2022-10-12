@@ -33,49 +33,6 @@ require("auto-save").setup {
   trigger_events = { "BufLeave" },
 }
 
---lualine settings
-require('lualine').setup {
-  options = {
-    icons_enabled = false,
-    theme = 'auto',
-    component_separators = { left = '', right = ''},
-    section_separators = { left = '', right = ''},
-    disabled_filetypes = {},
-    always_divide_middle = false,
-    globalstatus = true,
-  },
-  sections = {
-    lualine_a = {'mode'},
-    lualine_b = {
-      {
-       'diagnostics' 
-      },
-      {
-        'filename',
-        path = 1,
-      }
-    },
-    lualine_c = {},
-    lualine_x = {'vim.b.coc_git_blame'},
-    lualine_y = {'progress', 'filetype', 'encoding'},
-    lualine_z = {'location'}
-  },
-  inactive_sections = {
-    lualine_a = {},
-    lualine_b = {},
-    lualine_c = {'filename'},
-    lualine_x = {'location'},
-    lualine_y = {},
-    lualine_z = {}
-  },
-  tabline = {
-    lualine_a = {
-      'buffers'
-    }
-  },
-  extensions = {}
-}
-
 require("nvim-autopairs").setup()
 
 -- If you want insert `(` after select function or method item
@@ -87,4 +44,23 @@ if cmp ~= nil then
     cmp_autopairs.on_confirm_done()
   )
 end
+
+-- nvim-tree setup
+require'nvim-tree'.setup {
+  update_focused_file = {
+    enable = true,
+    update_cwd = false,
+    ignore_list = {},
+  },
+  diagnostics = {
+    enable = true,
+    show_on_dirs = true,
+  },
+}
+
+-- auto-save
+require("auto-save").setup {
+  enabled = true,
+  trigger_events = { "BufLeave" },
+}
 

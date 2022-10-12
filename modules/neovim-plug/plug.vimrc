@@ -13,7 +13,6 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'thomazmoura/auto-save.nvim' 
-Plug 'windwp/nvim-autopairs'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
@@ -25,6 +24,7 @@ Plug 'hrsh7th/nvim-cmp'
 Plug 'neovim/nvim-lspconfig' 
 Plug 'rafamadriz/friendly-snippets'
 Plug 'saadparwaiz1/cmp_luasnip'
+Plug 'windwp/nvim-autopairs'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'
