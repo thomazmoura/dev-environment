@@ -25,7 +25,7 @@ function New-HorizontalTmuxSession ($FirstPaneCommand="psgit", $SecondPaneComman
   $location = FuzzySearch-Location
 	if($location) {
 		Set-Location $location
-		$currentDirectory = ($pwd.Path.Split("/") | Select -Last 1)
+		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1)
 		& tmux new-session `; `
 			rename-session $currentDirectory `; `
 			split-window -h -p 20 `; `
@@ -78,11 +78,11 @@ function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'psgit &&
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
 			split-window -v -p 20 `; `
-			select-pane -t 0 `; `
-			send-keys "$Command" C-m `; `
 			select-pane -t 1 `; `
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `
+			send-keys "$Command" C-m `; `
+			send-keys "nvim" C-m `; `
 	}
 	Write-Information "Cancelled by user"
 }
