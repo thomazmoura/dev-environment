@@ -119,6 +119,7 @@ local on_attach = function(client, bufnr)
   vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
   vim.keymap.set('n', '<Leader>f', vim.lsp.buf.formatting, bufopts)
   vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_workspace_symbols<cr>', bufopts)
+  vim.keymap.set('n', '<Leader>a', '<cmd>Telescope diagnostics<cr>', bufopts)
   vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
 end
 
