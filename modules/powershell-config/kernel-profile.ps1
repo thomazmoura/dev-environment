@@ -111,10 +111,10 @@ function Clean-SwapFiles {
 }
 
 function FuzzySearch-Item($dir = "$env:CODE_FOLDER") {
-  return (fd . $dir --type f --follow | fzf)
+  return (fd . --base-directory $dir --type f --follow | fzf)
 }
 function FuzzySearch-Location($dir = "$env:CODE_FOLDER") {
-  return (fd . $dir --type d --follow | fzf)
+  return (fd . --base-directory $dir --type d --follow | fzf)
 }
 
 function FuzzyGet-ChildItem($dir = "$env:CODE_FOLDER") {
@@ -154,7 +154,7 @@ function FuzzyOpenOnCode-Item($dir = "$env:CODE_FOLDER") {
 }
 
 function FuzzyOpenOnVisualStudio-Solution($dir = "$env:CODE_FOLDER") {
-  $selectedItem = (fd sln $dir --type f --follow | fzf)
+  $selectedItem = (fd sln --base-directory $dir --type f --follow | fzf)
   if ($selectedItem) {
     Invoke-Item ($selectedItem)
   }
