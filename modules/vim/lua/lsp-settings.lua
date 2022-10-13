@@ -104,8 +104,9 @@ local on_attach = function(client, bufnr)
   vim.keymap.set('n', 'gd', '<cmd>Telescope lsp_definitions<cr>', bufopts)
   vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
   vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
+  vim.keymap.set('n', '<Leader>gh', vim.diagnostic.open_float, bufopts)
   vim.keymap.set('n', 'gi', '<cmd>Telescope lsp_implementations<cr>', bufopts)
-  vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, bufopts)
+  vim.keymap.set('n', '<Leader>K', vim.lsp.buf.signature_help, bufopts)
   vim.keymap.set('n', '<Leader>wa', vim.lsp.buf.add_workspace_folder, bufopts)
   vim.keymap.set('n', '<Leader>wr', vim.lsp.buf.remove_workspace_folder, bufopts)
   vim.keymap.set('n', '<Leader>wl', function()
@@ -118,6 +119,7 @@ local on_attach = function(client, bufnr)
   vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
   vim.keymap.set('n', '<Leader>f', vim.lsp.buf.formatting, bufopts)
   vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_workspace_symbols<cr>', bufopts)
+  vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
 end
 
 local lsp_flags = {
