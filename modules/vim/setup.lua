@@ -9,6 +9,7 @@ require('lualine-settings')
 require('telescope-settings')
 require('treesitter-settings')
 
+-- neo-scroll
 require('neoscroll').setup {
   mappings = {'<C-u>', '<C-d>', '<C-y>', 'zt', 'zz', 'zb'},
   easing_function = "cubic"
@@ -33,9 +34,8 @@ require("auto-save").setup {
   trigger_events = { "BufLeave" },
 }
 
+-- nvim-autopairs
 require("nvim-autopairs").setup()
-
--- If you want insert `(` after select function or method item
 local cmp_autopairs = require('nvim-autopairs.completion.cmp')
 local cmp = require('cmp')
 if cmp ~= nil then
@@ -44,23 +44,4 @@ if cmp ~= nil then
     cmp_autopairs.on_confirm_done()
   )
 end
-
--- nvim-tree setup
-require'nvim-tree'.setup {
-  update_focused_file = {
-    enable = true,
-    update_cwd = false,
-    ignore_list = {},
-  },
-  diagnostics = {
-    enable = true,
-    show_on_dirs = true,
-  },
-}
-
--- auto-save
-require("auto-save").setup {
-  enabled = true,
-  trigger_events = { "BufLeave" },
-}
 
