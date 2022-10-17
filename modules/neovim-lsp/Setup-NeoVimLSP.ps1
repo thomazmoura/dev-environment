@@ -41,6 +41,9 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 & tar -xzvf "./lua-language-server-3.5.6-linux-x64.tar.gz" -C "$HOME/.language-servers/lua"
 & Remove-Item "./lua-language-server-3.5.6-linux-x64.tar.gz"
 
+Write-Output "`n->> Installing YAML Language Server"
+& npm install --global yaml-language-server
+
 Pop-Location
 
 Throw-ExceptionOnNativeFailure

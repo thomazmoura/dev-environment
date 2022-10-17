@@ -197,6 +197,20 @@ require'lspconfig'.angularls.setup{
   flags = lsp_flags,
 }
 
+-- YAML LS settings
+require('lspconfig').yamlls.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+  settings = {
+    yaml = {
+      schemas = {
+        ["https://json.schemastore.org/github-workflow.json"] =  "/.github/workflows/*",
+      },
+    },
+  }
+}
+
 -- Proper icons
 local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
 for type, icon in pairs(signs) do
@@ -207,4 +221,5 @@ end
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
 require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
+
 
