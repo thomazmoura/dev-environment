@@ -85,8 +85,8 @@ endfunction
 autocmd TextYankPost * call CopyYank()
 
 " Transparent floating windows
-set winblend=30
-set pumblend=30
+set winblend=15
+set pumblend=15
 
 let g:rainbow_conf = {
 \	'separately': {
