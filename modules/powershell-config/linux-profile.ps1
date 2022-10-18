@@ -82,7 +82,7 @@ function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'psgit &&
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `
 			send-keys "$Command" C-m `; `
-			send-keys "nvim" C-m `; `
+			send-keys "nvs use lts && nvim" C-m `; `
 	}
 	Write-Information "Cancelled by user"
 }
