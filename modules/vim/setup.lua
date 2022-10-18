@@ -45,3 +45,10 @@ if cmp ~= nil then
   )
 end
 
+-- codewindow (minimap)
+require('codewindow').setup()
+local opts = { noremap = true, silent = true }
+vim.keymap.set('n', '<Leader>mm', require('codewindow').open_minimap, opts)
+vim.keymap.set('n', '<Leader>mc', require('codewindow').close_minimap, opts)
+vim.keymap.set('n', '<Leader>mf', require('codewindow').toggle_focus, opts)
+

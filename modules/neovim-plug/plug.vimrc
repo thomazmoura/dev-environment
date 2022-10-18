@@ -13,6 +13,7 @@ Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'thomazmoura/auto-save.nvim' 
+Plug 'gorbit99/codewindow.nvim'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
