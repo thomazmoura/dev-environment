@@ -51,7 +51,7 @@ Plug 'folke/tokyonight.nvim', { 'branch': 'main' }
 Plug 'catppuccin/nvim'
 
 " Highlighting
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate', 'commit': '5d11dfc27849e3d7435c32dbd8ea9be35bcd990b'} " Temporarily fixing the commit so that CSharp Highlighting does not break
 Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 
 " Tree Explorer
