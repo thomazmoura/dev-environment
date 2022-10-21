@@ -44,6 +44,9 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 Write-Output "`n->> Installing YAML Language Server"
 & npm install --global yaml-language-server
 
+Write-Output "`n->> Installing VIM Language Server"
+& npm install --global vim-language-server
+
 Pop-Location
 
 Throw-ExceptionOnNativeFailure
