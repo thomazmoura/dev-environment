@@ -111,10 +111,20 @@ function Clean-SwapFiles {
 }
 
 function FuzzySearch-Item($dir = "$env:CODE_FOLDER") {
-  return (fd . --base-directory $dir --type f --follow | fzf)
+  $selectedLocation = (fd . --base-directory $dir --type f --follow | fzf)
+  if($selectedLocation) {
+    return "$dir/$selectedLocation"
+  } else {
+    return ""
+  }
 }
 function FuzzySearch-Location($dir = "$env:CODE_FOLDER") {
-  return (fd . --base-directory $dir --type d --follow | fzf)
+  $selectedLocation = (fd . --base-directory $dir --type d --follow | fzf)
+  if($selectedLocation) {
+    return "$dir/$selectedLocation"
+  } else {
+    return ""
+  }
 }
 
 function FuzzyGet-ChildItem($dir = "$env:CODE_FOLDER") {
