@@ -21,7 +21,7 @@ require('lualine').setup {
       }
     },
     lualine_c = {},
-    lualine_x = {'vim.b.coc_git_blame'},
+    lualine_x = {},
     lualine_y = {'progress', 'filetype', 'encoding'},
     lualine_z = {'location'}
   },

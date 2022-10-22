@@ -12,6 +12,7 @@ Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
+Plug 'lewis6991/gitsigns.nvim'
 Plug 'thomazmoura/auto-save.nvim' 
 Plug 'gorbit99/codewindow.nvim'
 
