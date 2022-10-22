@@ -1,6 +1,9 @@
 --require custom modules
 package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 
+-- Vim settings
+vim.wo.signcolumn = "yes:1"
+
 -- Import custom sub-settings
 require('hop-settings')
 require('icons-settings')
@@ -8,6 +11,7 @@ require('lsp-settings')
 require('lualine-settings')
 require('telescope-settings')
 require('treesitter-settings')
+require('gitsigns-settings')
 
 -- neo-scroll
 require('neoscroll').setup {
@@ -51,14 +55,4 @@ local opts = { noremap = true, silent = true }
 vim.keymap.set('n', '<Leader>mm', require('codewindow').open_minimap, opts)
 vim.keymap.set('n', '<Leader>mc', require('codewindow').close_minimap, opts)
 vim.keymap.set('n', '<Leader>mf', require('codewindow').toggle_focus, opts)
-
--- git-signs settings
-require 'gitsigns'.setup {
-  numhl = true,
-  current_line_blame = true,
-  current_line_blame_opts = {
-    virt_text = true,
-    virt_text_pos = 'right_align', -- 'eol' | 'overlay' | 'right_align'
-  },
-}
 
