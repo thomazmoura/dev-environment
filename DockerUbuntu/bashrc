@@ -3,12 +3,12 @@ if [ -e "$HOME/.storage/bashrc" ]; then
   source "$HOME/.storage/bashrc"
 fi
 
-PATH="/home/developer/.shell/bin:$PATH"
+PATH="$HOME/.shell/bin:$PATH"
 export PATH
 
-source /home/developer/.shell/bashrc
+source $HOME/.shell/bashrc
 if ! git config --global user.name &> /dev/null; then
-  source /home/developer/.shell/git-setup.sh
+  source $HOME/.shell/git-setup.sh
 fi
 
 export NVS_HOME="$HOME/.nvs"
