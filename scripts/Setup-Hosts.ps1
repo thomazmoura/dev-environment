@@ -1,4 +1,5 @@
 . $PSScriptRoot/Setup-Docker.ps1
+. $PSScriptRoot/Setup-PowerShell.ps1
 
 Get-Content /home/thomaz/.docker-variables
 	| Where-Object {$_ -match "=" }
