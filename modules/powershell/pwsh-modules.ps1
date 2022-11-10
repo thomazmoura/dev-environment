@@ -65,7 +65,7 @@ function Import-OhMyPoshOnLinux() {
     if(!(Test-Path "$HOME/.local/bin") ) {
       New-Item -Force -ItemType Directory -Path "$HOME/.local/bin";
     }
-    "wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O $HOME/.local/bin/oh-my-posh" | Invoke-Expression
+    "wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/tag/v12.12.1/posh-linux-amd64 -O $HOME/.local/bin/oh-my-posh" | Invoke-Expression
     "chmod +x $HOME/.local/bin/oh-my-posh" | Invoke-Expression
   } else {
     Write-Verbose "OhMyPosh instalado corretamente"
