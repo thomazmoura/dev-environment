@@ -1,7 +1,7 @@
 param(
   [String]$Command='if( tmux ls 2> $null ) { tmuxa } else { vtmux }',
   [String]$ContainerName='dev-env',
-  [String]$ContainerTag='latest'
+  [String]$ContainerTag=':latest'
 )
 
 if( !(service docker status) ){
@@ -14,7 +14,7 @@ sudo docker kill $ContainerName *> /dev/null
 sudo docker rm $ContainerName *> /dev/null
 
 Write-Information "`n->> Updating the container"
-sudo docker pull thomazmoura/dev-environment:$ContainerTag
+sudo docker pull thomazmoura/dev-environment$ContainerTag
 
 Write-Information "`n->> Creating the code volume (if it does not exist)"
 sudo docker volume create code *> /dev/null
@@ -26,5 +26,5 @@ Write-Information "`n->> Creating the network (if it does not exist)"
 sudo docker network create dev-environment-network *> /dev/null
 
 Write-Information "`n->> Creating the $ContainerName container"
-sudo docker container run -v code:/home/developer/code -v storage:/home/developer/.storage -v "$HOME/.shared:/home/developer/.shared" -p 4200:4200 -p 5000:5000 -p 5001:5001 -p 5500:5500 -p 5501:5501 --env-file "$HOME/.docker-variables" -it -d --network dev-environment-network --name $ContainerName thomazmoura/dev-environment:$ContainerTag
+sudo docker container run -v code:/home/developer/code -v storage:/home/developer/.storage -v "$HOME/.shared:/home/developer/.shared" -p 4200:4200 -p 5000:5000 -p 5001:5001 -p 5500:5500 -p 5501:5501 --env-file "$HOME/.docker-variables" -it -d --network dev-environment-network --name $ContainerName thomazmoura/dev-environment$ContainerTag
 
