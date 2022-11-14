@@ -14,7 +14,7 @@ Write-Information "`n->> Creating Symbolic Link from $PowerShellConfigFolder to 
 New-Item -Force -Type SymbolicLink -Path $HOME/.config/powershell -Target $PowerShellConfigFolder
 
 Write-Information "`n->> Shell files"
-$DockerHostModuleFolder = (Get-Item "$PSScriptRoot/../DockerUbuntu").FullName
+$DockerHostModuleFolder = (Get-Item "$PSScriptRoot/../LinuxHost").FullName
 Copy-Item -Force $DockerHostModuleFolder/config/powershell/profile.ps1 $HOME/.config/powershell/
 Copy-Item -Force $DockerHostModuleFolder/bashrc $HOME/.bashrc
 
