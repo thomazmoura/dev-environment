@@ -27,6 +27,7 @@ function Create-DefaultFolders() {
   New-Item -Force -ItemType SymbolicLink -Path "$HOME/.azure" -Target "$Storage/azure"
 
   New-Item -Force -ItemType Directory "$HOME/.storage/dev-cert/"
+  New-Item -Force -ItemType Directory "$HOME/.storage/vscode-server/"
   New-Item -Force -ItemType Directory "$HOME/.shared/"
   New-Item -Force -ItemType Directory "$HOME/code/code-scripts/"
 
@@ -55,6 +56,20 @@ function Setup-DotNetCertificate {
     Copy-Item $env:ASPNETCORE_Kestrel__Certificates__Default__Path "$HOME/.shared/aspnet-localhost.pfx"
   }
 
+}
+
+function Setup-VSCodeServer() {
+  $VSCodeServerFolder = "$HOME/.vscode-server"
+  $VSCodeServerStorageFolder = "$HOME/.storage/vscode-server"
+  if( Test-Path $VSCodeServerFolder ) {
+    Write-Information "`n->> Moving $VSCodeServerFolder contents to $VSCodeServerStorageFolder"
+    Move-Item -Force "$VSCodeServerFolder/*" $VSCodeServerStorageFolder
+    Write-Information "`n->> Erasing $VSCodeServerFolder"
+    Remove-Item -Recurse -Force $VSCodeServerFolder
+  }
+
+  Write-Information "`n->> Creating SymbolicLink on $VSCodeServerFolder pointing to $VSCodeServerStorageFolder"
+  New-Item -ItemType SymbolicLink -Path $VSCodeServerFolder -Target $VSCodeServerStorageFolder
 }
 
 function Setup-DotFiles {
@@ -102,4 +117,5 @@ Create-DefaultFolders
 Setup-AzureDevOpsCLI
 Setup-DotNetCertificate
 Setup-DotFiles
+Setup-VSCodeServer
 
