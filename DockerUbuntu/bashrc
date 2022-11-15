@@ -131,7 +131,3 @@ alias bat='batcat'
 
 export PATH="$PATH:/local/fd-find"
 
-hash $SKIP_PWSH 2>/dev/null && hash pwsh 2>/dev/null && pwsh && exit
-
-echo 'Skipping powershell'
-
