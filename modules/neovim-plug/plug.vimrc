@@ -27,6 +27,7 @@ Plug 'neovim/nvim-lspconfig'
 Plug 'rafamadriz/friendly-snippets'
 Plug 'saadparwaiz1/cmp_luasnip'
 Plug 'windwp/nvim-autopairs'
+Plug 'simrat39/symbols-outline.nvim'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'
