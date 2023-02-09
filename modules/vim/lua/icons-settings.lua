@@ -40,6 +40,11 @@ require'nvim-web-devicons'.setup {
       color = "#7aa2f7",
       name = "CSharpProject"
     },
+    feature = {
+      icon = "",
+      color = "#22DD33",
+      name = "CucumberFeature"
+    },
     ["module.ts"] = {
       icon = "",
       color = "#bb9af7",
@@ -65,3 +70,4 @@ require'nvim-web-devicons'.setup {
 }
 
 require'nvim-web-devicons'.set_default_icon('', '#6d8086')
+
