@@ -132,5 +132,7 @@ autocmd BufNewFile,BufRead *.code-snippets set filetype=json
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
 autocmd BufNewFile,BufRead *.config,*.csproj set filetype=xml
 
+let g:vimade = { 'enablefocusfading': 1 }
+
 " Disable modelines for security reasons
 set nomodeline
