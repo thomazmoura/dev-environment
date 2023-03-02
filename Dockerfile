@@ -18,7 +18,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer modules/vim-autoload /home/developer/.local/share/nvim/site/autoload
 COPY --chown=developer:developer modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
-RUN pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -c 'nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
+RUN pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
 
 # Dotnet tools instalation
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
