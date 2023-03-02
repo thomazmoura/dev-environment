@@ -36,10 +36,10 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/powershell
 
 
 Write-Output "`n->> Installing Lua Language Server"
-Invoke-WebRequest "https://github.com/sumneko/lua-language-server/releases/download/3.5.6/lua-language-server-3.5.6-linux-x64.tar.gz" -OutFile "lua-language-server-3.5.6-linux-x64.tar.gz"
+Invoke-WebRequest "https://github.com/LuaLS/lua-language-server/releases/download/3.6.13/lua-language-server-3.6.13-linux-x64.tar.gz" -OutFile "lua-language-server-3.6.13-linux-x64.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
-& tar -xzvf "./lua-language-server-3.5.6-linux-x64.tar.gz" -C "$HOME/.language-servers/lua"
-& Remove-Item "./lua-language-server-3.5.6-linux-x64.tar.gz"
+& tar -xzvf "./lua-language-server-3.6.13-linux-x64.tar.gz" -C "$HOME/.language-servers/lua"
+& Remove-Item "./lua-language-server-3.6.13-linux-x64.tar.gz"
 
 Write-Output "`n->> Installing YAML Language Server"
 & npm install --global yaml-language-server

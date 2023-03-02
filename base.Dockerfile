@@ -53,10 +53,6 @@ COPY modules/bin-tools /usr/bin
 # Make terminal-based yank accessible both as yank and clip
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/clip -Target /usr/bin/yank' && chmod +x /usr/bin/clip && chmod +x /usr/bin/yank
 
-# NeoVim Installation (from channel testing)
-COPY modules/testing-packages /root/.modules/testing-packages
-RUN pwsh -NoProfile -File /root/.modules/testing-packages/testing-setup.ps1 && apt -t testing install neovim -y
-
 # dotnet installation
 COPY modules/dotnet /root/.modules/dotnet
 COPY modules/powershell /root/.modules/powershell
@@ -67,4 +63,8 @@ RUN useradd --user-group --system --create-home --no-log-init developer --shell 
 # Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
 RUN chown developer:developer /etc/host.conf && mkdir /home/developer/.hosts && pwsh -c "New-Item -ItemType HardLink -Path /home/developer/.hosts/host.conf -Target /etc/host.conf"
 USER developer
+
+# NeoVim Installation
+COPY modules/neovim-install /root/.modules/neovim-install
+RUN pwsh -NoProfile -File /root/.modules/neovim-install/Install-Neovim.ps1
 
