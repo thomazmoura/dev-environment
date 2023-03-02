@@ -6,10 +6,6 @@ RUN mkdir -p /home/developer/.modules
 COPY --chown=developer:developer modules/node /home/developer/.modules/node
 RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Command /home/developer/.modules/node/nvs-setup.ps1
 
-# PowerShell modules installation
-COPY --chown=developer:developer modules/powershell /home/developer/.modules/powershell
-RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
-
 # NeoVim Requirements
 COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1

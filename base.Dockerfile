@@ -64,6 +64,10 @@ RUN useradd --user-group --system --create-home --no-log-init developer --shell 
 RUN chown developer:developer /etc/host.conf && mkdir /home/developer/.hosts && pwsh -c "New-Item -ItemType HardLink -Path /home/developer/.hosts/host.conf -Target /etc/host.conf"
 USER developer
 
+# PowerShell modules installation
+COPY --chown=developer:developer modules/powershell /home/developer/.modules/powershell
+RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
+
 # NeoVim Installation
 COPY --chown=developer:developer modules/neovim-install /home/developer/.modules/neovim-install
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-install/Install-Neovim.ps1
