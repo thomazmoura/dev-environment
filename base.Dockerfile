@@ -65,6 +65,6 @@ RUN chown developer:developer /etc/host.conf && mkdir /home/developer/.hosts && 
 USER developer
 
 # NeoVim Installation
-COPY modules/neovim-install /root/.modules/neovim-install
-RUN pwsh -NoProfile -File /root/.modules/neovim-install/Install-Neovim.ps1
+COPY --chown=developer:developer modules/neovim-install /home/developer/.modules/neovim-install
+RUN pwsh -NoProfile -File /home/developer/.modules/neovim-install/Install-Neovim.ps1
 
