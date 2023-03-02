@@ -14,7 +14,7 @@ Write-Output "=>> Extracting Neovim package"
 & tar -xzf nvim-linux64.tar.fz
 
 Write-Output "=>> Moving Neovim files to expected destination"
-Move-Item nvim-linnux64/* "$HOME/neovim/"
+Move-Item nvim-linux64/* "$HOME/neovim/"
 
 Write-Output "=>> Making nvim (Neovim) executable"
 & chmod +x $HOME/neovim/bin/nvim
