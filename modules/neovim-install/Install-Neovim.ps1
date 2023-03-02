@@ -9,6 +9,7 @@ Move-Item nvim-linnux64/* "$HOME/neovim/"
 New-Item -Type SymbolicLink -Path "$HOME/.local/bin/nvim" -Target "$HOME/neovim/bin/nvim"
 New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vim" -Target "$HOME/neovim/bin/nvim"
 New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vi" -Target "$HOME/neovim/bin/nvim"
+& chmod +x $HOME/neovim/bin/nvim
 
 Throw-ExceptionOnNativeFailure
 
