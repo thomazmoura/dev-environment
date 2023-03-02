@@ -11,7 +11,7 @@ Write-Output "=>> Downloading Neovim's realease tar package"
 Invoke-WebRequest https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
 
 Write-Output "=>> Extracting Neovim package"
-& tar -xzf nvim-linnux64.tar.fz
+& tar -xzf nvim-linux64.tar.fz
 
 Write-Output "=>> Moving Neovim files to expected destination"
 Move-Item nvim-linnux64/* "$HOME/neovim/"
