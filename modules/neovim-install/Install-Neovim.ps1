@@ -25,8 +25,8 @@ New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vim" -Target "$HOME/neovim/b
 New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vi" -Target "$HOME/neovim/bin/nvim"
 
 Write-Output "=>> Cleaning up"
-Remove-Item -Recure -Force nvim-linux64.tar.gz
-Remove-Item -Recure -Force nvim-linux64
+Remove-Item -Recurse -Force nvim-linux64.tar.gz
+Remove-Item -Recurse -Force nvim-linux64
 
 Throw-ExceptionOnNativeFailure
 
