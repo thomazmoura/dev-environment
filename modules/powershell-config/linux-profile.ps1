@@ -70,7 +70,7 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 	Write-Information "Cancelled by user"
 }
 
-function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'psgit && psfzf') {
+function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'pwsh -NoExit -Command "psgit && psfzf" && exit') {
   $location = FuzzySearch-Location
 	if($location) {
 		Set-Location $location
