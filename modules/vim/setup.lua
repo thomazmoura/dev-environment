@@ -56,3 +56,9 @@ vim.keymap.set('n', '<Leader>mm', require('codewindow').open_minimap, opts)
 vim.keymap.set('n', '<Leader>mc', require('codewindow').close_minimap, opts)
 vim.keymap.set('n', '<Leader>mf', require('codewindow').toggle_focus, opts)
 
+-- tint (fade inactive windows)
+require("tint").setup({
+  tint = -75,
+  tint_background_colors = false
+})
+

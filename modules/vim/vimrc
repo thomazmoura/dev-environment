@@ -115,6 +115,7 @@ let g:tokyonight_style = "storm" " Tokyo Night colorscheme configuration
 
 colorscheme tokyonight
 highlight Normal guibg=none
+highlight Inactive guibg=none
 highlight MsgArea guibg=#1a1b26
 highlight LineNr guibg=#1a1b26
 highlight CursorLineNr guibg=#1a1b26
@@ -131,8 +132,6 @@ highlight DiagnosticUnderlineError cterm=underline gui=underline guisp=#db4b4b g
 autocmd BufNewFile,BufRead *.code-snippets set filetype=json
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
 autocmd BufNewFile,BufRead *.config,*.csproj set filetype=xml
-
-let g:vimade = { 'enablefocusfading': 1, 'detecttermcolors': 1, 'enabletreesitter': 1 }
 
 " Disable modelines for security reasons
 set nomodeline
