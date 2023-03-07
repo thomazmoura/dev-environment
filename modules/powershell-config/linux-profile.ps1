@@ -81,8 +81,7 @@ function New-VerticalTmuxSession  ($Command = 'nvim', $SecondCommand = 'pwsh -No
 			select-pane -t 1 `; `
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `
-			send-keys "$Command" C-m `; `
-			send-keys "nvs use lts && nvim" C-m `; `
+			send-keys "$Command" C-m `;
 	}
 	Write-Information "Cancelled by user"
 }
