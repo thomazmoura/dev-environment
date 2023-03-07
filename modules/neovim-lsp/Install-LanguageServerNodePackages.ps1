@@ -5,7 +5,12 @@ function Install-NodePackageGlobally([string]$NpmGlobalPackages, [string]$Packag
   } else {
     Write-Output "`n->> $PackageName already installed. Skipping."
   }
+}
 
+if(!(Get-Command npm -ErrorAction SilentlyContinue) -and !(Get-Command nvs -ErrorAction SilentlyContinue)) {
+  Write-Error "`n->> Node or NVS has to be installed to run this script" -ErrorAction Stop
+} elseif (!(Get-Command npm -ErrorAction SilentlyContinue)) {
+  nvs use lts
 }
 
 Write-Output "`n->> Getting installed packages"
