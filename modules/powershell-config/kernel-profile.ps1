@@ -319,27 +319,31 @@ function GitAdd-Untracked() {
   & git ls-files -o --exclude-standard | Foreach-Object { git add $_ }
 }
 
-function Start-DotnetWatch([String]$Profile, [Switch]$SkipAutoUrls) {
+function Start-DotnetWatch([String]$LaunchProfile, [Switch]$SkipAutoUrls) {
   if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
     Write-Verbose "Skipping auto exposing URLs"
     & dotnet watch run
     return;
   }
 
-  if(!($Profile)) {
-    $Profile = (Get-Item $PWD).Name
-    Write-Verbose "No Profile informed. Using $Profile as Profile"
+  if(!($LaunchProfile)) {
+    $LaunchProfile = (Get-Item $PWD).Name
+    Write-Verbose "No Profile informed. Using $LaunchProfile as Profile"
   }
   $LaunchSettings = Get-Content "./Properties/launchSettings.json" | ConvertFrom-Json
-  $ApplicationUrls = $LaunchSettings.profiles.$Profile.applicationUrl
+  $ApplicationUrls = $LaunchSettings.profiles.$LaunchProfile.applicationUrl
 
+  if($ApplicationUrls -and $ApplicationUrls -match "0.0.0.0") {
+    Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json): $ApplicationUrls"
+    dotnet watch run
+  }
   if($ApplicationUrls) {
     $ExposedUrls = $ApplicationUrls.Replace("localhost", "0.0.0.0")
-    Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json and exposed to accessible from outside the container): $ExposedUrls"
-    & dotnet watch run -- --urls="$ExposedUrls"
+    Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json and overriden to be accessible from outside the container): $ExposedUrls"
+    dotnet watch run -- --urls="$ExposedUrls"
   } else {
     Write-Verbose "No applicationUrl detected on profile. Skipping auto exposing URLs"
-    & dotnet watch run
+    dotnet watch run
   }
 }
 
