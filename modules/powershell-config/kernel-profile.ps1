@@ -622,6 +622,11 @@ function Set-AutoNodeVersion() {
   $nodeVersion = Get-Content $nodeVersionFile
   nvs add $nodeVersion
   nvs use $nodeVersion
+
+  if(Test-Path "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1") {
+    . "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1"
+  }
+
   $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
