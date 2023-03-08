@@ -8,7 +8,12 @@ function Install-NodePackageGlobally([string]$NpmGlobalPackages, [string]$Packag
 }
 
 if(!(Get-Command npm -ErrorAction SilentlyContinue) -and !(Get-Command nvs -ErrorAction SilentlyContinue)) {
-  Write-Error "`n->> Node or NVS has to be installed to run this script" -ErrorAction Stop
+  if(Test-Path "$HOME/.nvs/nvs.ps1") {
+    & "$HOME/.nvs/nvs.ps1" use lts
+  }
+  else {
+    Write-Error "`n->> Node or NVS has to be installed to run this script" -ErrorAction Stop
+  }
 } elseif (!(Get-Command npm -ErrorAction SilentlyContinue)) {
   nvs use lts
 }

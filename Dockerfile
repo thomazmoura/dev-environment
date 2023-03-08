@@ -4,7 +4,7 @@ FROM $DockerBase
 # Node installation
 RUN mkdir -p /home/developer/.modules
 COPY --chown=developer:developer modules/node /home/developer/.modules/node
-RUN chmod +x /home/developer/.modules/node/nvs-setup.ps1 && pwsh -NoProfile -Command /home/developer/.modules/node/nvs-setup.ps1
+RUN chmod +x /home/developer/.modules/node/Setup-NVS.ps1 && pwsh -NoProfile -Command /home/developer/.modules/node/Setup-NVS.ps1
 
 # NeoVim Requirements
 COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
@@ -24,10 +24,6 @@ RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setu
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
 RUN export PATH="$HOME/.local/bin:$PATH" && pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
-# NeoVim CoC Modules installation
-COPY --chown=developer:developer modules/neovim-coc /home/developer/.modules/neovim-coc
-RUN pwsh -NoProfile -File /home/developer/.modules/neovim-coc/coc-requirements.ps1
-
 # Delta diff installation
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
 RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
@@ -41,7 +37,6 @@ RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modu
 # NeoVim LSP Configuration
 COPY --chown=developer:developer modules/neovim-lsp /home/developer/.modules/neovim-lsp
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
-
 
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
