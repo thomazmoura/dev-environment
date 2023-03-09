@@ -316,7 +316,31 @@ function Git-History() {
 }
 
 function GitAdd-Untracked() {
-  & git ls-files -o --exclude-standard | Foreach-Object { git add $_ }
+  git ls-files -o --exclude-standard | Foreach-Object { git add $_ }
+}
+
+function GitIgnoreLocally-File([string] $File) {
+  if(!($File)) {
+    $File = GitList-ModifiedFiles;
+
+    if(!($File)) {
+      $File = '.';
+    }
+  }
+
+  git update-index --assume-unchanged $File
+}
+
+function GitUndoLocallyIgnored-File([string] $File) {
+  if(!($File)) {
+    $File = FuzzyGet-ChildItem;
+
+    if(!($File)) {
+      $File = '.';
+    }
+  }
+
+  git update-index --no-assume-unchanged $File
 }
 
 function Start-DotnetWatch([String]$LaunchProfile, [Switch]$SkipAutoUrls) {
