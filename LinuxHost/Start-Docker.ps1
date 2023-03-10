@@ -8,9 +8,9 @@ if( !(service docker status) ){
 	sudo service docker start
 }
 
-Write-Information "\n->> Starting dev-env container"
+Write-Information "`n->> Starting dev-env container"
 sudo docker start $ContainerName
 
-Write-Information "\n->> Attaching to dev-env container"
+Write-Information "`n->> Attaching to dev-env container"
 sudo docker container exec -it $ContainerName pwsh -c $Command
 
