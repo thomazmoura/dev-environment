@@ -1,0 +1,7 @@
+# Allow members of group sudo to start ssh and docker without password
+%sudo   ALL=NOPASSWD: /usr/sbin/service ssh start
+%sudo   ALL=NOPASSWD: /usr/sbin/service docker start
+%sudo   ALL=NOPASSWD: /usr/bin/docker start dev-env
+%sudo   ALL=NOPASSWD: /usr/bin/docker container exec -it dev-env pwsh -c *
+%sudo   ALL=NOPASSWD: /usr/bin/docker container exec -it dev-env pwsh -c if( tmux ls 2> $null ) { tmuxa } else { vtmux }
+

@@ -3,14 +3,14 @@ param(
   [String]$ContainerName='dev-env'
 )
 
-if( !(service docker status) ){
+if( !(/usr/sbin/service docker status) ){
   Write-Information "`n->> Starting docker"
-	sudo service docker start
+	sudo /usr/sbin/service docker start
 }
 
 Write-Information "`n->> Starting dev-env container"
-sudo docker start $ContainerName
+sudo /usr/bin/docker start $ContainerName
 
 Write-Information "`n->> Attaching to dev-env container"
-sudo docker container exec -it $ContainerName pwsh -c $Command
+sudo /usr/bin/docker container exec -it $ContainerName pwsh -c $Command
 

@@ -71,8 +71,9 @@ function Import-OhMyPoshOnLinux() {
     Write-Verbose "OhMyPosh instalado corretamente"
   }
   & $HOME/.local/bin/oh-my-posh init pwsh --config $HOME/.config/powershell/linux.omp.json | Invoke-Expression
-  Write-Information "Carregado o arquivo $HOME/.config/powershell/linux.omp.json"
-  $stopwatch.Stop(); Write-Information "`n-->> Importação do Oh-My-Posh demorou: $($stopwatch.ElapsedMilliseconds)"
+  Write-Verbose "Carregado o arquivo $HOME/.config/powershell/linux.omp.json"
+  $stopwatch.Stop();
+  Write-Verbose "`n-->> Importação do Oh-My-Posh demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
 function Update-PSReadline() {
