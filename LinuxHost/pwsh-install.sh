@@ -10,9 +10,7 @@ sudo dpkg -i packages-microsoft-prod.deb
 sudo apt-get update
 # Install PowerShell
 sudo apt-get install -y powershell
-# Change default shel
-chsh ${whoami} --shell $(which pwsh)
 
-$PARENT_DIR="$(dirname $(dirname $(readlink -f $0)))"
-$POWERSHELL_CONFIG="$PARENT_DIR/modules/powershell-config/linux-profile.ps1"
-". $POWERSHELL_CONFIG" > $PROFILE.CurrentUserAllHosts
+PARENT_DIR=$(dirname $(dirname $(readlink -f $0)))
+POWERSHELL_CONFIG="$PARENT_DIR/modules/powershell-config/linux-profile.ps1"
+echo '. '"$POWERSHELL_CONFIG" >> $PROFILE.CurrentUserAllHosts
