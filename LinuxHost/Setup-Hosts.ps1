@@ -1,3 +1,7 @@
+if(!(Get-Command docker -ErrorAction 'SilentlyContinue')) {
+	. $PSScriptRoot/Install-Docker.ps1
+}
+
 . $PSScriptRoot/Setup-Docker.ps1
 . $PSScriptRoot/Setup-PowerShell.ps1
 
