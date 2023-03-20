@@ -1,0 +1,1 @@
+Set-Alias nvs /home/thomaz/.nvs/nvs.ps1 # Node Version Switcher

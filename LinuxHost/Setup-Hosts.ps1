@@ -11,5 +11,9 @@ Get-Content /home/thomaz/.docker-variables
 
 . $PSScriptRoot/../modules/shell/Setup-Git.ps1
 
+if(!(Get-Command nvs -ErrorAction SilentlyContinue)) {
+	. $PSScriptRoot/../modules/node/Setup-NVS.ps1
+}
+
 sudo update-alternatives --config editor
 
