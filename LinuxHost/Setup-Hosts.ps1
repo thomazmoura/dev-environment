@@ -15,5 +15,9 @@ if(!(Get-Command nvs -ErrorAction SilentlyContinue)) {
 	. $PSScriptRoot/../modules/node/Setup-NVS.ps1
 }
 
+if( !(Test-Path "$HOME/.docker-variables") ) {
+	Copy-Item "$PSScriptRoot/../.docker-variables" "$HOME/.docker-variables"
+}
+
 sudo update-alternatives --config editor
 
