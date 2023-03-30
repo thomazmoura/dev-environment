@@ -119,6 +119,7 @@ highlight Inactive guibg=none
 highlight MsgArea guibg=#1a1b26
 highlight LineNr guibg=#1a1b26
 highlight CursorLineNr guibg=#1a1b26
+highlight Comment guifg=#819c98
 set fillchars+=vert:│
 highlight VertSplit guibg=none guifg=#414868
 
