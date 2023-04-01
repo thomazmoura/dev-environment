@@ -16,6 +16,7 @@ RUN apt update \
     fd-find \
     fzf \
     git \
+    htop \
     iproute2 \
     iputils-ping \
     less \
