@@ -5,7 +5,6 @@ $InformationPreference = "Continue";
 # Vi style cursor
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 if ($PSVersionTable.PSVersion.Major -ge 6) {
-  Write-Host -NoNewLine "`e[5 q"
   $OnViModeChange = [scriptblock] {
     if ($args[0] -eq 'Command') {
       # Set the cursor to a blinking block.
