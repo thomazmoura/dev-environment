@@ -113,9 +113,32 @@ function Setup-DotFiles {
 
 }
 
+function Setup-Copilot {
+  if( !(Get-Command nvs) ) {
+    Write-Warning "Aborting Copilot setup because nvs is not available"
+    return
+  }
+
+  if( !(Test-Path "~/.nvs/node/16.*") ) {
+    Write-Information "Installing Node 16"
+    nvs add 16
+  }
+
+  $PathToCopilotsNode = "~/.nvs/copilot-node"
+  if( !(Test-Path $PathToCopilotsNode) ) {
+    Write-Information "Creating copilot's node symbolic link"
+    $Node16Folder = Get-Item "~/.nvs/node/16.*"
+      | Sort-Object Name -Descending
+      | Select-Object -First 1
+    $Node16Exe = "$Node16Folder/x64/bin/node"
+    New-Item -Type SymbolicLink -Path $PathToCopilotsNode -Target $Node16Exe
+  }
+}
+
 Create-DefaultFolders
 Setup-AzureDevOpsCLI
 Setup-DotNetCertificate
 Setup-DotFiles
 Setup-VSCodeServer
+Setup-Copilot
 

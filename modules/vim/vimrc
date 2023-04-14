@@ -128,5 +128,8 @@ autocmd BufNewFile,BufRead *.code-snippets set filetype=json
 autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
 autocmd BufNewFile,BufRead *.config,*.csproj set filetype=xml
 
+" Copilot node_version
+let g:copilot_node_command = '/home/developer/.nvs/copilot-node'
+
 " Disable modelines for security reasons
 set nomodeline
