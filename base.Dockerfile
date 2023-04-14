@@ -61,7 +61,7 @@ RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1 -ErrorAction 'Stop'
 
 # github installation
 COPY modules/github /root/.modules/github
-RUN /root/.modules/github/install-gh.sh
+RUN chmod +x /root/.modules/github/install-gh.sh && /root/.modules/github/install-gh.sh
 
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
