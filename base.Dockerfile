@@ -59,6 +59,10 @@ COPY modules/dotnet /root/.modules/dotnet
 COPY modules/powershell /root/.modules/powershell
 RUN pwsh -c /root/.modules/dotnet/dotnet-setup.ps1 -ErrorAction 'Stop'
 
+# github installation
+COPY modules/github /root/.modules/github
+RUN /root/.modules/github/install-gh.sh
+
 # Create the developer user to be used dynamically
 RUN useradd --user-group --system --create-home --no-log-init developer --shell /bin/bash
 # Allow the user to override the hosts file on the $HOME/.hosts folder (which will be symbolic linked to .storage if present)
