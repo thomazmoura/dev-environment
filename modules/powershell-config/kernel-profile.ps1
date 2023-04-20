@@ -633,21 +633,30 @@ function Exit-Session() {
 
 function Set-AutoNodeVersion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if(!(Get-Command nvs -ErrorAction SilentlyContinue) -or !(Get-Command fd -ErrorAction SilentlyContinue)) {
-    Write-Verbose "fd or nvs not found. Skipping"
-  }
-
-  $nodeVersionFile = (fd --hidden .node-version)
-  if(!($nodeVersionFile)) {
-    Write-Verbose ".node-version not found"
-    return;
-  }
-  if($nodeVersionFile -is [array]) {
-    Write-Verbose "More than a single .node-version found"
+  if(!(Get-Command nvs -ErrorAction SilentlyContinue)) {
+    Write-Verbose "nvs not found. Skipping"
     return;
   }
 
-  $nodeVersion = Get-Content $nodeVersionFile
+  if(!(Get-Command fd -ErrorAction SilentlyContinue)) {
+    Write-Verbose "fd not found. Settings lts as the version"
+    $nodeVersion = 'lts'
+  } else {
+
+    $nodeVersionFile = (fd --hidden .node-version)
+    if(!($nodeVersionFile)) {
+      Write-Verbose ".node-version not found. Using lts"
+      $nodeVersion = 'lts'
+    } else {
+      if($nodeVersionFile -is [array]) {
+        Write-Verbose "More than a single .node-version found, so picking first"
+        $nodeVersionFile = $nodeVersionFile[0]
+      }
+
+      $nodeVersion = Get-Content $nodeVersionFile
+    }
+  }
+
   nvs add $nodeVersion
   nvs use $nodeVersion
 
