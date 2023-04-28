@@ -115,4 +115,5 @@ nnoremap <leader>mc @="^d2Wf{hDIbuilder.Property(\<lt>Esc>\"0pa\<lt>Space>=>\<lt
 nnoremap <leader>mu @="Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>"<CR>
 nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>:b#\<lt>CR>:wa\<lt>CR>"<CR>
 
-" CocActions
+" Copilot
+imap <silent><script><expr> <End> copilot#Accept("\<CR>")
