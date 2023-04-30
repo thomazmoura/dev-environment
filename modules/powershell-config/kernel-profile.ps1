@@ -632,12 +632,12 @@ function Exit-Session() {
 
 function Set-AutoNodeVersion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if(!(Get-Command nvs -ErrorAction SilentlyContinue)) {
+  if(!(&{nvs --version} *> $null)) {
     Write-Verbose "nvs not found. Skipping"
     return;
   }
 
-  if(!(Get-Command fd -ErrorAction SilentlyContinue)) {
+  if(!(&{fd --version} *> $null)) {
     Write-Verbose "fd not found. Settings lts as the version"
     $nodeVersion = 'lts'
   } else {
