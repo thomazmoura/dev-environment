@@ -29,6 +29,7 @@ Plug 'rafamadriz/friendly-snippets'
 Plug 'saadparwaiz1/cmp_luasnip'
 Plug 'windwp/nvim-autopairs'
 Plug 'simrat39/symbols-outline.nvim'
+Plug 'ErichDonGubler/lsp_lines.nvim'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'
@@ -63,4 +64,5 @@ Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
 
 call plug#end()
+
 

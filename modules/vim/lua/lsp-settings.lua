@@ -9,6 +9,25 @@ local lspconfig = require('lspconfig')
 -- luasnip setup
 local luasnip = require 'luasnip'
 
+-- lsp_lines
+Virtual_text = false
+local function toggle_lsp_lines()
+  require("lsp_lines").toggle()
+  Virtual_text = not Virtual_text
+  vim.diagnostic.config({
+    virtual_text = Virtual_text,
+  })
+end
+vim.diagnostic.config({
+  virtual_text = Virtual_text,
+})
+require('lsp_lines').setup()
+vim.keymap.set(
+  "n",
+  "<Leader>l",
+  toggle_lsp_lines,
+  { desc = "Toggle lsp_lines" }
+)
 
 -- nvim-cmp setup
 local cmp = require 'cmp'
@@ -20,14 +39,14 @@ if cmp ~= nil then
       end,
     },
     mapping = cmp.mapping.preset.insert({
-      ['<C-d>'] = cmp.mapping.scroll_docs(-4),
-      ['<C-u>'] = cmp.mapping.scroll_docs(4),
-      ['<C-Space>'] = cmp.mapping.complete(),
-      ['<CR>'] = cmp.mapping.confirm {
+          ['<C-d>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-u>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete(),
+          ['<CR>'] = cmp.mapping.confirm {
         behavior = cmp.ConfirmBehavior.Replace,
         select = true,
       },
-      ['<Tab>'] = cmp.mapping(function(fallback)
+          ['<Tab>'] = cmp.mapping(function(fallback)
         if cmp.visible() then
           cmp.select_next_item()
         elseif luasnip.expand_or_jumpable() then
@@ -36,7 +55,7 @@ if cmp ~= nil then
           fallback()
         end
       end, { 'i', 's' }),
-      ['<S-Tab>'] = cmp.mapping(function(fallback)
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
         if cmp.visible() then
           cmp.select_prev_item()
         elseif luasnip.jumpable(-1) then
@@ -140,7 +159,7 @@ require 'lspconfig'.omnisharp.setup {
 }
 
 -- powershell settings
-require'lspconfig'.powershell_es.setup{
+require 'lspconfig'.powershell_es.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
@@ -176,21 +195,21 @@ require 'lspconfig'.lua_ls.setup {
 }
 
 -- json LS settings
-require'lspconfig'.jsonls.setup {
+require 'lspconfig'.jsonls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- TypeScript LS settings
-require'lspconfig'.tsserver.setup{
+require 'lspconfig'.tsserver.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Angular LS settings
-require'lspconfig'.angularls.setup{
+require 'lspconfig'.angularls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
@@ -204,14 +223,14 @@ require('lspconfig').yamlls.setup {
   settings = {
     yaml = {
       schemas = {
-        ["https://json.schemastore.org/github-workflow.json"] =  "/.github/workflows/*",
+            ["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
       },
     },
   }
 }
 
 -- VIM LS settings
-require'lspconfig'.vimls.setup {
+require 'lspconfig'.vimls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
