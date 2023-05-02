@@ -4,7 +4,7 @@ Write-Verbose "`n->> Setting environment variables"
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
 $env:NVS_HOME="$env:HOME/.nvs"
-$env:PATH="$($env:PATH):$HOME/.local/bin"
+$env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(!$env:ConnectionStrings__Log) {
