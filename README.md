@@ -1,5 +1,14 @@
 # dev-environment
+
 Dev Environment for developing with NeoVim. From inside the container itself.
+
+- [Overview](#overview)
+- [Showcase](#showcase)
+- [Goals](#goals)
+- [Current Stack and Tools](#current-stack-and-tools)
+  - [Main Container](#main-container)
+  - [Secondary Container (QMK)](#secondary-container-qmk)
+  - [Windows and Linux Scripts](#windows-and-linux-scripts)
 
 ## Overview
 
