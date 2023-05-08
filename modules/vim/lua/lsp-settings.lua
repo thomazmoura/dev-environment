@@ -70,6 +70,15 @@ if cmp ~= nil then
       { name = 'luasnip' },
       { name = 'buffer' },
       { name = 'path' },
+      {
+        name = 'spell',
+        option = {
+          keep_all_entries = false,
+          enable_in_context = function()
+            return true
+          end,
+        },
+      }
     },
   }
 
@@ -231,6 +240,13 @@ require('lspconfig').yamlls.setup {
 
 -- VIM LS settings
 require 'lspconfig'.vimls.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
+-- Markdown LS Settings (Marksman)
+require'lspconfig'.marksman.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
