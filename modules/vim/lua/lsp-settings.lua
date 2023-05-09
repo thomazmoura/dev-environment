@@ -236,6 +236,20 @@ require 'lspconfig'.vimls.setup {
   flags = lsp_flags,
 }
 
+-- Markdown LS Settings (Marksman)
+require'lspconfig'.marksman.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
+-- Emmet LS
+require'lspconfig'.emmet_ls.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
 -- Proper icons
 local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
 for type, icon in pairs(signs) do
