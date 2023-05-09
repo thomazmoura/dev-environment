@@ -243,6 +243,13 @@ require'lspconfig'.marksman.setup {
   flags = lsp_flags,
 }
 
+-- Emmet LS
+require'lspconfig'.emmet_ls.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
 -- Proper icons
 local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
 for type, icon in pairs(signs) do

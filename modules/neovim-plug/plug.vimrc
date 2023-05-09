@@ -31,6 +31,7 @@ Plug 'windwp/nvim-autopairs'
 Plug 'simrat39/symbols-outline.nvim'
 Plug 'ErichDonGubler/lsp_lines.nvim'
 Plug 'artempyanykh/marksman'
+Plug 'aca/emmet-ls'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'

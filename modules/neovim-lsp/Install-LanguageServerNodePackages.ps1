@@ -27,4 +27,5 @@ Install-NodePackageGlobally -NpmGlobalPackages $CurrentNpmGlobalPackages -Packag
 Install-NodePackageGlobally -NpmGlobalPackages $CurrentNpmGlobalPackages -PackageName '@angular/language-server'
 Install-NodePackageGlobally -NpmGlobalPackages $CurrentNpmGlobalPackages -PackageName 'yaml-language-server'
 Install-NodePackageGlobally -NpmGlobalPackages $CurrentNpmGlobalPackages -PackageName 'vim-language-server'
+Install-NodePackageGlobally -NpmGlobalPackages $CurrentNpmGlobalPackages -PackageName 'emmet-ls'
 
