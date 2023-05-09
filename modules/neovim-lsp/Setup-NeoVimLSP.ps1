@@ -33,8 +33,9 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 & Remove-Item "./lua-language-server-3.6.13-linux-x64.tar.gz"
 
 Write-Output "`n->> Installing Marksman (Markdown Language Server)"
+New-Item -Force -Type Directory -Path "$HOME/.language-servers/marksman"
 Invoke-WebRequest "https://github.com/artempyanykh/marksman/releases/download/2023-04-12/marksman-linux" -OutFile "$HOME/.language-servers/marksman/marksman"
-New-Item -Force -Type SymbolicLink -Path "/home/developer/.local/bin/marksman" -DestinationPath "$HOME/.language-servers/marksman/marksman"
+New-Item -Force -Type SymbolicLink -Path "/home/developer/.local/bin/marksman" -Target "$HOME/.language-servers/marksman/marksman"
 chmod +x "$HOME/.language-servers/marksman/marksman"
 chmod +x "/home/developer/.local/bin/marksman"
 
