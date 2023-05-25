@@ -10,12 +10,20 @@ vim.keymap.set('n', '<Leader>hj', '<cmd>lua require("harpoon.ui").nav_file(1)<En
 vim.keymap.set('n', '<Leader>hk', '<cmd>lua require("harpoon.ui").nav_file(2)<Enter>', opts)
 vim.keymap.set('n', '<Leader>hl', '<cmd>lua require("harpoon.ui").nav_file(3)<Enter>', opts)
 vim.keymap.set('n', '<Leader>h;', '<cmd>lua require("harpoon.ui").nav_file(4)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hu', '<cmd>lua require("harpoon.ui").nav_file(5)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hi', '<cmd>lua require("harpoon.ui").nav_file(6)<Enter>', opts)
+vim.keymap.set('n', '<Leader>ho', '<cmd>lua require("harpoon.ui").nav_file(7)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hp', '<cmd>lua require("harpoon.ui").nav_file(8)<Enter>', opts)
 
 -- Default bindings to set main indexes
 vim.keymap.set('n', '<Leader>hJ', '<cmd>lua require("harpoon.mark").set_current_at(1)<Enter>', opts)
 vim.keymap.set('n', '<Leader>hK', '<cmd>lua require("harpoon.mark").set_current_at(2)<Enter>', opts)
 vim.keymap.set('n', '<Leader>hL', '<cmd>lua require("harpoon.mark").set_current_at(3)<Enter>', opts)
 vim.keymap.set('n', '<Leader>h:', '<cmd>lua require("harpoon.mark").set_current_at(4)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hU', '<cmd>lua require("harpoon.mark").set_current_at(5)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hI', '<cmd>lua require("harpoon.mark").set_current_at(6)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hO', '<cmd>lua require("harpoon.mark").set_current_at(7)<Enter>', opts)
+vim.keymap.set('n', '<Leader>hP', '<cmd>lua require("harpoon.mark").set_current_at(8)<Enter>', opts)
 
 -- Additional keybindings
 vim.keymap.set('n', '<Leader>hm', require("harpoon.mark").add_file, opts)
