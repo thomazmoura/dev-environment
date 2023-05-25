@@ -16,6 +16,7 @@ Plug 'lewis6991/gitsigns.nvim'
 Plug 'thomazmoura/auto-save.nvim' 
 Plug 'gorbit99/codewindow.nvim'
 Plug 'github/copilot.vim'
+Plug 'ThePrimeagen/harpoon'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}

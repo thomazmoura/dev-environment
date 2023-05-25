@@ -12,6 +12,7 @@ require('lualine-settings')
 require('telescope-settings')
 require('treesitter-settings')
 require('gitsigns-settings')
+require('harpoon-settings')
 
 -- neo-scroll
 require('neoscroll').setup {
