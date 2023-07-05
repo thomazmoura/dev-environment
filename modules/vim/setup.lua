@@ -27,9 +27,10 @@ require 'nvim-tree'.setup {
     update_cwd = false,
     ignore_list = {},
   },
+  -- currently disabled due to performance issues
   diagnostics = {
-    enable = true,
-    show_on_dirs = true,
+    enable = false,
+    show_on_dirs = false,
   },
 }
 
