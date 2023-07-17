@@ -19,6 +19,14 @@ function Create-DefaultFolders() {
   New-Item -Force -ItemType Directory -Path "$Storage/hosts"
   New-Item -Force -ItemType SymbolicLink -Path "$HOME/.hosts" -Target "$Storage/hosts"
 
+  Write-Information "Setting up .NET tools folder (on .storage)"
+  if(Test-Path "$HOME/.dotnet/tools") {
+    Move-Item "$HOME/.dotnet/tools" "$Storage/dotnet-tools"
+  } else {
+    New-Item -Force -ItemType Directory -Path "$Storage/dotnet-tools"
+  }
+  New-Item -Force -ItemType SymbolicLink -Path "$HOME/.dotnet/tools" -Target "$Storage/dotnet-tools"
+
   Write-Information "Setting up Azure folder (on .storage)"
   if( !(Test-Path "$Storage/azure") ) {
     New-Item -Force -ItemType Directory -Path "$Storage/azure"
@@ -119,19 +127,25 @@ function Setup-Copilot {
     return
   }
 
-  if( !(Test-Path "~/.nvs/node/16.*") ) {
+  if( !(Test-Path "$HOME/.nvs/node/16.*") ) {
     Write-Information "Installing Node 16"
     nvs add 16
   }
 
-  $PathToCopilotsNode = "~/.nvs/copilot-node"
+  $PathToCopilotsNode = "$HOME/.nvs/copilot-node"
   if( !(Test-Path $PathToCopilotsNode) ) {
     Write-Information "Creating copilot's node symbolic link"
-    $Node16Folder = Get-Item "~/.nvs/node/16.*"
+    $Node16Folder = Get-Item "$HOME/.nvs/node/16.*"
       | Sort-Object Name -Descending
       | Select-Object -First 1
     $Node16Exe = "$Node16Folder/x64/bin/node"
     New-Item -Type SymbolicLink -Path $PathToCopilotsNode -Target $Node16Exe
+  }
+}
+
+function Setup-DotNetTools {
+  if( !(Test-Path "$HOME/.modules/dotnet-tools/dotnettools-setup.ps1") ) {
+    . $HOME/.modules/dotnet-tools/dotnettools-setup.ps1
   }
 }
 
@@ -141,4 +155,5 @@ Setup-DotNetCertificate
 Setup-DotFiles
 Setup-VSCodeServer
 Setup-Copilot
+Setup-DotNetTools
 

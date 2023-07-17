@@ -16,10 +16,6 @@ COPY --chown=developer:developer modules/vim-autoload /home/developer/.local/sha
 COPY --chown=developer:developer modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
 RUN pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
 
-# Dotnet tools instalation
-COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
-RUN pwsh -NoProfile -File /home/developer/.modules/dotnet-tools/dotnettools-setup.ps1
-
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
 RUN export PATH="$HOME/.local/bin:$PATH" && pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
@@ -33,6 +29,9 @@ COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
+
+# Dotnet tools instalation script
+COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
 
 # NeoVim LSP Configuration
 COPY --chown=developer:developer modules/neovim-lsp /home/developer/.modules/neovim-lsp
