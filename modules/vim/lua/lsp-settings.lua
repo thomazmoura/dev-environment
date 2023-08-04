@@ -252,6 +252,13 @@ require'lspconfig'.emmet_ls.setup{
   flags = lsp_flags,
 }
 
+-- CSS LS
+require'lspconfig'.cssls.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
 -- Proper icons
 local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
 for type, icon in pairs(signs) do
