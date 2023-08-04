@@ -13,7 +13,7 @@ require('lualine').setup {
     lualine_a = {'mode'},
     lualine_b = {
       {
-       'diagnostics' 
+       'diagnostics'
       },
       {
         'filename',
@@ -32,11 +32,6 @@ require('lualine').setup {
     lualine_x = {'location'},
     lualine_y = {},
     lualine_z = {}
-  },
-  tabline = {
-    lualine_a = {
-      'buffers'
-    }
   },
   extensions = {}
 }
