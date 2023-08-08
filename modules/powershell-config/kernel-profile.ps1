@@ -656,8 +656,12 @@ function Set-AutoNodeVersion() {
     }
   }
 
-  nvs add $nodeVersion
   nvs use $nodeVersion
+  if( !($?) ) {
+    Write-Verbose "Unable to use node version $nodeVersion installing it now"
+    nvs add $nodeVersion
+    nvs use $nodeVersion
+  }
 
   if(Test-Path "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1") {
     . "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1"
