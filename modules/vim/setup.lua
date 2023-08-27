@@ -32,6 +32,9 @@ require 'nvim-tree'.setup {
     enable = false,
     show_on_dirs = false,
   },
+  view = {
+    width = 50,
+  }
 }
 
 -- auto-save
