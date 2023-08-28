@@ -111,35 +111,31 @@ vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, opts)
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, opts)
 vim.keymap.set('n', '<Leader>q', vim.diagnostic.setloclist, opts)
 
--- Use an on_attach function to only map the following keys
--- after the language server attaches to the current buffer
-local on_attach = function(client, bufnr)
-  -- Mappings.
-  -- See `:help vim.lsp.*` for documentation on any of the below functions
-  local bufopts = { noremap = true, silent = true, buffer = bufnr }
-  vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
-  vim.keymap.set('n', 'gd', '<cmd>Telescope lsp_definitions<cr>', bufopts)
-  vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
-  vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
-  vim.keymap.set('n', '<Leader>gh', vim.diagnostic.open_float, bufopts)
-  vim.keymap.set('n', 'gi', '<cmd>Telescope lsp_implementations<cr>', bufopts)
-  vim.keymap.set('n', '<Leader>K', vim.lsp.buf.signature_help, bufopts)
-  vim.keymap.set('n', '<Leader>wa', vim.lsp.buf.add_workspace_folder, bufopts)
-  vim.keymap.set('n', '<Leader>wr', vim.lsp.buf.remove_workspace_folder, bufopts)
-  vim.keymap.set('n', '<Leader>wl', function()
-    print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-  end, bufopts)
-  vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, bufopts)
-  vim.keymap.set('n', '<Leader>r', vim.lsp.buf.rename, bufopts)
-  vim.keymap.set('n', '<Leader>R', '<cmd>LspRestart<cr>')
-  vim.keymap.set('n', '<Leader>.', vim.lsp.buf.code_action, bufopts)
-  vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
-  vim.keymap.set('n', '<Leader>f', vim.lsp.buf.formatting, bufopts)
-  vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
-  vim.keymap.set('n', '<Leader>a', '<cmd>Telescope diagnostics<cr>', bufopts)
-  vim.keymap.set('n', '<Leader>o', '<cmd>SymbolsOutline<cr>', bufopts)
-  vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
-end
+-- LSP Mappings.
+-- See `:help vim.lsp.*` for documentation on any of the below functions
+local bufopts = { noremap = true, silent = true }
+vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
+vim.keymap.set('n', 'gd', '<cmd>Telescope lsp_definitions<cr>', bufopts)
+vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
+vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
+vim.keymap.set('n', '<Leader>gh', vim.diagnostic.open_float, bufopts)
+vim.keymap.set('n', 'gi', '<cmd>Telescope lsp_implementations<cr>', bufopts)
+vim.keymap.set('n', '<Leader>K', vim.lsp.buf.signature_help, bufopts)
+vim.keymap.set('n', '<Leader>wa', vim.lsp.buf.add_workspace_folder, bufopts)
+vim.keymap.set('n', '<Leader>wr', vim.lsp.buf.remove_workspace_folder, bufopts)
+vim.keymap.set('n', '<Leader>wl', function()
+  print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+end, bufopts)
+vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, bufopts)
+vim.keymap.set('n', '<Leader>r', vim.lsp.buf.rename, bufopts)
+vim.keymap.set('n', '<Leader>R', '<cmd>LspRestart<cr>')
+vim.keymap.set('n', '<Leader>.', vim.lsp.buf.code_action, bufopts)
+vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
+vim.keymap.set('n', '<Leader>f', vim.lsp.buf.formatting, bufopts)
+vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
+vim.keymap.set('n', '<Leader>a', '<cmd>Telescope diagnostics<cr>', bufopts)
+vim.keymap.set('n', '<Leader>o', '<cmd>SymbolsOutline<cr>', bufopts)
+vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
 
 local lsp_flags = {
   -- This is the default in Nvim 0.7+
@@ -148,8 +144,7 @@ local lsp_flags = {
 
 
 -- omnisharp settings
-require 'lspconfig'.omnisharp.setup {
-  on_attach = on_attach,
+lspconfig.omnisharp.setup {
   capabilities = capabilities,
   flags = lsp_flags,
   cmd = {
@@ -159,16 +154,14 @@ require 'lspconfig'.omnisharp.setup {
 }
 
 -- powershell settings
-require 'lspconfig'.powershell_es.setup {
-  on_attach = on_attach,
+lspconfig.powershell_es.setup {
   capabilities = capabilities,
   flags = lsp_flags,
   bundle_path = '/home/developer/.language-servers/powershell',
 }
 
 -- lua LS settings
-require 'lspconfig'.lua_ls.setup {
-  on_attach = on_attach,
+lspconfig.lua_ls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
   cmd = { "/home/developer/.language-servers/lua/bin/lua-language-server" },
@@ -197,29 +190,25 @@ require 'lspconfig'.lua_ls.setup {
 }
 
 -- json LS settings
-require 'lspconfig'.jsonls.setup {
-  on_attach = on_attach,
+lspconfig.jsonls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- TypeScript LS settings
-require 'lspconfig'.tsserver.setup {
-  on_attach = on_attach,
+lspconfig.tsserver.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Angular LS settings
-require 'lspconfig'.angularls.setup {
-  on_attach = on_attach,
+lspconfig.angularls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- YAML LS settings
 require('lspconfig').yamlls.setup {
-  on_attach = on_attach,
   capabilities = capabilities,
   flags = lsp_flags,
   settings = {
@@ -232,29 +221,25 @@ require('lspconfig').yamlls.setup {
 }
 
 -- VIM LS settings
-require 'lspconfig'.vimls.setup {
-  on_attach = on_attach,
+lspconfig.vimls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Markdown LS Settings (Marksman)
-require'lspconfig'.marksman.setup {
-  on_attach = on_attach,
+lspconfig.marksman.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- Emmet LS
-require'lspconfig'.emmet_ls.setup{
-  on_attach = on_attach,
+lspconfig.emmet_ls.setup{
   capabilities = capabilities,
   flags = lsp_flags,
 }
 
 -- CSS LS
-require'lspconfig'.cssls.setup {
-  on_attach = on_attach,
+lspconfig.cssls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
