@@ -28,6 +28,7 @@ RUN apt update \
     pkg-config \
     powershell \
     procps \
+    pipx \
     python3 \
     python3-pip \
     ripgrep \

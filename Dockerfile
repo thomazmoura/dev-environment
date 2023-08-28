@@ -18,7 +18,7 @@ RUN pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neov
 
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN export PATH="$HOME/.local/bin:$PATH" && pip install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
+RUN export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # Delta diff installation
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
