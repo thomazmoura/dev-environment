@@ -20,10 +20,11 @@ function Create-DefaultFolders() {
   New-Item -Force -ItemType SymbolicLink -Path "$HOME/.hosts" -Target "$Storage/hosts"
 
   Write-Information "Setting up .NET tools folder (on .storage)"
-  if(Test-Path "$HOME/.dotnet/tools") {
-    Move-Item "$HOME/.dotnet/tools" "$Storage/dotnet-tools"
-  } else {
-    New-Item -Force -ItemType Directory -Path "$Storage/dotnet-tools"
+  if((Test-Path "$HOME/.dotnet/tools") -and ! (Get-Item -Path "$HOME/.dotnet/tools").Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+    Remove-Item -Recurse -Force "$HOME/.dotnet/tools"
+  }
+  if( ! (Test-Path "$Storage/dotnet-tools")) {
+    New-Item -Force -Type Directory -Path "$Storage/dotnet-tools"
   }
   New-Item -Force -ItemType SymbolicLink -Path "$HOME/.dotnet/tools" -Target "$Storage/dotnet-tools"
 
@@ -144,7 +145,7 @@ function Setup-Copilot {
 }
 
 function Setup-DotNetTools {
-  if( !(Test-Path "$HOME/.modules/dotnet-tools/dotnettools-setup.ps1") ) {
+  if( Test-Path "$HOME/.modules/dotnet-tools/dotnettools-setup.ps1" ) {
     . $HOME/.modules/dotnet-tools/dotnettools-setup.ps1
   }
 }
