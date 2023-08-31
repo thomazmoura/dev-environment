@@ -11,7 +11,7 @@
           "properties": {
             "folder_icon": "\uf115",
             "folder_separator_icon": "/",
-            "home_icon": "\uf7db ",
+            "home_icon": "\uf015 ",
             "style": "full"
           },
           "style": "powerline",
@@ -56,23 +56,8 @@
             "always_enabled": true
           },
           "style": "powerline",
-          "template": " \ufbab {{ .FormattedMs }} ",
+          "template": " \uf253 {{ .FormattedMs }} ",
           "type": "executiontime"
-        },
-        {
-          "background": "#2e9599",
-          "background_templates": [
-            "{{ if gt .Code 0 }}red{{ end }}"
-          ],
-          "foreground": "#ffffff",
-          "powerline_symbol": "\ue0b0",
-          "properties": {
-            "always_enabled": true
-          },
-          "style": "powerline",
-          "template": " {{ if gt .Code 0 }}\uf525{{ else }}\uf469{{ end }} ",
-          "trailing_diamond": "\ue0b4",
-          "type": "exit"
         }
       ],
       "type": "prompt"
