@@ -36,7 +36,7 @@ require'nvim-web-devicons'.setup {
       name = "PowerShell"
     },
     csproj = {
-      icon = "﬏",
+      icon = "",
       color = "#7aa2f7",
       name = "CSharpProject"
     },
