@@ -1,3 +1,4 @@
+
 {
   "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
   "blocks": [
@@ -58,6 +59,21 @@
           "style": "powerline",
           "template": " \uf253 {{ .FormattedMs }} ",
           "type": "executiontime"
+        },
+        {
+          "background": "#2e9599",
+          "background_templates": [
+            "{{ if gt .Code 0 }}red{{ end }}"
+          ],
+          "foreground": "#ffffff",
+          "powerline_symbol": "\ue0b0",
+          "properties": {
+            "always_enabled": true
+          },
+          "style": "powerline",
+          "template": " {{ if gt .Code 0 }}\udb84\uddce{{ else }}\uf469{{ end }} ",
+          "trailing_diamond": "\ue0b4",
+          "type": "exit"
         }
       ],
       "type": "prompt"
@@ -99,3 +115,4 @@
   "final_space": true,
   "version": 2
 }
+
