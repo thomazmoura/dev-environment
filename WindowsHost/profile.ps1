@@ -47,21 +47,21 @@ function Import-OhMyPosh() {
     winget install JanDeDobbeleer.OhMyPosh
   }
   
-  if (! $env:OhMyPoshFile ) {
+  if ( ! ($env:OhMyPoshFile) -and (Test-Path "$HOME/*.omp.json") ) {
     $OhMyPoshFile = (Get-ChildItem "$HOME/*.omp.json" | Select-Object -First 1).FullName
-    if(! $OhMyPoshFile) {
-      Write-Information "`n->> No OMP file found on $HOME. Copying sample"
-      Copy-Item "$PSScriptRoot/windows.omp.json" "$HOME/windows.omp.json"
-      $OhMyPoshFile = (Get-ChildItem "$HOME/*.omp.json" | Select-Object -First 1).FullName
-    }
-    Write-Information "`n->> Setting the OhMyPoshFile environment variable"
-    $env:OhMyPoshFile = $OhMyPoshFile
+    Write-Information "`n->> Setting the OhMyPoshFile environment variable to $OhMyPoshFile"
     [System.Environment]::SetEnvironmentVariable("OhMyPoshFile", $OhMyPoshFile, "User")
-  } else {
-    Write-Verbose "`n->> OhMyPoshFile environment variable is already set"
+    $env:OhMyPoshFile = $OhMyPoshFile
   }
-  oh-my-posh init pwsh --config $env:OhMyPoshFile | Invoke-Expression
-  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
+
+  if ( $env:OhMyPoshFile ) {
+    oh-my-posh init pwsh --config $env:OhMyPoshFile | Invoke-Expression
+  } else {
+    Write-Information "`n->> No OhMyPoshFile found. Starting without customizations"
+    oh-my-posh init pwsh | Invoke-Expression
+  } 
+
+  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do OhMyPosh demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
 function Import-SqlServer() {
