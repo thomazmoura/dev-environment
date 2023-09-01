@@ -42,15 +42,25 @@ function Import-PoshGit() {
 
 function Import-OhMyPosh() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  Write-Verbose "`n->> Importing oh-my-posh"
-  Import-Module oh-my-posh
-  if ( !($?) ) {
-    Write-Information "`n->> oh-my-posh not found. Installing"
-    Install-Module oh-my-posh -Scope CurrentUser
+  if(! (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
+    Write-Information "`n->> oh-my-posh is not installed. Installing it now with winget"
+    winget install JanDeDobbeleer.OhMyPosh
   }
-  Get-ChildItem("$HOME/*.omp.json")
-  $OhMyPoshFile = (Get-ChildItem "$HOME/*.omp.json" | Select-Object -First 1).FullName
-  oh-my-posh init pwsh --config $OhMyPoshFile | Invoke-Expression
+  
+  if (! $env:OhMyPoshFile ) {
+    $OhMyPoshFile = (Get-ChildItem "$HOME/*.omp.json" | Select-Object -First 1).FullName
+    if(! $OhMyPoshFile) {
+      Write-Information "`n->> No OMP file found on $HOME. Copying sample"
+      Copy-Item "$PSScriptRoot/windows.omp.json" "$HOME/windows.omp.json"
+      $OhMyPoshFile = (Get-ChildItem "$HOME/*.omp.json" | Select-Object -First 1).FullName
+    }
+    Write-Information "`n->> Setting the OhMyPoshFile environment variable"
+    $env:OhMyPoshFile = $OhMyPoshFile
+    [System.Environment]::SetEnvironmentVariable("OhMyPoshFile", $OhMyPoshFile, "User")
+  } else {
+    Write-Verbose "`n->> OhMyPoshFile environment variable is already set"
+  }
+  oh-my-posh init pwsh --config $env:OhMyPoshFile | Invoke-Expression
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
@@ -807,10 +817,6 @@ $env:FZF_CTRL_T_COMMAND = 'fd --type f --follow'
 Write-Verbose "`n->> Set update notifications to LTS only"
 [System.Environment]::SetEnvironmentVariable('POWERSHELL_UPDATECHECK', 'LTS')
 $stopwatch.Stop(); Write-Verbose "`n-->> Definir variáveis de ambiente demorou: $($stopwatch.ElapsedMilliseconds)"
-
-if($PSVersionTable.PSVersion.Major -ge 6) {
-  Import-OhMyPosh
-}
 
 Write-Verbose "`n->> Settings node LTS"
 if( (Get-Command nvs -ErrorAction SilentlyContinue) ) {
