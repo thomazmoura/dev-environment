@@ -8,7 +8,7 @@ Write-Output "=>> Ensuring the ~/.local/bin directory exists"
 New-Item -Type Directory -Force "$HOME/.local/bin/"
 
 Write-Output "=>> Downloading Neovim's realease tar package"
-Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.8.3/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
+Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.9.1/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
 
 Write-Output "=>> Extracting Neovim package"
 & tar -xzf nvim-linux64.tar.gz
