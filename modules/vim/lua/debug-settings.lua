@@ -41,4 +41,5 @@ vim.keymap.set('n', '<Leader>dd', dap.toggle_breakpoint)
 vim.keymap.set('n', '<Leader>dD', "<cmd>dap.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>")
 vim.keymap.set('n', '<Leader>do', dap.repl.open)
 vim.keymap.set('n', '<Leader>dR', dap.run_last)
+vim.keymap.set('n', '<Leader>ds', dap.close)
 
