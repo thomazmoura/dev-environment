@@ -4,7 +4,7 @@ local dap, dapui = require("dap"), require("dapui")
 dap.adapters.coreclr = {
   type = 'executable',
   command = '/home/developer/.local/bin/netcoredbg',
-  args = {'--interpreter=vscode'}
+  args = { '--interpreter=vscode' }
 }
 
 dap.configurations.cs = {
@@ -12,8 +12,11 @@ dap.configurations.cs = {
     type = "coreclr",
     name = "launch - netcoredbg",
     request = "launch",
+    cwd = function()
+      return vim.fn.input('Path to csproj: ', vim.fn.getcwd(), 'dir')
+    end,
     program = function()
-        return vim.fn.input('Path to dll', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+      return vim.fn.input('Path to dll: ', vim.fn.getcwd(), 'file')
     end,
   },
 }
