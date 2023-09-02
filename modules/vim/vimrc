@@ -64,26 +64,6 @@ source $HOME/.local/share/nvim/site/setup.lua
 " Yank highlight
 autocmd TextYankPost * silent! lua vim.highlight.on_yank { higroup="TabLineSel", timeout=450 }
 
-" copy to attached terminal using the yank(1) script:
-" https://github.com/sunaku/home/blob/master/bin/yank
-function! Yank(text) abort
-  let escape = system('yank', a:text)
-  if v:shell_error
-    echoerr escape
-  else
-    call writefile([escape], '/dev/tty', 'b')
-  endif
-endfunction
-vnoremap <silent> <Leader>Y y:<C-U>call Yank(@0)<CR>
-
-" automatically run yank(1) whenever yanking in Vim with the + register
-function! CopyYank() abort
-  if(v:event.regname == '+')
-    call Yank(join(v:event.regcontents, "\n"))
-  endif
-endfunction
-autocmd TextYankPost * call CopyYank()
-
 " Transparent floating windows
 set winblend=15
 set pumblend=15
