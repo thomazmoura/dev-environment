@@ -74,3 +74,7 @@ RUN pwsh -NoProfile -Command /home/developer/.modules/powershell/pwsh-setup.ps1
 COPY --chown=developer:developer modules/neovim-install /home/developer/.modules/neovim-install
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-install/Install-Neovim.ps1
 
+# Debugger installation
+COPY --chown=developer:developer modules/debugging /home/developer/.modules/debugging
+RUN pwsh -NoProfile -File /home/developer/.modules/debugging/Install-NetCoreDbg.ps1
+

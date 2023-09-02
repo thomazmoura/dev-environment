@@ -47,6 +47,7 @@ Plug 'junegunn/fzf.vim'
 Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'karb94/neoscroll.nvim'
+Plug 'folke/neodev.nvim'
 
 " TMUX integration
 Plug 'christoomey/vim-tmux-navigator'
@@ -69,6 +70,11 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'kyazdani42/nvim-tree.lua'
 
-call plug#end()
+" Debugging
+Plug 'mfussenegger/nvim-dap'
+Plug 'rcarriga/nvim-dap-ui'
+Plug 'theHamsta/nvim-dap-virtual-text'
+Plug 'nvim-telescope/telescope-dap.nvim'
 
+call plug#end()
 

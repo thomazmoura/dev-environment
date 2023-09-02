@@ -20,8 +20,8 @@ if( !(Test-Path delta) ) {
   Write-Error "Delta bin not found!" -ErrorAction Stop
 }
 Move-Item delta "$env:HOME/.local/bin/delta"
-Remove-Item -Recurse -Force delta*
 Set-Location -
+Remove-Item -Recurse -Force delta*
 Set-Location -
 
 Write-Output "Settings delta options"

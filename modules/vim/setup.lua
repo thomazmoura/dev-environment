@@ -13,6 +13,7 @@ require('telescope-settings')
 require('treesitter-settings')
 require('gitsigns-settings')
 require('harpoon-settings')
+require('debug-settings')
 
 -- neo-scroll
 require('neoscroll').setup {

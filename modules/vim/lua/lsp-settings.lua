@@ -1,3 +1,8 @@
+-- NeoDev settings
+require("neodev").setup({
+  library = { plugins = { "nvim-dap-ui" }, types = true }
+})
+
 -- cmp settings
 -- Set up nvim-cmp.
 -- Add additional capabilities supported by nvim-cmp
@@ -185,6 +190,9 @@ lspconfig.lua_ls.setup {
       telemetry = {
         enable = false,
       },
+      completion = {
+        callSnippet = "Replace"
+      }
     },
   },
 }
@@ -233,7 +241,7 @@ lspconfig.marksman.setup {
 }
 
 -- Emmet LS
-lspconfig.emmet_ls.setup{
+lspconfig.emmet_ls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
