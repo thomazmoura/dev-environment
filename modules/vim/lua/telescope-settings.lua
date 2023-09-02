@@ -1,5 +1,6 @@
 -- telescope
-require('telescope').setup {
+local telescope = require('telescope');
+telescope.setup {
   defaults = {
     winblend = 30
   },
@@ -18,5 +19,6 @@ require('telescope').setup {
   }
 }
 
-require('telescope').load_extension('fzf', 'dap')
+telescope.load_extension('fzf')
+telescope.load_extension('dap')
 
