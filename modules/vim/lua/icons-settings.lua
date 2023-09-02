@@ -1,3 +1,4 @@
+
 require'nvim-web-devicons'.setup {
   override = {
     vimrc = {
@@ -26,7 +27,7 @@ require'nvim-web-devicons'.setup {
       name = "InputRC"
     },
     gitignore = {
-      icon = "",
+      icon = "",
       color = "#8B2F1A",
       name = "GitIgnore"
     },
@@ -61,7 +62,7 @@ require'nvim-web-devicons'.setup {
       name = "AngularService"
     },
     ["spec.ts"] = {
-      icon = "ﭧ",
+      icon = "󰙨",
       color = "#9ece6a",
       name = "AngularSpec"
     },

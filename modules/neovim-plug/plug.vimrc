@@ -42,14 +42,17 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'phaazon/hop.nvim'
 
 " General Settings
-Plug 'christoomey/vim-tmux-navigator'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
+Plug 'karb94/neoscroll.nvim'
+
+" TMUX integration
+Plug 'christoomey/vim-tmux-navigator'
 Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
-Plug 'karb94/neoscroll.nvim'
+Plug 'aserowy/tmux.nvim'
 
 " Colorschemes
 Plug 'joshdick/onedark.vim'

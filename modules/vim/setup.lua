@@ -67,3 +67,10 @@ require("tint").setup({
   tint_background_colors = false
 })
 
+require("tmux").setup({
+  copy_sync = {
+    sync_clipboard = true,
+    sync_registers = false,
+  }
+})
+
