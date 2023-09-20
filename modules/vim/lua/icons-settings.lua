@@ -1,4 +1,3 @@
-
 require'nvim-web-devicons'.setup {
   override = {
     vimrc = {
@@ -35,6 +34,11 @@ require'nvim-web-devicons'.setup {
       icon = "",
       color = "#7aa2f7",
       name = "PowerShell"
+    },
+    cs = {
+      icon = "",
+      color = "#1a662e",
+      name = "CSharpFile"
     },
     csproj = {
       icon = "",
