@@ -1,12 +1,13 @@
 . "$HOME/.modules/powershell/Check-Failure.ps1"
+
+Write-Output "Make node available to the script"
+& $HOME/.nvs/nvs.ps1 use lts
+
 . "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1"
 
 Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
-
-Write-Output "Make node available to the script"
-. $HOME/.nvs/nvs.ps1 use lts
 
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
 Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.1/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
