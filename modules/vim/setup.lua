@@ -14,6 +14,7 @@ require('treesitter-settings')
 require('gitsigns-settings')
 require('harpoon-settings')
 require('debug-settings')
+require('noice-settings')
 
 -- neo-scroll
 require('neoscroll').setup {

@@ -4,6 +4,9 @@ call plug#begin('~/.local/share/nvim/site/.plugged')
 Plug 'nvim-lua/plenary.nvim'
 Plug 'lewis6991/impatient.nvim'
 Plug 'nvim-telescope/telescope.nvim', { 'branch': '0.1.x' }
+Plug 'MunifTanjim/nui.nvim'
+Plug 'rcarriga/nvim-notify'
+Plug 'folke/neodev.nvim'
 
 " General Settings
 Plug 'preservim/nerdcommenter'
@@ -47,7 +50,7 @@ Plug 'junegunn/fzf.vim'
 Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'karb94/neoscroll.nvim'
-Plug 'folke/neodev.nvim'
+Plug 'folke/noice.nvim'
 
 " TMUX integration
 Plug 'christoomey/vim-tmux-navigator'
@@ -77,4 +80,5 @@ Plug 'theHamsta/nvim-dap-virtual-text'
 Plug 'nvim-telescope/telescope-dap.nvim'
 
 call plug#end()
+
 

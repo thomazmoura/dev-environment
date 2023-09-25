@@ -2,7 +2,7 @@
 nnoremap <Leader><Tab> :b#<CR>
 
 " * Turn off highlighing with ESC
-nnoremap <esc> :noh<CR>
+nnoremap <esc> :noh<CR>:Noice dismiss<CR>
 
 " Save on Leader Leader
 nnoremap <Leader><Leader> :w<CR>
@@ -99,6 +99,9 @@ noremap <Up> <C-y>
 " Upper U as redo
 nnoremap U <C-r>
 
+" Show noice history
+nnoremap <Leader>n :Telescope noice<CR>
+
 " Macros
 " C# - Class boilerplate
 nnoremap <leader>mn inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic class 0F/ldBf.Do{o}O
@@ -118,3 +121,4 @@ nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/nor
 
 " Copilot
 imap <silent><script><expr> <End> copilot#Accept("\<CR>")
+
