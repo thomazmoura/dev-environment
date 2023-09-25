@@ -151,13 +151,6 @@ New-Alias -Force lso Get-OctalFilePermissions
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if(&{nvs --version} *> $null) {
-	nvs auto on
-	nvs use lts
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
-
 Import-OhMyPoshOnLinux
 Set-AutoNodeVersion
 Run-CodeFolderScripts
