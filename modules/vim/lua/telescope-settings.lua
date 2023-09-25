@@ -1,5 +1,5 @@
 -- telescope
-local telescope = require('telescope');
+local telescope = require('telescope')
 telescope.setup {
   defaults = {
     winblend = 30
@@ -15,11 +15,10 @@ telescope.setup {
     }
   },
   extensions = {
-    fzf = { }
+    fzf = {}
   }
 }
-
 telescope.load_extension('fzf')
 telescope.load_extension('dap')
 telescope.load_extension('noice')
-
+telescope.load_extension('ui-select')

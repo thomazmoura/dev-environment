@@ -40,6 +40,7 @@ Plug 'aca/emmet-ls'
 " Telescope
 Plug 'BurntSushi/ripgrep'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
+Plug 'nvim-telescope/telescope-ui-select.nvim'
 
 " Jump motion
 Plug 'phaazon/hop.nvim'
@@ -80,5 +81,4 @@ Plug 'theHamsta/nvim-dap-virtual-text'
 Plug 'nvim-telescope/telescope-dap.nvim'
 
 call plug#end()
-
 
