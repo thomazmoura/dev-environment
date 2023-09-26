@@ -1,11 +1,11 @@
 "  Back to previous page
-nnoremap <Leader><Tab> :b#<CR>
+nnoremap <silent> <Leader><Tab> :b#<CR>
 
 " * Turn off highlighing with ESC
-nnoremap <esc> :noh<CR>:Noice dismiss<CR>
+nnoremap <silent> <esc> :noh<CR>:Noice dismiss<CR>
 
 " Save on Leader Leader
-nnoremap <Leader><Leader> :w<CR>
+nnoremap <silent> <Leader><Leader> :w<CR>
 
 " Swap selection with deleted contents
 vnoremap gs p2g;P
@@ -23,54 +23,46 @@ vnoremap <silent> # :<C-U>
   \gVzv:call setreg('"', old_reg, old_regtype)<CR>
 
 " File Explorer
-nnoremap <C-e> :NvimTreeToggle<CR>
-nnoremap <Leader><C-e> :NvimTreeFindFile<CR>
-nnoremap <Leader>e :NvimTreeToggle<CR>
+nnoremap <silent> <C-e> :NvimTreeToggle<CR>
+nnoremap <silent> <Leader><C-e> :NvimTreeFindFile<CR>
+nnoremap <silent> <Leader>e :NvimTreeToggle<CR>
 
 " Telescope
-nnoremap <Leader>/ <cmd>Telescope find_files<cr>
-nnoremap <Leader>* <cmd>Telescope live_grep<cr>
-nnoremap <Leader>? <cmd>Telescope buffers<cr>
-nnoremap <Leader>h <cmd>Telescope help_tags<cr>
-nnoremap <Leader>, <cmd>Telescope find_files cwd=~/code/dotfiles<cr>
+nnoremap <silent> <Leader>/ <cmd>Telescope find_files<cr>
+nnoremap <silent> <Leader>* <cmd>Telescope live_grep<cr>
+nnoremap <silent> <Leader>? <cmd>Telescope buffers<cr>
+nnoremap <silent> <Leader>h <cmd>Telescope help_tags<cr>
+nnoremap <silent> <Leader>, <cmd>Telescope find_files cwd=~/code/dotfiles<cr>
 
 " FZF
-nnoremap <C-p> :Files<CR>
-nnoremap <Leader><C-p> :Buffers<CR>
-nnoremap <C-t> :CocFzfList symbols<CR>
-nnoremap <Leader>O :CocFzfList symbols<CR>
+nnoremap <silent> <C-p> :Files<CR>
+nnoremap <silent> <Leader><C-p> :Buffers<CR>
 
 " Find everywhere
-nnoremap <C-f> :Ag<CR>
-
-" Format document
-nnoremap <Leader>f :CocCommand editor.action.formatDocument<CR>
-nnoremap <Leader>F :CocCommand prettier.formatFile<CR>
+nnoremap <silent> <C-f> :Ag<CR>
 
 " Delete the previous word
-noremap! <C-BS> <C-w>
-noremap! <C-h> <C-w>
+noremap <silent> <C-BS> <C-w>
+noremap <silent> <C-h> <C-w>
 
 " Navigate through buffers
-nnoremap gb :bnext<CR>
-nnoremap gB :bprevious<CR>
+nnoremap <silent> gb :bnext<CR>
+nnoremap <silent> gB :bprevious<CR>
 
-" Reset Omnisharp
-nnoremap <Leader>R :CocRestart<CR><CR>
 
 " Deal with buffers
-nnoremap <Leader>bd :bd<CR>
-nnoremap <Leader>bD :bd#<CR>
+nnoremap <silent> <Leader>bd :bd<CR>
+nnoremap <silent> <Leader>bD :bd#<CR>
 
 " Browsable command line history
-nnoremap <leader>: q:i
+nnoremap <silent> <leader>: q:i
 
 " Force quit terminal
-tnoremap <Leader><ESC> <C-\><C-N>
+tnoremap <silent> <Leader><ESC> <C-\><C-N>
 
 " Insert a GUID/UUID
-nnoremap <Leader>gg  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0p
-nnoremap <Leader>gG  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0P
+nnoremap <silent> <Leader>gg  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0p
+nnoremap <silent> <Leader>gG  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0P
 
 " Use <Leader> as a substitute for "+ on yank and paste
 noremap <Leader>y "+y
@@ -84,13 +76,13 @@ noremap <Leader>0P "0P
 noremap <Leader>0d "0d
 
 " Quickly split vertically
-nnoremap <Leader>\  :vsplit<CR>
+nnoremap <silent> <Leader>\  :vsplit<CR>
 
 " Quickly break the line
 nnoremap <Leader><CR>  i<CR><ESC>
 
 " Quickly sort (removing duplicates)
-vnoremap <Leader>s :'<,'>sort u<CR>
+vnoremap <silent> <Leader>s :'<,'>sort u<CR>
 
 " Use the arrows to scroll up and down
 noremap <Down> <C-e>
@@ -100,7 +92,7 @@ noremap <Up> <C-y>
 nnoremap U <C-r>
 
 " Show noice history
-nnoremap <Leader>n :Telescope noice<CR>
+nnoremap <silent> <Leader>n :Telescope noice<CR>
 
 " Macros
 " C# - Class boilerplate
