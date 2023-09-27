@@ -1,3 +1,4 @@
+
 --require custom modules
 package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 
@@ -75,4 +76,8 @@ require("tmux").setup({
     sync_registers = false,
   }
 })
+
+vim.o.timeout = true
+vim.o.timeoutlen = 500
+require("which-key").setup()
 
