@@ -1,3 +1,10 @@
+require("notify").setup({
+  render = "compact",
+  timeout = 10000,
+  stages = "fade_in_slide_out",
+  top_down = false,
+})
+
 require("noice").setup({
   lsp = {
     -- override markdown rendering so that **cmp** and other plugins use **Treesitter**
@@ -21,6 +28,11 @@ require("noice").setup({
       opts = { skip = true },
     },
   },
+  views = {
+    notify = {
+      replace = true,
+    },
+  }
 })
 
 require('telescope').load_extension('noice')
