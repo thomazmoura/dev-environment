@@ -3,17 +3,17 @@ require('lualine').setup {
   options = {
     icons_enabled = false,
     theme = 'auto',
-    component_separators = { left = '', right = ''},
-    section_separators = { left = '', right = ''},
+    component_separators = { left = '', right = '' },
+    section_separators = { left = '', right = '' },
     disabled_filetypes = {},
     always_divide_middle = false,
     globalstatus = true,
   },
   sections = {
-    lualine_a = {'mode'},
+    lualine_a = { 'mode' },
     lualine_b = {
       {
-       'diagnostics'
+        'diagnostics'
       },
       {
         'filename',
@@ -21,19 +21,29 @@ require('lualine').setup {
       }
     },
     lualine_c = {},
-    lualine_x = {},
-    lualine_y = {'progress', 'filetype', 'encoding'},
-    lualine_z = {'location'}
+    lualine_x = {
+      {
+        require("noice").api.status.mode.get,
+        cond = require("noice").api.status.mode.has,
+        color = { fg = "#ff9e64" },
+      },
+      {
+        require("noice").api.status.search.get,
+        cond = require("noice").api.status.search.has,
+        color = { fg = "#ff9e64" },
+      },
+    },
+    lualine_y = { 'progress', 'filetype', 'encoding' },
+    lualine_z = { 'location' }
   },
   inactive_sections = {
     lualine_a = {},
     lualine_b = {},
-    lualine_c = {'filename'},
-    lualine_x = {'location'},
+    lualine_c = { 'filename' },
+    lualine_x = { 'location' },
     lualine_y = {},
     lualine_z = {}
   },
   extensions = {}
 }
-
 
