@@ -40,38 +40,39 @@ sudo apt update \
   && sudo rm -rf /var/lib/apt/lists/* \
   && sudo locale-gen C.UTF-8;
 
-if ! grep -q "^TZ" "/etv/environment"; then
-    sudo echo "TZ=America/Sao_Paulo" >> /etc/environment
+environment_file="/etc/environment"
+if ! grep -q "^TZ" $environment_file; then
+    echo "TZ=America/Sao_Paulo" | sudo tee -a $environment_file
 fi
-if ! grep -q "^LANG" "/etv/environment"; then
-    sudo echo "LANG=C.UTF-8" >> /etc/environment
+if ! grep -q "^LANG" $environment_file; then
+    echo "LANG=C.UTF-8" | sudo tee -a $environment_file
 fi
-if ! grep -q "^LC_ALL" "/etv/environment"; then
-    sudo echo "LC_ALL=C.UTF-8" >> /etc/environment
+if ! grep -q "^LC_ALL" $environment_file; then
+    echo "LC_ALL=C.UTF-8" | sudo tee -a $environment_file
 fi
-if ! grep -q "^LANGUAGE" "/etv/environment"; then
-    sudo echo "LANGUAGE=C.UTF-8" >> /etc/environment
+if ! grep -q "^LANGUAGE" $environment_file; then
+    echo "LANGUAGE=C.UTF-8" | sudo tee -a $environment_file
+fi
 
 # Make fdfind be callable as fd
-pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind' -ErrorAction 'Stop'
+sudo pwsh -NoProfile -Command 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
 
 # Get the current modules path and make a symbolic link to it on $HOME/.modules
 script_path="$(cd "$(dirname "$0")" && pwd)"
-modules_path="$script_path/../../modules"
-pwsh -c "New-Item -Type HardLink -Path $HOME/.modules -Target $script_path" -ErrorAction 'Stop'
+modules_path="$script_path/../modules"
+echo "Creating symbolink link on $HOME/.modules to $modules_path"
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.modules -Target $modules_path"
+sudo pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path /root/.modules -Target $modules_path"
 
 # dotnet installation
-sudo pwsh -c "$HOME/.modules/dotnet/dotnet-setup.ps1" -ErrorAction 'Stop'
+sudo pwsh -Command "$HOME/.modules/dotnet/dotnet-setup.ps1"
 
 # PowerShell modules installation
-pwsh -NoProfile -Command "$HOME/.modules/powershell/pwsh-setup.ps1"
+pwsh -NoProfile -File "$HOME/.modules/powershell/pwsh-setup.ps1"
 
 # NeoVim Installation
-COPY --chown=developer:developer modules/neovim-install $HOME/.modules/neovim-install
-RUN pwsh -NoProfile -File "$HOME/.modules/neovim-install/Install-Neovim.ps1"
+pwsh -NoProfile -File "$HOME/.modules/neovim-install/Install-Neovim.ps1"
 
 # Debugger installation
-COPY --chown=developer:developer modules/debugging $HOME/.modules/debugging
-RUN pwsh -NoProfile -File "$HOME/.modules/debugging/Install-NetCoreDbg.ps1"
-
+pwsh -NoProfile -File "$HOME/.modules/debugging/Install-NetCoreDbg.ps1"
 
