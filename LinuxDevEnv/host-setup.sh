@@ -76,3 +76,43 @@ pwsh -NoProfile -File "$HOME/.modules/neovim-install/Install-Neovim.ps1"
 # Debugger installation
 pwsh -NoProfile -File "$HOME/.modules/debugging/Install-NetCoreDbg.ps1"
 
+# Node installation
+pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1 &&
+pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1
+
+# NeoVim Requirements
+pwsh -NoProfile -File $HOME/.modules/neovim-base/neovim-setup.ps1
+
+# NeoVim Plug Modules installation
+pwsh -NoProfile -Command '$HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -Command '$HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
+
+# Azure-CLI extensions installation
+export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh && $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh
+
+# Delta diff installation
+pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1
+
+# Tmux plugins installation
+export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
+
+# NeoVim LSP Configuration
+pwsh -NoProfile -File $HOME/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
+
+# Shell config folders and .files
+pwsh -NoProfile -Command "New-Item -ItemType SymbolicLink -Path $HOME/.vim -Target $HOME/.local/share/nvim/site"
+
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.shell -Target $modules_path/shell"
+
+pwsh -NoProfile -Command "New-Item -Type Directory $HOME/.config -Force"
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/powershell -Target $modules_path/powershell-config"
+
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -Target $modules_path/nvim-config"
+
+pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
+
+# Start the environment
+if ! grep -q "^TERM" $environment_file; then
+    echo "TERM=xterm-256color" | sudo tee -a $environment_file
+fi
+
