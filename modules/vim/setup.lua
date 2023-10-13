@@ -1,4 +1,3 @@
-
 --require custom modules
 package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 

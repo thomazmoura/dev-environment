@@ -65,7 +65,7 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.modules -Targ
 sudo pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path /root/.modules -Target $modules_path"
 
 # dotnet installation
-sudo pwsh -Command "$HOME/.modules/dotnet/dotnet-setup.ps1"
+sudo pwsh -NoProfile -Command "$HOME/.modules/dotnet/dotnet-setup.ps1"
 
 # PowerShell modules installation
 pwsh -NoProfile -File "$HOME/.modules/powershell/pwsh-setup.ps1"
@@ -84,7 +84,8 @@ pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1
 pwsh -NoProfile -File $HOME/.modules/neovim-base/neovim-setup.ps1
 
 # NeoVim Plug Modules installation
-pwsh -NoProfile -Command '$HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -Command '$HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
+pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site/autoload -Target $modules_path/vim-autoload"
+pwsh -NoProfile -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
 
 # Azure-CLI extensions installation
 export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh && $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh
