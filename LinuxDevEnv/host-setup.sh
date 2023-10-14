@@ -94,7 +94,8 @@ export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME
 pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1
 
 # Tmux plugins installation
-export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
+pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
+chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
 
 # NeoVim LSP Configuration
 pwsh -NoProfile -File $HOME/.modules/neovim-lsp/Setup-NeoVimLSP.ps1

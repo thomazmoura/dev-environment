@@ -642,7 +642,7 @@ function Set-AutoNodeVersion() {
     $nodeVersion = 'lts'
   } else {
 
-    $nodeVersionFile = (fd --hidden .node-version --maxdepth 3)
+    $nodeVersionFile = (fd --hidden .node-version --maxdepth 3 --exclude .installed-node-versions)
     if(!($nodeVersionFile)) {
       Write-Verbose ".node-version not found. Using lts"
       $nodeVersion = 'lts'
