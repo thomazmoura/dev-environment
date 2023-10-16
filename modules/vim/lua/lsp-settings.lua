@@ -1,3 +1,6 @@
+-- Util
+local home_directory = vim.fn.expand("$HOME");
+
 -- NeoDev settings
 require("neodev").setup({
   library = { plugins = { "nvim-dap-ui" }, types = true }
@@ -153,7 +156,7 @@ lspconfig.omnisharp.setup {
   capabilities = capabilities,
   flags = lsp_flags,
   cmd = {
-    "dotnet", "/home/developer/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
+    "dotnet", home_directory .. "/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
     tostring(vim.fn.getpid())
   },
 }
@@ -162,14 +165,14 @@ lspconfig.omnisharp.setup {
 lspconfig.powershell_es.setup {
   capabilities = capabilities,
   flags = lsp_flags,
-  bundle_path = '/home/developer/.language-servers/powershell',
+  bundle_path = home_directory .. '/.language-servers/powershell',
 }
 
 -- lua LS settings
 lspconfig.lua_ls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
-  cmd = { "/home/developer/.language-servers/lua/bin/lua-language-server" },
+  cmd = { home_directory .. "/.language-servers/lua/bin/lua-language-server" },
   settings = {
     Lua = {
       runtime = {
@@ -261,7 +264,7 @@ end
 
 -- LuaSnip settings
 require("luasnip.loaders.from_vscode").lazy_load()
-require("luasnip.loaders.from_vscode").lazy_load({ paths = { "~/.local/share/nvim/site/vscode-snippets" } })
+require("luasnip.loaders.from_vscode").lazy_load({ paths = { home_directory .. "/.local/share/nvim/site/vscode-snippets" } })
 
 -- Symbols outline
 require("symbols-outline").setup()

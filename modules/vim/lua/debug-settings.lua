@@ -1,9 +1,12 @@
+-- Util
+local home_directory = vim.fn.expand("$HOME");
+
 -- DAP configuration
 local dap, dapui = require("dap"), require("dapui")
 
 dap.adapters.coreclr = {
   type = 'executable',
-  command = '/home/developer/.local/bin/netcoredbg',
+  command = home_directory .. '/.local/bin/netcoredbg',
   args = { '--interpreter=vscode' }
 }
 
