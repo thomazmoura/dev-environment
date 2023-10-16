@@ -40,6 +40,7 @@ sudo apt update \
   && sudo rm -rf /var/lib/apt/lists/* \
   && sudo locale-gen C.UTF-8;
 
+echo "Setting environment variables"
 environment_file="/etc/environment"
 if ! grep -q "^TZ" $environment_file; then
     echo "TZ=America/Sao_Paulo" | sudo tee -a $environment_file
@@ -52,6 +53,12 @@ if ! grep -q "^LC_ALL" $environment_file; then
 fi
 if ! grep -q "^LANGUAGE" $environment_file; then
     echo "LANGUAGE=C.UTF-8" | sudo tee -a $environment_file
+fi
+if ! grep -q "^TERM" $environment_file; then
+    echo "TERM=xterm-256color" | sudo tee -a $environment_file
+fi
+if ! grep -q "^DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $environment_file; then
+    echo "DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | sudo tee -a $environment_file
 fi
 
 # Make fdfind be callable as fd
@@ -112,9 +119,4 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -
 
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
-
-# Start the environment
-if ! grep -q "^TERM" $environment_file; then
-    echo "TERM=xterm-256color" | sudo tee -a $environment_file
-fi
 

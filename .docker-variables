@@ -7,3 +7,4 @@ AZURE_DEVOPS_PROJECT=Project
 ASPNETCORE_ENVIRONMENT=Development
 ASPNETCORE_Kestrel__Certificates__Default__Password=p455W0rd
 ASPNETCORE_Kestrel__Certificates__Default__Path=/home/developer/.shared/aspnet-localhost.pfx
+DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1
