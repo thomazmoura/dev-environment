@@ -2,6 +2,10 @@ $InformationPreference = "Continue";
 
 . $HOME/.modules/powershell/pwsh-modules.ps1
 
+if(Test-Path "$HOME/.profile.ps1") {
+  . $HOME/.profile.ps1
+}
+
 # Vi style cursor
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 if ($PSVersionTable.PSVersion.Major -ge 6) {
@@ -343,7 +347,7 @@ function GitUndoLocallyIgnored-File([string] $File) {
 }
 
 function Start-DotnetWatch([String]$LaunchProfile, [Switch]$SkipAutoUrls) {
-  if($SkipAutoUrls -or !(Test-Path "./Properties/launchSettings.json") ) {
+  if(($env:DOTNET_SKIP_AUTO_URLS) -or ($SkipAutoUrls) -or !(Test-Path "./Properties/launchSettings.json") ) {
     Write-Verbose "Skipping auto exposing URLs"
     & dotnet watch run
     return;
@@ -749,6 +753,7 @@ New-Alias -Force gitu Git-Undo
 New-Alias -Force gitr Git-Reset
 New-Alias -Force gitfh GitFuzzyGet-History
 New-Alias -Force gitau GitAdd-Untracked
+New-Alias -Force gitif GitIgnoreLocally-File
 
 New-Alias -Force stop Stop-Process
 New-Alias -Force tasks Get-Process

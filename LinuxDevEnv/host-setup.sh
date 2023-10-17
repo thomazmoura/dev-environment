@@ -120,3 +120,19 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
 
+# User environment variables
+pwsh -NoProfile -Command "if ( ! (Test-Path $HOME/.profile.ps1) ) { New-Item -Path $HOME/.profile.ps1 }"
+powershell_profile="$HOME/.profile.ps1"
+if ! grep -q "^\$env:ASPNETCORE_Kestrel__Certificates__Default__Path" $powershell_profile; then
+    echo "\$env:ASPNETCORE_Kestrel__Certificates__Default__Path=\"$HOME/.shared/aspnet-localhost.pfx\"" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:ASPNETCORE_Kestrel__Certificates__Default__Password" $powershell_profile; then
+    echo "\$env:ASPNETCORE_Kestrel__Certificates__Default__Password=\"p455W0rd\"" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:DOTNET_SKIP_AUTO_URLS" $powershell_profile; then
+    echo "\$env:DOTNET_SKIP_AUTO_URLS=\$True" | tee -a $powershell_profile
+fi
+
+# Run environment initialization
+pwsh -File $HOME/.modules/wsl2/Start-DevSession.ps1
+
