@@ -61,8 +61,8 @@ nnoremap <silent> <leader>: q:i
 tnoremap <silent> <Leader><ESC> <C-\><C-N>
 
 " Insert a GUID/UUID
-nnoremap <silent> <Leader>gg  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0p
-nnoremap <silent> <Leader>gG  mz<cmd>r!/opt/microsoft/powershell/7/pwsh -NoProfile -C "(New-Guid).Guid"<CR>y$dd`z"0P
+nnoremap <silent> <Leader>gg  mz<cmd>r!uuidgen<CR>y$dd`z"0p
+nnoremap <silent> <Leader>gG  mz<cmd>r!uuidgen<CR>y$dd`z"0P
 
 " Use <Leader> as a substitute for "+ on yank and paste
 noremap <Leader>y "+y
