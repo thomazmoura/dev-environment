@@ -38,6 +38,9 @@ set wildignore+=*/node_modules/**
 set wildignore+=*/bin/**
 set wildignore+=*/obj/**
 
+" Fix for esc delay issues
+set ttimeoutlen=0
+
 " Custom Registers
 " Convert SQL Column to C# property
 let @s = "^Wdi]^Pa wdi]hPlD:s/numeric/decimal/e:s/bit/bool/e:s/nvarchar/string/e:s/varchar/string/e:s/float/double/e:s/datetime2/datetime/e:s/bigint/float/e:s/text/string/e:s/datetime/DateTime/eA { get; set; }Ipublic j"
