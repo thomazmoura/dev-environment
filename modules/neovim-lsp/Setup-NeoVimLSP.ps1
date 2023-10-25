@@ -16,7 +16,8 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
 & Remove-Item "./omnisharp-linux-x64-net6.tar.gz"
 
 Write-Output "`n->> Copying custom language config files to user folder"
-Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" $HOME
+New-Item -Force -Type Directory -Path $HOME/.omnisharp
+Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" "$HOME/.omnisharp/omnisharp.json"
 Copy-Item "$HOME/.modules/neovim-lsp/editorconfig" "$HOME/.editorconfig"
 
 

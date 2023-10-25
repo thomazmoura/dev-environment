@@ -48,11 +48,10 @@ function Setup-DotFiles {
     New-Item -Type SymbolicLink -Path $ModulesFolder -Target "$HOME/.modules"
   }
 
-  $UserConfigsFolder = "$DotFilesFolder/user-configs"
-  if( !(Test-Path $UserConfigsFolder) ) {
-    Write-Information "Creating User Configs Local Folder SymbolicLink"
-    New-Item -Type Directory -Path $UserConfigsFolder
-    New-Item -Type HardLink -Path "$HOME/code/dotfiles/user-configs/omnisharp.json" -Target "$HOME/omnisharp.json"
+  $OmnisharpFolder = "$DotFilesFolder/omnisharp"
+  if( !(Test-Path $OmnisharpFolder) ) {
+    Write-Information "Creating Omnisharp Local Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $OmnisharpFolder -Target "$HOME/.omnisharp"
   }
 
 }
