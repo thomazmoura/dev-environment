@@ -132,6 +132,9 @@ fi
 if ! grep -q "^\$env:DOTNET_SKIP_AUTO_URLS" $powershell_profile; then
     echo "\$env:DOTNET_SKIP_AUTO_URLS=\$True" | tee -a $powershell_profile
 fi
+if ! grep -q "^DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $powershell_profile; then
+    echo "\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | tee -a $powershell_profile
+fi
 
 # Run environment initialization
 pwsh -File $HOME/.modules/wsl2/Start-DevSession.ps1

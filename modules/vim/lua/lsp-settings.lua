@@ -185,7 +185,7 @@ lspconfig.omnisharp.setup {
   -- have a negative impact on initial completion responsiveness,
   -- particularly for the first few completion sessions after opening a
   -- solution.
-  enable_import_completion = true,
+  enable_import_completion = false,
 
   -- Specifies whether to include preview versions of the .NET SDK when
   -- determining which version to use for project loading.
