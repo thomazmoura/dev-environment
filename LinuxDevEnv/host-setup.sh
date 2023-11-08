@@ -132,8 +132,12 @@ fi
 if ! grep -q "^\$env:DOTNET_SKIP_AUTO_URLS" $powershell_profile; then
     echo "\$env:DOTNET_SKIP_AUTO_URLS=\$True" | tee -a $powershell_profile
 fi
-if ! grep -q "^DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $powershell_profile; then
+if ! grep -q "^\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $powershell_profile; then
     echo "\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:PATH" $powershell_profile; then # To add clip.exe, explorer.exe and win32yank.exe
+    echo "\$env:PATH="\${env:PATH}:/mnt/c/Windows/system32:/mnt/c/Windows:/mnt/c/Program Files/Neovim/bin/"
+" | tee -a $powershell_profile
 fi
 
 # Run environment initialization
