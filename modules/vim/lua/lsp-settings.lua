@@ -185,7 +185,7 @@ lspconfig.omnisharp.setup {
   -- have a negative impact on initial completion responsiveness,
   -- particularly for the first few completion sessions after opening a
   -- solution.
-  enable_import_completion = false,
+  enable_import_completion = true,
 
   -- Specifies whether to include preview versions of the .NET SDK when
   -- determining which version to use for project loading.
@@ -193,7 +193,7 @@ lspconfig.omnisharp.setup {
 
   -- Only run analyzers against open files when 'enableRoslynAnalyzers' is
   -- true
-  analyze_open_documents_only = false,
+  analyze_open_documents_only = true,
 }
 
 -- powershell settings

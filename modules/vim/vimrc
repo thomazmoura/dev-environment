@@ -14,7 +14,7 @@ set cursorline
 set cursorcolumn
 
 set foldmethod=syntax
-set foldlevel=4
+set foldlevel=8
 
 set noshowmode
 set laststatus=2
