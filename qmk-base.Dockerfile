@@ -7,6 +7,9 @@ USER root
 COPY modules/qmk/qmk_install.sh /root/.modules/qmk/qmk_install.sh
 RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
 
+# C requirements
+RUN sudo apt install clangd-12 && sudo update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
+
 USER developer
 
 COPY --chown=developer:developer modules/qmk /home/developer/.modules/qmk
