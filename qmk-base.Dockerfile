@@ -8,7 +8,7 @@ COPY modules/qmk/qmk_install.sh /root/.modules/qmk/qmk_install.sh
 RUN chmod +x /root/.modules/qmk/qmk_install.sh && /root/.modules/qmk/qmk_install.sh
 
 # C requirements
-RUN apt install clangd-11 && update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-12 100
+RUN apt install clangd
 
 USER developer
 
