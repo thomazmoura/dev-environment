@@ -42,8 +42,8 @@ nnoremap <silent> <Leader><C-p> :Buffers<CR>
 nnoremap <silent> <C-f> :Ag<CR>
 
 " Delete the previous word
-noremap <silent> <C-BS> <C-w>
-noremap <silent> <C-h> <C-w>
+inoremap <silent> <C-BS> <C-w>
+inoremap <silent> <C-h> <C-w>
 
 " Navigate through buffers
 nnoremap <silent> gb :bnext<CR>
