@@ -1,4 +1,4 @@
-if not vim.env.VSCODE_IPC_HOOK_CLI then
+if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   --require custom modules
   package.path = package.path .. ";" .. vim.env.HOME .. "/.vim/lua/?.lua"
 

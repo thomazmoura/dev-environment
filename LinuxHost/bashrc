@@ -131,7 +131,13 @@ alias bat='batcat'
 
 export PATH="$PATH:/local/fd-find"
 
-hash $SKIP_PWSH 2>/dev/null && hash pwsh 2>/dev/null && pwsh && exit
+if [ -z $VSCODE_SHELL_INTEGRATION ]; then
+  hash pwsh 2>/dev/null && pwsh -NoExit -Command 'vtmux' && exit
+elif [ -z $SKIP_PWSH ]; then
+  hash pwsh 2>/dev/null && pwsh && exit
+else
+  echo 'Skipping powershell'
+fi
 
 echo 'Skipping powershell'
 
