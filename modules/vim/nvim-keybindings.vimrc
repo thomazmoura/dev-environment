@@ -44,6 +44,8 @@ nnoremap <silent> <C-f> :Ag<CR>
 " Delete the previous word
 inoremap <silent> <C-BS> <C-w>
 inoremap <silent> <C-h> <C-w>
+cnoremap <silent> <C-BS> <C-w>
+cnoremap <silent> <C-h> <C-w>
 
 " Navigate through buffers
 nnoremap <silent> gb :bnext<CR>
