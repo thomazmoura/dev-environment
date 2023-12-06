@@ -6,7 +6,7 @@ telescope.setup {
   },
   pickers = {
     find_files = {
-      find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git', '--exclude', '.plugged' }
+      find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git', '--exclude', '.plugged', '--exclude', vim.env.FZF_IGNORE_FOLDER }
     },
     buffers = {
       ignore_current_buffer = true,
