@@ -37,6 +37,7 @@ Plug 'simrat39/symbols-outline.nvim'
 Plug 'ErichDonGubler/lsp_lines.nvim'
 Plug 'artempyanykh/marksman'
 Plug 'aca/emmet-ls'
+Plug 'Hoffs/omnisharp-extended-lsp.nvim'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'

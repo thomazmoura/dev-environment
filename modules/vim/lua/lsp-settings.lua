@@ -123,7 +123,7 @@ vim.keymap.set('n', '<Leader>q', vim.diagnostic.setloclist, opts)
 -- See `:help vim.lsp.*` for documentation on any of the below functions
 local bufopts = { noremap = true, silent = true }
 vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, bufopts)
-vim.keymap.set('n', 'gd', '<cmd>Telescope lsp_definitions<cr>', bufopts)
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
 vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
 vim.keymap.set('n', 'gh', vim.lsp.buf.hover, bufopts)
 vim.keymap.set('n', '<Leader>gh', vim.diagnostic.open_float, bufopts)
@@ -155,6 +155,9 @@ local lsp_flags = {
 lspconfig.omnisharp.setup {
   capabilities = capabilities,
   flags = lsp_flags,
+  handlers = {
+    ["textDocument/definition"] = require('omnisharp_extended').handler,
+  },
   cmd = {
     "dotnet", home_directory .. "/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
     tostring(vim.fn.getpid())
