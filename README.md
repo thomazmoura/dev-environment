@@ -40,7 +40,7 @@ My main intentions with this repo are:
 The container I use for most professional work.
 
 * **Docker** - The main reason this repo exists is to try out the idea of keeping most of my development stack on a container (and develop from inside the container), so I use Docker for that.
-* **NeoVim** - NeoVim is my main tool for development so it was my choice for editor/IDE-like-beast. I also use both coc.nvim and native LTS packages and many plugins to achieve the usability I need.
+* **NeoVim** - NeoVim is my main tool for development so it was my choice for editor/IDE-like-beast. I also native LTS packages and many plugins to achieve the usability I need.
 * **TMUX** - I use it mostly to have a dedicated pane for terminal and for quick switching between projects.
 * **PowerShell** - Call me a heretic, but I'm both a Linux and a PowerShell lover, so yep, I use mostly PowerShell as my main shell and this repo reflects that. Should be easy to change that on the DockerFile if so you want.
 * **DotNet** - Call me a heretic again, but I just love coding C# on NeoVim on a tmux pane on Linux inside a container. Such an underrated experience... So anyway, the main container should have at least the supported LTS versions of .NET installed.

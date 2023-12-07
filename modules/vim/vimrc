@@ -48,15 +48,15 @@ let @s = "^Wdi]^Pa wdi]hPlD:s/numeric/decimal/e:s/bit/bool/e:s/nvarchar/strin
 let @c = "^d2Wf{hDIbuilder.Property(pekbkbusuario => usuario.A)o.HasColumnName();hi\"\"mz}j^yi]dd`z^f\"\"0pj"
 let @z = "\"zyiwb\"x y\"xyiwOprivate readonly \"xpa \"zpbi_A;/{%O\"zpI_A = \"zpA;=="
 
-source $HOME/.modules/neovim-plug/plug.vimrc
+if exists('g:vscode') || exists('g:azuredatastudio')
+  source $HOME/.modules/neovim-plug/vscode-plug.vimrc
+else
+  source $HOME/.modules/neovim-plug/plug.vimrc
+endif
 
 " Custom Keymaps
 "  Set space as the leader
 let mapleader = " "
-
-" COC.NVIM default settings - Currently being replaced by LSP
-" source $HOME/.local/share/nvim/site/coc-config.vimrc
-let g:coc_config_home = "$HOME/.config/nvim"
 
 " NeoVim Custom keybindings
 source $HOME/.local/share/nvim/site/nvim-keybindings.vimrc
