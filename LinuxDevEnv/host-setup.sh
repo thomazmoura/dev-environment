@@ -5,7 +5,7 @@ sudo apt update \
     gnupg \
     software-properties-common \
   && curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - \
-  && sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list' \
+  && sudo sh -c 'echo "deb [arch=amd64,arm64,armhf] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft.list' \
   && sudo apt update \
   && sudo apt install -y \
     apt-utils \
@@ -72,7 +72,7 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.modules -Targ
 sudo pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path /root/.modules -Target $modules_path"
 
 # dotnet installation
-sudo pwsh -NoProfile -Command "$HOME/.modules/dotnet/dotnet-setup.ps1"
+sudo pwsh -NoProfile -Command "$HOME/.modules/dotnet/ubuntu-22-04-dotnet-setup.ps1"
 
 # PowerShell modules installation
 pwsh -NoProfile -File "$HOME/.modules/powershell/pwsh-setup.ps1"
@@ -134,6 +134,9 @@ if ! grep -q "^\$env:DOTNET_SKIP_AUTO_URLS" $powershell_profile; then
 fi
 if ! grep -q "^\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $powershell_profile; then
     echo "\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:DOTNET_ROOT" $powershell_profile; then
+    echo "\$env:DOTNET_ROOT='/usr/share/dotnet'" | tee -a $powershell_profile
 fi
 if ! grep -q "^\$env:PATH" $powershell_profile; then # To add clip.exe, explorer.exe and win32yank.exe
     echo "\$env:PATH="\${env:PATH}:/mnt/c/Windows/system32:/mnt/c/Windows:/mnt/c/Program Files/Neovim/bin/"
