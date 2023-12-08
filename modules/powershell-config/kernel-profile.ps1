@@ -613,11 +613,16 @@ function Start-NpmInstallDockerContainer($Version = "lts-alpine") {
 }
 
 function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Interactive) {
+  if (Get-Command sudo -ErrorAction SilentlyContinue) {
+    $Prefix = 'sudo ';
+  } else {
+    $Prefix = '';
+  }
   if ($Interactive) {
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Prefix docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
   else {
-    docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Prefix docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
