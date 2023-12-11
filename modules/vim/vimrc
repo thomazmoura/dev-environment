@@ -12,6 +12,7 @@ set smartcase
 
 set cursorline
 set cursorcolumn
+set colorcolumn=120
 
 set foldmethod=syntax
 set foldlevel=8
