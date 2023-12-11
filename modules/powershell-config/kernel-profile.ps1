@@ -626,12 +626,12 @@ function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Inter
   }
 }
 
-function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "mssql", $UserId = "sa", $Password = "L0c4lD3v!") {
+function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "::1", $UserId = "sa", $Password = "L0c4lD3v!") {
   if (!$DatabaseName) {
     $env:ConnectionStrings__Contexto = $null
   }
   else {
-    [Environment]::SetEnvironmentVariable("ConnectionStrings__$ContextName", "Data Source=$DataSourceName;Initial Catalog=$DatabaseName;Persist Security Info=True;User Id=$UserId;Password=$Password")
+    [Environment]::SetEnvironmentVariable("ConnectionStrings__$ContextName", "Data Source=$DataSourceName;Initial Catalog=$DatabaseName;Persist Security Info=True;User Id=$UserId;Password=$Password;encrypt=false")
   }
 }
 
