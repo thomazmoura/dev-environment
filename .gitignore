@@ -1,6 +1,8 @@
 *.luarc.json
-*.swp
 *.log
+*.swp
 *.swo
 *.swl
+*.swj
+*.swk
 
