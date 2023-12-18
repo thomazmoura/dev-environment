@@ -51,7 +51,6 @@ cnoremap <silent> <C-h> <C-w>
 nnoremap <silent> gb :bnext<CR>
 nnoremap <silent> gB :bprevious<CR>
 
-
 " Deal with buffers
 nnoremap <silent> <Leader>bd :bd<CR>
 nnoremap <silent> <Leader>bD :bd#<CR>
@@ -95,6 +94,9 @@ nnoremap U <C-r>
 
 " Show noice history
 nnoremap <silent> <Leader>n :Telescope noice<CR>
+
+" Toggle relative lines
+nnoremap <silent> <Leader>L <CMD>set relativenumber!<CR>
 
 " Macros
 " C# - Class boilerplate
