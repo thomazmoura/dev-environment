@@ -140,7 +140,7 @@ syntax enable
   autocmd BufNewFile,BufRead *.config,*.csproj set filetype=xml
 
   " Copilot node_version
-  let g:copilot_node_command = '/home/developer/.nvs/copilot-node'
+  let g:copilot_node_command = "$HOME/.nvs/copilot-node"
   let g:copilot_no_tab_map = v:true
 endif
 
