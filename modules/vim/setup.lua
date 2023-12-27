@@ -70,28 +70,6 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
     tint_background_colors = false
   })
 
-  if os.getenv('WSLENV') then
-    vim.g.clipboard = {
-      name = 'win32yank-wsl',
-      copy = {
-        ['+'] = 'win32yank.exe -i --crlf',
-        ['*'] = 'win32yank.exe -i --crlf',
-      },
-      paste = {
-        ['+'] = 'win32yank.exe -o --lf',
-        ['*'] = 'win32yank.exe -o --lf',
-      },
-      cache_enabled = 0,
-    }
-  else
-    require("tmux").setup({
-      copy_sync = {
-        sync_clipboard = true,
-        sync_registers = false,
-      }
-    })
-  end
-
   vim.o.timeout = true
   vim.o.timeoutlen = 1000
   require("which-key").setup({
@@ -100,3 +78,27 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
     },
   })
 end
+
+-- Clipboard integration
+if os.getenv('WSLENV') then
+  vim.g.clipboard = {
+    name = 'win32yank-wsl',
+    copy = {
+      ['+'] = 'win32yank.exe -i --crlf',
+      ['*'] = 'win32yank.exe -i --crlf',
+    },
+    paste = {
+      ['+'] = 'win32yank.exe -o --lf',
+      ['*'] = 'win32yank.exe -o --lf',
+    },
+    cache_enabled = 0,
+  }
+else
+  require("tmux").setup({
+    copy_sync = {
+      sync_clipboard = true,
+      sync_registers = false,
+    }
+  })
+end
+

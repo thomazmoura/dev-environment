@@ -143,6 +143,9 @@ if ! grep -q "^\$env:PATH" $powershell_profile; then # To add clip.exe, explorer
 " | tee -a $powershell_profile
 fi
 
+# Create a symbolic link to win32yank.exe
+sudo pwsh -Command 'if (Test-Path "/mnt/c/Program Files/Neovim/bin/win32yank.exe") { New-Item -Force -Type SymbolicLink -Path "/usr/bin/win32yank.exe" -Target "/mnt/c/Program Files/Neovim/bin/win32yank.exe" }'
+
 # Run environment initialization
 pwsh -File $HOME/.modules/wsl2/Start-DevSession.ps1
 
