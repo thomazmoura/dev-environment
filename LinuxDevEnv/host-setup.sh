@@ -146,6 +146,11 @@ fi
 # Create a symbolic link to win32yank.exe
 sudo pwsh -Command 'if (Test-Path "/mnt/c/Program Files/Neovim/bin/win32yank.exe") { New-Item -Force -Type SymbolicLink -Path "/usr/bin/win32yank.exe" -Target "/mnt/c/Program Files/Neovim/bin/win32yank.exe" }'
 
+# Increase the number of inotify watchers
+if ! grep -q "^fs\.inotify\.max_user_instances" /etc/sysctl.conf; then
+    echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+fi
+
 # Run environment initialization
 pwsh -File $HOME/.modules/wsl2/Start-DevSession.ps1
 
