@@ -293,6 +293,12 @@ lspconfig.cssls.setup {
   flags = lsp_flags,
 }
 
+-- HTML LS
+lspconfig.html.setup {
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
 -- Proper icons
 local signs = { Error = " ", Warn = " ", Hint = "󱈸 ", Info = " " }
 for type, icon in pairs(signs) do
