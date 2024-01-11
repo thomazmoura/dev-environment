@@ -275,12 +275,6 @@ lspconfig.vimls.setup {
   flags = lsp_flags,
 }
 
--- Markdown LS Settings (Marksman)
-lspconfig.marksman.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
 -- Emmet LS
 lspconfig.emmet_ls.setup {
   capabilities = capabilities,

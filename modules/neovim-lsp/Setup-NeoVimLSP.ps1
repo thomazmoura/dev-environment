@@ -24,7 +24,7 @@ Copy-Item "$HOME/.modules/neovim-lsp/editorconfig" "$HOME/.editorconfig"
 Write-Output "`n->> Installing PowerShell Editor Services (PowerShell LSP)"
 Invoke-WebRequest "https://github.com/PowerShell/PowerShellEditorServices/releases/download/v3.5.4/PowerShellEditorServices.zip" -OutFile "PowerShellEditorServices.zip"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/powershell
-& Expand-Archive -Path "PowerShellEditorServices.zip" -DestinationPath "$HOME/.language-servers/powershell"
+& Expand-Archive -Force -Path "PowerShellEditorServices.zip" -DestinationPath "$HOME/.language-servers/powershell"
 & Remove-Item "PowerShellEditorServices.zip"
 
 
@@ -33,13 +33,6 @@ Invoke-WebRequest "https://github.com/LuaLS/lua-language-server/releases/downloa
 New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 & tar -xzvf "./lua-language-server-3.6.13-linux-x64.tar.gz" -C "$HOME/.language-servers/lua"
 & Remove-Item "./lua-language-server-3.6.13-linux-x64.tar.gz"
-
-Write-Output "`n->> Installing Marksman (Markdown Language Server)"
-New-Item -Force -Type Directory -Path "$HOME/.language-servers/marksman"
-Invoke-WebRequest "https://github.com/artempyanykh/marksman/releases/download/2023-04-12/marksman-linux" -OutFile "$HOME/.language-servers/marksman/marksman"
-New-Item -Force -Type SymbolicLink -Path "$HOME/.local/bin/marksman" -Target "$HOME/.language-servers/marksman/marksman"
-chmod +x "$HOME/.language-servers/marksman/marksman"
-chmod +x "/home/developer/.local/bin/marksman"
 
 Pop-Location
 
