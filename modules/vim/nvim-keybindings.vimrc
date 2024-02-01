@@ -34,6 +34,10 @@ nnoremap <silent> <Leader>? <cmd>Telescope buffers<cr>
 nnoremap <silent> <Leader>h <cmd>Telescope help_tags<cr>
 nnoremap <silent> <Leader>, <cmd>Telescope find_files cwd=~/code/dotfiles<cr>
 
+" Undotree
+nnoremap <silent> <Leader>u <cmd>UndotreeToggle<cr><cmd>UndotreeFocus<cr>
+
+
 " FZF
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <silent> <Leader><C-p> :Buffers<CR>
