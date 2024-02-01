@@ -40,9 +40,10 @@ end
 
 -- Keybindings
 vim.keymap.set('n', '<Leader>dr', dap.continue)
-vim.keymap.set('n', '<Leader>dj', dap.step_over)
+vim.keymap.set('n', '<Leader>dh', dap.continue)
+vim.keymap.set('n', '<Leader>dl', dap.step_over)
 vim.keymap.set('n', '<Leader>dk', dap.step_out)
-vim.keymap.set('n', '<Leader>dh', dap.step_into)
+vim.keymap.set('n', '<Leader>dj', dap.step_into)
 vim.keymap.set('n', '<Leader>dd', dap.toggle_breakpoint)
 vim.keymap.set('n', '<Leader>dD', "<cmd>dap.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>")
 vim.keymap.set('n', '<Leader>do', dap.repl.open)
