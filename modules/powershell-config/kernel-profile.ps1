@@ -452,6 +452,14 @@ function GitDiff-StagedChanges() {
   & git diff --cached --ignore-all-space --ignore-blank-lines --ignore-space-at-eol
 }
 
+function GitDiff-VerboseUnstagedChanges() {
+  & git diff
+}
+
+function GitDiff-VerboseStagedChanges() {
+  & git diff --cached
+}
+
 function GitCheckout-Previous() {
   & git checkout -
 }
@@ -737,7 +745,9 @@ New-Alias -Force git-checkoutf GitFuzzyCheckout-Branch
 New-Alias -Force gitb GitFuzzySearch-Branch
 New-Alias -Force gitco GitFuzzyCheckout-Branch
 New-Alias -Force gitdf GitDiff-UnstagedChanges
+New-Alias -Force gitdff GitDiff-VerboseUnstagedChanges
 New-Alias -Force gitdfc GitDiff-StagedChanges
+New-Alias -Force gitdffc GitDiff-VerboseStagedChanges
 New-Alias -Force gitff GitList-ModifiedFiles
 New-Alias -Force gitpu GitPush-UpstreamBranch
 New-Alias -Force gitc- GitCheckout-Previous
