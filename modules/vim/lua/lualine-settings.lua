@@ -33,7 +33,16 @@ require('lualine').setup {
         color = { fg = "#ff9e64" },
       },
     },
-    lualine_y = { 'progress', 'filetype', 'encoding' },
+    lualine_y = {
+      'progress',
+      'filetype',
+      function()
+        local encoding = vim.bo.fileencoding
+        local bom = vim.bo.bomb and 'BOM' or ''
+        return string.format('%s %s', encoding, bom)
+      end,
+      'fileformat'
+    },
     lualine_z = { 'location' }
   },
   inactive_sections = {
@@ -46,4 +55,3 @@ require('lualine').setup {
   },
   extensions = {}
 }
-
