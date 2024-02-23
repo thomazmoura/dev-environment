@@ -109,8 +109,8 @@ nnoremap <leader>mN inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\/
 nnoremap <leader>mi inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic interface 0F/ldBf.Do{o}O
 nnoremap <leader>mI inamespace "=fnamemodify(expand("%"), ":~:.")pyiW$F/D:s/\//./gA;ooipublic interface 0F/ldBf.Do{o}gg$xji{Go}>i{jo
 " C# - Add parameter injection
-nnoremap <leader>mp @="\"zyiwb\"xyiw?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>=="<CR>
-nnoremap <leader>mP @="\"zyiwbva>ob\"xyE?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>=="<CR>
+nnoremap <leader>mp @="\"zyiwb\"xyiw?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>==:noh\<lt>CR>"<CR>
+nnoremap <leader>mP @="\"zyiwbva>ob\"xyE?(\<lt>CR>Oprivate\<lt>Space>readonly\<lt>Space>\<lt>Esc>\"xpa\<lt>Space>\<lt>Esc>\"zpbi_\<lt>Esc>A;\<lt>Esc>/{\<lt>CR>%O\<lt>Esc>\"zpI_\<lt>Esc>A\<lt>Space>=\<lt>Space>\<lt>Esc>\"zpA;\<lt>Esc>==:noh\<lt>CR>"<CR>
 " C# - Convert SQL Column to C# property (n - supported)
 nnoremap <leader>ms @="^Wdi]^Pa\<lt>Space>\<lt>Esc>wdi]hPlD:s/numeric/decimal/e\<lt>CR>:s/bit/bool/e\<lt>CR>:s/nvarchar/string/e\<lt>CR>:s/varchar/string/e\<lt>CR>:s/float/double/e\<lt>CR>:s/datetime2/datetime/e\<lt>CR>:s/bigint/float/e\<lt>CR>:s/text/string/e\<lt>CR>:s/datetime/DateTime/e\<lt>CR>A\<lt>Space>{\<lt>Space>get;\<lt>Space>set;\<lt>Space>}\<lt>Esc>Ipublic\<lt>Space>\<lt>Esc>j"<CR>
 " C# - Merge SQL mapping and C# properties (n - supported)
