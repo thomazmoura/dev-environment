@@ -128,12 +128,6 @@ syntax enable
   set fillchars+=vert:│
   highlight VertSplit guibg=none guifg=#414868
 
-  " Using underline until Windows Terminal supports undercul
-  highlight DiagnosticUnderlineHint cterm=underline gui=underline guisp=#1abc9c guifg=#1abc9c
-  highlight DiagnosticUnderlineInfo cterm=underline gui=underline guisp=#0db9d7 guifg=#0db9d7
-  highlight DiagnosticUnderlineWarn cterm=underline gui=underline guisp=#e0af68 guifg=#e0af68
-  highlight DiagnosticUnderlineError cterm=underline gui=underline guisp=#db4b4b guifg=#db4b4b
-
   " Filetype detections
   autocmd BufNewFile,BufRead *.code-snippets set filetype=json
   autocmd BufNewFile,BufRead *.tsx,*.jsx set filetype=typescript
