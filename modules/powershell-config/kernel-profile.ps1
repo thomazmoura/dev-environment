@@ -627,10 +627,10 @@ function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Inter
     $Prefix = '';
   }
   if ($Interactive) {
-    & $Prefix docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
   else {
-    & $Prefix docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
@@ -706,6 +706,10 @@ function Run-CodeFolderScripts() {
     Write-Verbose "`n->> Invoking. $Script"
     . $Script
   }
+}
+
+function Get-PowerShellCoreDotNetVersion() {
+  [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
 }
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
