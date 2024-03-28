@@ -55,6 +55,11 @@ else
   source $HOME/.modules/neovim-plug/plug.vimrc
 endif
 
+" Fix tag for targets (rollback to native NeoVim tags)
+autocmd User targets#mappings#user call targets#mappings#extend({
+    \ 't': {},
+    \ })
+
 " Custom Keymaps
 "  Set space as the leader
 let mapleader = " "
