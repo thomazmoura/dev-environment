@@ -267,14 +267,14 @@
   "Exemplo de Teste": {
     "prefix": "test-sample-br",
     "body": [
-      "public ${1:Entidade} Gerar${1:Entidade}()",
+      "public ${1:Entidade} Inserir${1:Entidade}()",
       "{",
       "    var ${2:nomeDaVariavel} = new ${1:Entidade}()",
       "    {",
       "        ${4}",
       "    };",
-      "    ${3:_contexto}.Add(${2:nomeDaVariavel});",
-      "    ${3:_contexto}.SaveChanges();",
+      "    ${3:Contexto}.Add(${2:nomeDaVariavel});",
+      "    ${3:Contexto}.SaveChanges();",
       "    return ${2:nomeDaVariavel};",
       "}"
     ],
