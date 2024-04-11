@@ -19,7 +19,7 @@ vim.keymap.set('n', '<M-p>', '<cmd>lua require("harpoon.ui").nav_file(8)<Enter>'
 vim.keymap.set('n', '<M-S-J>', '<cmd>lua require("harpoon.mark").set_current_at(1)<Enter>', opts)
 vim.keymap.set('n', '<M-S-K>', '<cmd>lua require("harpoon.mark").set_current_at(2)<Enter>', opts)
 vim.keymap.set('n', '<M-S-L>', '<cmd>lua require("harpoon.mark").set_current_at(3)<Enter>', opts)
-vim.keymap.set('n', '<M-S-:>', '<cmd>lua require("harpoon.mark").set_current_at(4)<Enter>', opts)
+vim.keymap.set('n', '<M-:>', '<cmd>lua require("harpoon.mark").set_current_at(4)<Enter>', opts)
 vim.keymap.set('n', '<M-S-U>', '<cmd>lua require("harpoon.mark").set_current_at(5)<Enter>', opts)
 vim.keymap.set('n', '<M-S-I>', '<cmd>lua require("harpoon.mark").set_current_at(6)<Enter>', opts)
 vim.keymap.set('n', '<M-S-O>', '<cmd>lua require("harpoon.mark").set_current_at(7)<Enter>', opts)
