@@ -95,16 +95,6 @@
 		],
 		"description": "Cria uma configuração de entidade do EF Core"
 	},
-	"Extensions Method Filter": {
-		"prefix": "effilter",
-		"body": [
-			"public IQueryable<${1:Entidade}> Filtrar(this IQueryable<${1:Entidade}> ${2:entidade})",
-			"{",
-			"    return ${2:entidade}.Where(${2:entidade}s => ${2:entidade}s.${3:Condicao});",
-			"}"
-		],
-		"description": "Cria uma configuração de entidade do EF Core"
-	},
   "Empty Constructor": {
     "prefix": "econstructor",
     "body": [ 
@@ -223,28 +213,61 @@
 		],
 		"description": "Creates a new foreach statement"
 	},
+	"Extensions Method Filter": {
+		"prefix": "extension-filter",
+		"body": [
+			"public IQueryable<${1:Entidade}> Filtrar(this IQueryable<${1:Entidade}> ${2:entidade})",
+			"{",
+			"    return ${2:entidade}.Where(${3:entidades} => ${3:entidades}.${3:Condicao});",
+			"}"
+		],
+		"description": "Cria uma configuração de entidade do EF Core"
+	},
   "Extension Methods class": {
-    "prefix": "extension-filter-class",
+    "prefix": "extension-method-class",
     "body": [
       "public static class ${TM_FILENAME_BASE:Entity}Extensions",
       "{",
-      "    public static IQueryable<${TM_FILENAME_BASE:Entity}> ${1:MethodName}(this IQueryable<${TM_FILENAME_BASE:Entity}> ${2:variable}s${3:})",
+      "    public static IQueryable<${TM_FILENAME_BASE:Entity}> ${1:MethodName}(this IQueryable<${TM_FILENAME_BASE:Entity}> ${2:variables})",
       "    {",
-      "        return ${2:variable}s.${4:Method}(${2:variable} => ${2:variable}.${5});",
+      "        return ${2:variables}.${3:Method}(${4:variable} => ${5});",
       "    }",
       "}",
       ""
     ],
     "description": "Creates a class for extension methods for filtering entities"
   },
-  "Extension Method filter": {
-    "prefix": "extension-filter",
+  "Extension Method": {
+    "prefix": "extension-method",
     "body": [
-      "public static IQueryable<${TM_FILENAME_BASE:Entity}> ${1:MethodName}(this IQueryable<${TM_FILENAME_BASE:Entity}> ${2:variable}s${3:})",
+      "public static IQueryable<${TM_FILENAME_BASE:Entity}> ${1:MethodName}(this IQueryable<${TM_FILENAME_BASE:Entity}> ${2:variables})",
       "{",
-      "    return ${2:variable}s.${4:Method}(${2:variable} => ${2:variable}.${5});",
+      "    return ${2:variables}.${3:Method}(${4:variable} => ${5});",
+      "}"
+    ],
+    "description": "Creates an extension method for filtering entities"
+  },
+  "Generic Extension Methods class": {
+    "prefix": "gemc",
+    "body": [
+      "public static class ${1:${TM_FILENAME_BASE:Entity}}Extensions",
+      "{",
+      "    public static IQueryable<${2:${TM_FILENAME_BASE:Entity}}> ${3:MethodName}(this IQueryable<${4:${TM_FILENAME_BASE:Entity}}> ${5:variables})",
+      "    {",
+      "        return ${5:variables}.${6:Method}(${7:variable} => ${8});",
+      "    }",
       "}",
       ""
+    ],
+    "description": "Creates a class for extension methods for filtering entities"
+  },
+  "Generic Extension Method": {
+    "prefix": "gem",
+    "body": [
+      "public static IQueryable<${1:${TM_FILENAME_BASE:Entity}}> ${2:MethodName}(this IQueryable<${3:${TM_FILENAME_BASE:Entity}}> ${4:variables})",
+      "{",
+      "    return ${4:variables}.${5:Method}(${6:variable} => ${7});",
+      "}"
     ],
     "description": "Creates an extension method for filtering entities"
   },
