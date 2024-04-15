@@ -11,6 +11,13 @@
           "cs"
         ],
         "path": "./csharp.json"
+      },
+      {
+        "language": [
+          "typescript",
+          "ts"
+        ],
+        "path": "./typescript.json"
       }
     ]
   }

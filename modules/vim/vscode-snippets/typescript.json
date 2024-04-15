@@ -1,0 +1,23 @@
+{
+	"Component structure": {
+		"prefix": "comp",
+		"body": [
+      "subscriptions: Subscription[] = [];",
+      "",
+      "constructor(",
+      " $1",
+      ") { }",
+      "",
+      "ngOnInit(): void {",
+      " this.subscriptions.push(",
+      "  $0",
+      " );",
+      "}",
+      "",
+      "ngOnDestroy(): void {",
+      " this.subscriptions.forEach(subscription => subscription.unsubscribe());",
+      "}"
+		],
+		"description": "Populates a new component with default boilerplate"
+	}
+}
