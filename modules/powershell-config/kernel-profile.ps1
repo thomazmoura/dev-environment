@@ -29,9 +29,11 @@ Set-PsReadLineOption -EditMode Vi
 Set-PSReadlineOption -BellStyle None
 $stopwatch.Stop(); Write-Verbose "`n-->> Ativar o modo VI demorou: $($stopwatch.ElapsedMilliseconds)"
 
-# Enable prediction
+# Enable prediction and increase history size
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 try {
+  $MaximumHistoryCount = 20000
+  Set-PSReadlineOption -MaximumHistoryCount $MaximumHistoryCount
   Set-PSReadLineOption -PredictionSource History
   Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
   Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
