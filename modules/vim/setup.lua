@@ -16,6 +16,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('harpoon-settings')
   require('debug-settings')
   require('noice-settings')
+  require('keybinding-settings')
 
   -- neo-scroll
   require('neoscroll').setup {
