@@ -37,7 +37,6 @@ nnoremap <silent> <Leader>, <cmd>Telescope find_files cwd=~/code/dotfiles<cr>
 " Undotree
 nnoremap <silent> <Leader>u <cmd>UndotreeToggle<cr><cmd>UndotreeFocus<cr>
 
-
 " FZF
 nnoremap <silent> <C-p> :Files<CR>
 nnoremap <silent> <Leader><C-p> :Buffers<CR>
@@ -54,6 +53,10 @@ cnoremap <silent> <C-h> <C-w>
 " Navigate through buffers
 nnoremap <silent> gb :bnext<CR>
 nnoremap <silent> gB :bprevious<CR>
+
+" Navigate through quicklist
+nnoremap <silent> <leader>] :cnext<CR>
+nnoremap <silent> <leader>[ :cprevious<CR>
 
 " Deal with buffers
 nnoremap <silent> <Leader>bd :bd<CR>
@@ -120,5 +123,7 @@ nnoremap <leader>mu @="Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u
 nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>:b#\<lt>CR>:wa\<lt>CR>"<CR>
 
 " Copilot
-imap <silent><script><expr> <End> copilot#Accept("\<CR>")
+if exists(':Copilot')
+  imap <silent><script><expr> <End> copilot#Accept("\<CR>")
+endif
 
