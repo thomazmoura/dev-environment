@@ -1,5 +1,8 @@
--- Define the Lua function
-local function indent_angular_if_else_blocks()
+-- Function to indent all @if and @else blocks that were added to Angular 17,
+-- since the <leader>f is not indenting they right
+local function angularFormat()
+  vim.lsp.buf.format()
+
   -- Start from the beginning of the file
   vim.cmd('normal! gg')
 
@@ -26,7 +29,7 @@ vim.api.nvim_create_autocmd('FileType', {
   group = 'HtmlIndent',
   pattern = 'html',
   callback = function()
-    vim.keymap.set('n', '<leader>>', indent_angular_if_else_blocks, { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<leader>f', angularFormat, { noremap = true, silent = true, buffer = true })
   end
 })
 
