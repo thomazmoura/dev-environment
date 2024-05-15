@@ -126,12 +126,3 @@ alias bat='batcat'
 export PATH="$PATH:/local/fd-find"
 export PATH="$PATH:/mnt/c/Program Files/Neovim/bin/win32yank.exe"
 
-if  [ -z $VSCODE_SHELL_INTEGRATION ] && [ -z $TMUX ] ; then
-  hash pwsh 2>/dev/null && pwsh -NoExit -Command 'vtmux' && exit
-elif [ -z $SKIP_PWSH ]; then
-  hash pwsh 2>/dev/null && pwsh && exit
-else
-  echo 'Skipping powershell'
-fi
-
-
