@@ -18,11 +18,12 @@ Plug 'tpope/vim-fugitive'
 Plug 'lewis6991/gitsigns.nvim'
 Plug 'thomazmoura/auto-save.nvim' 
 Plug 'gorbit99/codewindow.nvim'
-Plug 'github/copilot.vim'
 Plug 'ThePrimeagen/harpoon'
 Plug 'folke/which-key.nvim'
 Plug 'mbbill/undotree'
 Plug 'folke/trouble.nvim'
+" I'm disabling copilot for the time being
+" Plug 'github/copilot.vim'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
@@ -40,6 +41,7 @@ Plug 'ErichDonGubler/lsp_lines.nvim'
 Plug 'artempyanykh/marksman'
 Plug 'aca/emmet-ls'
 Plug 'Hoffs/omnisharp-extended-lsp.nvim'
+Plug 'williamboman/mason.nvim'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'
