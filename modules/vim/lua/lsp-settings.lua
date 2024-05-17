@@ -109,6 +109,15 @@ if cmp ~= nil then
       { name = 'cmdline' }
     })
   })
+
+  cmp.setup.filetype('sql', {
+    sources = {
+      { name = 'luasnip' },
+      { name = 'vim-dadbod-completion' },
+      { name = 'buffer' }
+    }
+  })
+
 end
 
 -- Mappings.

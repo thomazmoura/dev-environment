@@ -42,6 +42,10 @@ Plug 'artempyanykh/marksman'
 Plug 'aca/emmet-ls'
 Plug 'Hoffs/omnisharp-extended-lsp.nvim'
 Plug 'williamboman/mason.nvim'
+Plug 'tpope/vim-dadbod'
+Plug 'kristijanhusak/vim-dadbod-ui'
+Plug 'kristijanhusak/vim-dadbod-completion'
+Plug 'radenling/vim-dispatch-neovim'
 
 " Telescope
 Plug 'BurntSushi/ripgrep'

@@ -18,6 +18,12 @@
           "ts"
         ],
         "path": "./typescript.json"
+      },
+      {
+        "language": [
+          "sql"
+        ],
+        "path": "./sql.json"
       }
     ]
   }

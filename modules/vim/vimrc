@@ -143,5 +143,9 @@ syntax enable
   let g:copilot_no_tab_map = v:true
 endif
 
+" dadbod/dadbod-ui Settings
+let g:db_ui_save_location = "~/.shared/sql-saved-queries"
+let g:db_ui_tmp_query_location = "~/.shared/sql-queries"
+
 " Disable modelines for security reasons
 set nomodeline

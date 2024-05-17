@@ -1,0 +1,82 @@
+{
+	"Inner Join": {
+		"prefix": "ij",
+		"body": [
+			"INNER JOIN ${1:TABELA} ${2:ALIAS} ON ${2}.${3:FK} = ${4:ALIAS_REFERENCIA}.${5:FK_REFERENCIA}"
+		],
+		"description": "Acrescenta um inner join à consulta atual."
+	},
+	"Select All": {
+		"prefix": "ssf",
+		"body": [
+			"SELECT * FROM ${1:Tabela}"
+		],
+		"description": "Acrescenta um inner join à consulta atual."
+	},
+	"Log": {
+		"prefix": "log",
+		"body": [
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
+			"FROM Log.dbo.Log WITH (NOLOCK)",
+			"WHERE Application = '${1:Aplicacao}'",
+			"ORDER BY Id DESC",
+			""
+		],
+		"description": "Acrescenta uma consulta de logs para o Application soliticado"
+	},
+	"Log de Erro": {
+		"prefix": "erlog",
+		"body": [
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
+			"FROM Log.dbo.Log WITH (NOLOCK)",
+			"WHERE Application = '${1:Aplicacao}'",
+			"AND LEVEL IN( 'Warning', 'Error', 'Fatal' )",
+			"ORDER BY Id DESC",
+			""
+		],
+		"description": "Acrescenta uma consulta de logs para o Application soliticado"
+	},
+	"Log por Request": {
+		"prefix": "rqlog",
+		"body": [
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName'), *",
+			"FROM Log.dbo.Log WITH (NOLOCK)",
+			"WHERE Application = '${1:Aplicacao}'",
+			"AND JSON_VALUE(LogEvent, '$.Properties.RequestId') = '${2:RequestId}'",
+			"ORDER BY Id DESC",
+			""
+		],
+		"description": "Acrescenta uma consulta de logs para o Application soliticado"
+	},
+	"Consulta Simples": {
+		"prefix": "sel",
+		"body": [
+			"SELECT TOP 100 *",
+			"FROM ${1:TABELA} ${2:ALIAS}"
+		],
+		"description": "Consulta simples com TOP 100 para evitar gargalos"
+	},
+	"Force Drop": {
+		"prefix": "droptfu",
+		"body": [
+			"/* Delete Database Backup and Restore History from MSDB System Database */",
+			" ",
+			"EXEC msdb.dbo.sp_delete_database_backuphistory @database_name = N'${1:BaseASerDeletada}'",
+			"GO",
+			" ",
+			"/* Query to Get Exclusive Access of SQL Server Database before Dropping the Database  */",
+			" ",
+			"USE [master]",
+			"GO",
+			"ALTER DATABASE [${1:BaseASerDeletada}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE",
+			"GO",
+			" ",
+			"/* Query to Drop Database in SQL Server  */",
+			" ",
+			"DROP DATABASE [${1:BaseASerDeletada}]",
+			"GO"
+		]
+	}
+}
+
+
