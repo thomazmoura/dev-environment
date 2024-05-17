@@ -18,12 +18,6 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('noice-settings')
   require('keybinding-settings')
 
-  -- neo-scroll
-  require('neoscroll').setup {
-    mappings = { '<C-u>', '<C-d>', '<C-y>', 'zt', 'zz', 'zb' },
-    easing_function = "cubic"
-  }
-
   -- nvim-tree setup
   require 'nvim-tree'.setup {
     update_focused_file = {

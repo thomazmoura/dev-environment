@@ -60,7 +60,9 @@ Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
-Plug 'karb94/neoscroll.nvim'
+" I'm currently trying cinnamon as an alternative to neo-scroll (since it has more motions)
+"Plug 'karb94/neoscroll.nvim'
+Plug 'declancm/cinnamon.nvim'
 Plug 'folke/noice.nvim'
 
 " TMUX integration
