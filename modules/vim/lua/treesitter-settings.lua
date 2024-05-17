@@ -13,9 +13,11 @@ if not vim.env.windir then
       "python",
       "regex",
       "rust",
+      "sql",
       "typescript",
       "vim",
-      "yaml"
+      "vimdoc",
+      "yaml",
     },
 
     -- Install parsers synchronously (only applied to `ensure_installed`)
