@@ -1,3 +1,6 @@
+vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', { noremap = true, silent = true })
+
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
 local function angularFormat()
@@ -33,6 +36,3 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
--- Create an autocommand group to ensure no duplicates
-vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', { noremap = true, silent = true, buffer = true })
-vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', { noremap = true, silent = true, buffer = true })
