@@ -146,6 +146,10 @@ endif
 " dadbod/dadbod-ui Settings
 let g:db_ui_save_location = "~/.shared/sql-saved-queries"
 let g:db_ui_tmp_query_location = "~/.shared/sql-queries"
+let g:db_ui_use_nvim_notify = 1
+let g:db_ui_execute_on_save = 0
+let g:db_ui_show_database_icon = 1
+let g:db_ui_use_nerd_fonts = 1
 
 " Disable modelines for security reasons
 set nomodeline

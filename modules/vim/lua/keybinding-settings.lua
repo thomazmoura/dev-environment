@@ -24,8 +24,9 @@ local function angularFormat()
   end
 end
 
--- Create an autocommand group to ensure no duplicates
+-- Create autocommand groups to ensure no duplicates
 vim.api.nvim_create_augroup('HtmlIndent', { clear = true })
+vim.api.nvim_create_augroup('SqlFiles', { clear = true })
 
 -- Set up the key mapping only for .html files
 vim.api.nvim_create_autocmd('FileType', {
@@ -35,4 +36,14 @@ vim.api.nvim_create_autocmd('FileType', {
     vim.keymap.set('n', '<leader>f', angularFormat, { noremap = true, silent = true, buffer = true })
   end
 })
+
+-- Set up the key mapping only for sql files
+vim.api.nvim_create_autocmd('FileType', {
+  group = 'SqlFiles',
+  pattern = 'sql',
+  callback = function()
+    vim.keymap.set('n', '<leader>r', '<Plug>(DBUI_ExecuteQuery)', { noremap = true, silent = true, buffer = true })
+  end
+})
+
 

@@ -1,3 +1,16 @@
+local function dadbod_status()
+  return vim.api.nvim_call_function('db_ui#statusline', {
+    {
+      show = {
+       'db_name',
+       'table'
+      },
+      separator = ' - ',
+      prefix = ''
+    }
+  })
+end
+
 --lualine settings
 require('lualine').setup {
   options = {
@@ -34,6 +47,7 @@ require('lualine').setup {
       },
     },
     lualine_y = {
+      dadbod_status,
       'progress',
       'filetype',
       function()
