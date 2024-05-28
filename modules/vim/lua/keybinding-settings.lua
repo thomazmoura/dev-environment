@@ -4,6 +4,10 @@ vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', { norem
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
 local function angularFormat()
+
+  -- Save the current cursor position
+  local current_pos = vim.fn.getpos('.')
+
   vim.lsp.buf.format()
 
   -- Start from the beginning of the file
@@ -22,6 +26,10 @@ local function angularFormat()
     -- Continue searching for the next @if or @else after the current one
     pos = vim.fn.search('@if\\|@else', 'W')
   end
+
+  -- Restore the cursor position
+  vim.fn.setpos('.', current_pos)
+  vim.cmd('normal! zz')
 end
 
 -- Create autocommand groups to ensure no duplicates
