@@ -254,25 +254,16 @@ lspconfig.jsonls.setup {
   flags = lsp_flags,
 }
 
--- Custom on_attach to disable tsserver's rename so that angular-ls rename is always used instead
-local function disable_tsserver_rename_on_attach(client, bufnr)
-  if client.name == 'tsserver' then
-    client.server_capabilities.renameProvider = false
-  end
-end
-
 --TypeScript LS settings
 lspconfig.tsserver.setup {
   capabilities = capabilities,
   flags = lsp_flags,
-  on_attach = disable_tsserver_rename_on_attach
 }
 
 -- Angular LS settings
 lspconfig.angularls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
-  on_attach = disable_tsserver_rename_on_attach
 }
 
 -- YAML LS settings
