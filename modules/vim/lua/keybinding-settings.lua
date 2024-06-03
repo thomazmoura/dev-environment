@@ -1,5 +1,12 @@
-vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', { noremap = true, silent = true })
-vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', { noremap = true, silent = true })
+local default_global_options = { noremap = true, silent = true };
+local default_buffer_options = { noremap = true, silent = true, buffer = true };
+
+-- Vim dadbod keys
+vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', default_global_options)
+vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', default_global_options)
+
+-- Automatically substitute only inside selection
+vim.keymap.set('v', 's', ':s/\\%V')
 
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
@@ -41,7 +48,7 @@ vim.api.nvim_create_autocmd('FileType', {
   group = 'HtmlIndent',
   pattern = 'html',
   callback = function()
-    vim.keymap.set('n', '<leader>f', angularFormat, { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<leader>f', angularFormat, default_buffer_options)
   end
 })
 
@@ -50,7 +57,7 @@ vim.api.nvim_create_autocmd('FileType', {
   group = 'SqlFiles',
   pattern = 'sql',
   callback = function()
-    vim.keymap.set('n', '<leader>r', '<Plug>(DBUI_ExecuteQuery)', { noremap = true, silent = true, buffer = true })
+    vim.keymap.set('n', '<leader>r', '<Plug>(DBUI_ExecuteQuery)', default_buffer_options)
   end
 })
 
