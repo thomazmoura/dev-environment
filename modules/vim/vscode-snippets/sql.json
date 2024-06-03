@@ -9,7 +9,7 @@
 	"Select All": {
 		"prefix": "ssf",
 		"body": [
-			"SELECT * FROM ${1:Tabela}"
+			"SELECT ${2:*} FROM ${1:Tabela}"
 		],
 		"description": "Acrescenta um inner join à consulta atual."
 	},
@@ -51,8 +51,8 @@
 	"Consulta Simples": {
 		"prefix": "sel",
 		"body": [
-			"SELECT TOP 100 *",
-			"FROM ${1:TABELA} ${2:ALIAS}"
+			"SELECT TOP 100 ${2:*}",
+			"FROM ${1:TABELA}"
 		],
 		"description": "Consulta simples com TOP 100 para evitar gargalos"
 	},
