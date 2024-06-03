@@ -58,6 +58,8 @@ endif
 " Fix tag for targets (rollback to native NeoVim tags)
 autocmd User targets#mappings#user call targets#mappings#extend({
     \ 't': {},
+    \ '<': {},
+    \ '>': {},
     \ })
 
 " Custom Keymaps
