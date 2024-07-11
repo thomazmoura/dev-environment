@@ -121,6 +121,9 @@ nnoremap <leader>mc @="^d2Wf{hDIbuilder.Property(\<lt>Esc>\"0pa\<lt>Space>=>\<lt
 " C# - Sort Global usings
 nnoremap <leader>mu @="Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>"<CR>
 nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/normal Iglobal \<lt>CR>:sort u\<lt>CR>:b#\<lt>CR>:wa\<lt>CR>"<CR>
+nnoremap <leader>mt ^Wyiwciwasync Task<0>f(%iCancellationToken cancellationToken
+nnoremap <leader>mT ^Wyiwciwasync Task<0>f(%i, CancellationToken cancellationToken
+
 
 " Copilot
 if exists(':Copilot')

@@ -36,6 +36,13 @@
 		],
 		"description": "Creates a new private field"
 	},
+  "Cancellation Token": {
+    "prefix": "ctk",
+    "body": [
+      "CancellationToken cancellationToken"
+    ],
+    "description": "Add a CancellationToken parameter"
+  },
 	"Unit Test": {
 		"prefix": "ut",
 		"body": [
