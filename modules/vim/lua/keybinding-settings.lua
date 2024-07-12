@@ -8,6 +8,11 @@ vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', default
 -- Automatically substitute only inside selection
 vim.keymap.set('v', 's', ':s/\\%V')
 
+-- Git utilities shortcuts
+vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>')
+vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>')
+
+
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
 local function angularFormat()
