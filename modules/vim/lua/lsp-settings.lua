@@ -250,6 +250,18 @@ lspconfig.lua_ls.setup {
   },
 }
 
+-- Create an augroup named JsonToJsonc (so that comments won't be an issue anymore with JSON)
+local json_to_jsonc_group = vim.api.nvim_create_augroup("JsonToJsonc", { clear = true })
+
+-- Create an autocmd in the JsonToJsonc group that sets the filetype to jsonc for json files
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "json",
+  callback = function()
+    vim.bo.filetype = "jsonc"
+  end,
+  group = json_to_jsonc_group,
+})
+
 -- json LS settings
 lspconfig.jsonls.setup {
   capabilities = capabilities,
