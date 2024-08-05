@@ -117,7 +117,6 @@ if cmp ~= nil then
       { name = 'buffer' }
     }
   })
-
 end
 
 -- Mappings.
@@ -126,8 +125,8 @@ local opts = { noremap = true, silent = true }
 vim.keymap.set('n', '<Leader>E', '<cmd>Telescope diagnostics<cr>', opts)
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, opts)
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, opts)
-vim.keymap.set('n', '[D', function() vim.diagnostic.goto_prev({severity=vim.diagnostic.severity.ERROR}) end, opts)
-vim.keymap.set('n', ']D', function() vim.diagnostic.goto_next({severity=vim.diagnostic.severity.ERROR}) end, opts)
+vim.keymap.set('n', '[D', function() vim.diagnostic.goto_prev({ severity = vim.diagnostic.severity.ERROR }) end, opts)
+vim.keymap.set('n', ']D', function() vim.diagnostic.goto_next({ severity = vim.diagnostic.severity.ERROR }) end, opts)
 vim.keymap.set('n', '<Leader>q', vim.diagnostic.setloclist, opts)
 
 -- LSP Mappings.
@@ -152,7 +151,7 @@ vim.keymap.set('n', '<Leader>.', vim.lsp.buf.code_action, bufopts)
 vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
 vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format, bufopts)
 vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
-vim.keymap.set('n', '<Leader>a', '<cmd>TroubleToggle workspace_diagnostics<cr>', bufopts)
+vim.keymap.set('n', '<Leader>a', '<cmd>Trouble diagnostics toggle<cr>', bufopts)
 vim.keymap.set('n', '<Leader>A', '<cmd>Telescope diagnostics<cr>', bufopts)
 vim.keymap.set('n', '<Leader>o', '<cmd>SymbolsOutline<cr>', bufopts)
 vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
@@ -332,3 +331,6 @@ require("luasnip.loaders.from_vscode").lazy_load({
 
 -- Symbols outline
 require("symbols-outline").setup()
+
+-- Trouble.nvim
+require("trouble").setup()

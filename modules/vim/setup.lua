@@ -31,6 +31,13 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
       enable = false,
       show_on_dirs = false,
     },
+    actions = {
+      open_file = {
+        window_picker = {
+          enable = false,
+        },
+      },
+    },
     view = {
       width = 50,
     }
@@ -68,11 +75,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
 
   vim.o.timeout = true
   vim.o.timeoutlen = 1000
-  require("which-key").setup({
-    window = {
-      winblend = 15
-    },
-  })
+  require("which-key").setup()
 end
 
 -- Clipboard integration

@@ -10,6 +10,7 @@ vim.keymap.set('v', 's', ':s/\\%V')
 
 -- Git utilities shortcuts
 vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>')
+vim.keymap.set('n', '<leader>Gm', '<cmd>Gvdiffsplit!<cr><C-w>J')
 vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>')
 
 

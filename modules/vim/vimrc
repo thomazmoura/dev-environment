@@ -121,11 +121,7 @@ elseif exists('g:vscode')
 else
 " Colorscheme
 syntax enable
-  set background=dark
-  let g:one_allow_italics = 1 " One colorscheme configuration
-  let g:tokyonight_style = "storm" " Tokyo Night colorscheme configuration
-
-  colorscheme tokyonight
+  colorscheme tokyonight-storm
   highlight Normal guibg=none
   highlight Inactive guibg=none
   highlight MsgArea guibg=#1a1b26

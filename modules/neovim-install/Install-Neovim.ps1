@@ -9,7 +9,7 @@ if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) 
   New-Item -Type Directory -Force "$HOME/.local/bin/"
 
   Write-Output "=>> Downloading Neovim's realease tar package"
-  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.9.1/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
+  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.10.1/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
 
   Write-Output "=>> Extracting Neovim package"
   & tar -xzf nvim-linux64.tar.gz
