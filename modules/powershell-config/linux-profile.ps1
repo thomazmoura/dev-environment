@@ -72,7 +72,7 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 
 function New-VerticalTmuxSession  (
   $Command = "pwsh -NoExit -Command '$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim' && exit",
-  $SecondCommand = "pwsh -NoExit -Command 'psgit && psfzf' && exit"
+  $SecondCommand = "pwsh -NoExit -Command 'psgit && psfzf && Build-DotnetProjectIfNeeded' && exit"
 ) {
   if(tmux ls 2> $null) {
     Get-TmuxSession

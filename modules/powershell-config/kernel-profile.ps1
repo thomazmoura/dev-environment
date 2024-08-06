@@ -714,6 +714,22 @@ function Get-PowerShellCoreDotNetVersion() {
   [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
 }
 
+function Build-DotnetProjectIfNeeded() {
+  if ((Test-Path "*.sln") -and !(Test-Path ".vs")) {
+    Write-Verbose "Project not yet built. Building now and creating .vs folder as a way to skip build next time..."
+    & dotnet build
+    New-Item -Type Directory .vs
+  } else {
+    Write-Verbose "Project already built."
+  }
+}
+
+function Install-NpmIfNeeded() {
+  if ((Test-Path "package.json") -and !(Test-Path "node_modules")) {
+    & npm install
+  }
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
