@@ -70,7 +70,7 @@
 	"Entity Type Configuration (.NET 6)": {
 		"prefix": "efconfig",
 		"body": [
-			"namespace ${2:Namespace}.Dados.Configuracao;",
+			"namespace ${2:Namespace}.Dominio.Dados.Configuracao;",
 			"",
 			"public class ${1:Entidade}Configuracao : IEntityTypeConfiguration<${1:Entidade}>",
 			"{",
@@ -89,7 +89,7 @@
 			"using Microsoft.EntityFrameworkCore.Metadata.Builders;",
 			"using ${2:Namespace}.Entidades;",
 			" ",
-			"namespace ${2:Namespace}.Dados.Configuracao",
+			"namespace ${2:Namespace}.Dominio.Dados.Configuracao",
 			"{",
 			"    public class ${1:Entidade}Configuracao : IEntityTypeConfiguration<${1:Entidade}>",
 			"    {",
