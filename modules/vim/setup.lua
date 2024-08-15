@@ -6,7 +6,6 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   vim.wo.signcolumn = "yes:1"
 
   -- Import custom sub-settings
-  require('hop-settings')
   require('icons-settings')
   require('lsp-settings')
   require('lualine-settings')
@@ -18,6 +17,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('noice-settings')
   require('keybinding-settings')
   require('scrolling-settings')
+  require('hop-settings')
 
   -- nvim-tree setup
   require 'nvim-tree'.setup {
