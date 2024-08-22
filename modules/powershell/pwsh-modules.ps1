@@ -5,7 +5,9 @@ function Import-PsFzf() {
     Install-Module -Force -AcceptLicense PSFzf 
   }
   Write-Verbose "`n->> Importing PSFzf"
-  Import-Module PSFzf -ArgumentList 'Ctrl+t', 'Ctrl+r' -ErrorAction Stop
+  Import-Module PSFzf -ErrorAction Stop
+  Write-Information "`n->> Overriding keybinding"
+  Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do PsFzf demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 

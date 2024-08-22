@@ -12,7 +12,6 @@ sudo apt update \
     bat \
     build-essential \
     fd-find \
-    fzf \
     git \
     htop \
     iproute2 \
@@ -60,6 +59,9 @@ fi
 if ! grep -q "^DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $environment_file; then
     echo "DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | sudo tee -a $environment_file
 fi
+
+echo "Installing fzf (newer version)"
+pwsh -NoProfile -Command "Invoke-WebRequest https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz -OutFile fzf.tar.gz && tar -xzvf ./fzf.tar.gz -C $HOME/.local/bin && rm ./fzf.tar.gz"
 
 # Make fdfind be callable as fd
 sudo pwsh -NoProfile -Command 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
