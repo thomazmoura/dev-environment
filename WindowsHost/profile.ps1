@@ -679,43 +679,14 @@ function Start-NpmInstallDockerContainer($Version = "lts-alpine") {
 }
 
 function Set-AutoNodeVersion() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-  if(!(Get-Command nvs -ErrorAction "SilentlyContinue")) {
-    Write-Verbose "nvs not found. Skipping"
-    return;
+  if ( !(Get-Command node -ErrorAction SilentlyContinue) ) {
+    $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+    Write-Warning "`n->> No default node version detected, setting as LTS"
+    nvs use lts
+    $stopwatch.Stop(); Write-Verbose "`n-->> Definição de versão padrão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
   }
-
-  if(!(Get-Command fd -ErrorAction "SilentlyContinue")) {
-    Write-Verbose "fd not found. Settings lts as the version"
-    $nodeVersion = 'lts'
-  } else {
-
-    $nodeVersionFile = (fd --hidden .node-version --maxdepth 3)
-    if(!($nodeVersionFile)) {
-      Write-Verbose ".node-version not found. Using lts"
-      $nodeVersion = 'lts'
-    } else {
-      if($nodeVersionFile -is [array]) {
-        Write-Verbose "More than a single .node-version found, so picking first"
-        $nodeVersionFile = $nodeVersionFile[0]
-      }
-
-      $nodeVersion = Get-Content $nodeVersionFile
-    }
-  }
-
-  nvs use $nodeVersion
-  if( !($?) ) {
-    Write-Verbose "Unable to use node version $nodeVersion installing it now"
-    nvs add $nodeVersion
-    nvs use $nodeVersion
-  }
-
-  if(Test-Path "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1") {
-    . "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1"
-  }
-
-  $stopwatch.Stop(); Write-Verbose "`n-->> Ativação do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
+  Write-Verbose "`n->> Setting nvs auto on"
+  nvs auto on
 }
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
@@ -869,4 +840,5 @@ function Stop-ProcessByName($processName) {
 
 Write-Debug "`n->> Setting Windows Specific Aliases"
 
+Import-OhMyPosh
 Set-AutoNodeVersion
