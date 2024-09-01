@@ -26,6 +26,7 @@ vnoremap <silent> # :<C-U>
 nnoremap <silent> <C-e> :NvimTreeToggle<CR>
 nnoremap <silent> <Leader><C-e> :NvimTreeFindFile<CR>
 nnoremap <silent> <Leader>e :NvimTreeToggle<CR>
+nnoremap <silent> <Leader>E :NvimTreeFocus<CR>
 
 " Telescope
 nnoremap <silent> <Leader>/ <cmd>Telescope find_files<cr>
