@@ -6,7 +6,7 @@ vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', default_global
 vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', default_global_options)
 
 -- Automatically substitute only inside selection
-vim.keymap.set('v', 's', ':s/\\%V')
+vim.keymap.set('v', 'S', ':s/\\%V')
 
 -- Git utilities shortcuts
 vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>')
