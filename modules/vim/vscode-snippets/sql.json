@@ -36,6 +36,31 @@
 		],
 		"description": "Acrescenta uma consulta de logs para o Application soliticado"
 	},
+	"Log - PostgreSQL": {
+		"prefix": "pglog",
+		"body": [
+      "select",
+      " \"application\", \"message\", \"message_template\", \"raise_date\", \"level\", \"exception\", \"properties\", \"machine_name\"",
+      "from public.\"Log\"",
+      "where \"application\" = '${1:Aplicacao}'",
+      "order by raise_date desc",
+      "limit 100"
+		],
+		"description": "Acrescenta uma consulta de logs para o Application soliticado"
+	},
+	"Log de Erro - PostgreSQL": {
+		"prefix": "pgerlog",
+		"body": [
+      "select",
+      " \"application\", \"message\", \"message_template\", \"raise_date\", \"level\", \"exception\", \"properties\", \"machine_name\"",
+      "from public.\"Log\"",
+      "where \"application\" = '${1:Aplicacao}'",
+      "and \"level\" in ('Warning','Error','Fatal')",
+      "order by raise_date desc",
+      "limit 100"
+		],
+		"description": "Acrescenta uma consulta de logs para o Application soliticado"
+	},
 	"Log por Request": {
 		"prefix": "rqlog",
 		"body": [
