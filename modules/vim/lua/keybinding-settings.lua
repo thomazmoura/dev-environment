@@ -6,12 +6,15 @@ vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', default_global
 vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', default_global_options)
 
 -- Automatically substitute only inside selection
-vim.keymap.set('v', 'S', ':s/\\%V')
+vim.keymap.set('v', 'S', ':s/\\%V', default_global_options)
+
+-- Fix highlight when reloading the file (after external git checkout to another branch)
+vim.keymap.set('n', '<leader>F', '<cmd>w<cr><cmd>e!<cr>', default_global_options)
 
 -- Git utilities shortcuts
-vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>')
-vim.keymap.set('n', '<leader>Gm', '<cmd>Gvdiffsplit!<cr><C-w>J')
-vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>')
+vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>', default_global_options)
+vim.keymap.set('n', '<leader>Gm', '<cmd>Gvdiffsplit!<cr><C-w>J', default_global_options)
+vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>', default_global_options)
 
 
 -- Function to indent all @if and @else blocks that were added to Angular 17,
