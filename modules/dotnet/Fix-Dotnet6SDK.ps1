@@ -24,3 +24,29 @@ $Dotnet6FolderSymbolicLinkNetPath = "/usr/share/dotnet/shared/Microsoft.NETCore.
 Write-Information "Criando o link simbólico em $Dotnet6FolderSymbolicLinkNetPath para acessar $Dotnet6FolderNet"
 sudo pwsh -C "New-Item -ItemType SymbolicLink -Path $Dotnet6FolderSymbolicLinkNetPath -Target $Dotnet6FolderNet"
 
+$Dotnet8FolderAspNet = Get-ChildItem "/usr/share/dotnet/shared/Microsoft.AspNetCore.App/8*"
+$Dotnet8FolderNet = Get-ChildItem "/usr/share/dotnet/shared/Microsoft.NETCore.App/8.*"
+
+$Dotnet8FolderSymbolicLinkAspNet = Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.AspNetCore.App/8*"
+$Dotnet8FolderSymbolicLinkNet = Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.NETCore.App/8*"
+
+if ($Dotnet8FolderSymbolicLinkAspNet) {
+  Write-Information "Removendo $Dotnet8FolderSymbolicLinkAspNet para que seja recriado"
+  sudo pwsh -C "Remove-Item $Dotnet8FolderSymbolicLinkAspNet"
+}
+
+if ($Dotnet8FolderSymbolicLinkNet) {
+  Write-Information "Removendo $Dotnet8FolderSymbolicLinkNet para que seja recriado"
+  sudo pwsh -C "Remove-Item $Dotnet8FolderSymbolicLinkNet"
+}
+
+$DotnetAsp8FolderVersion = $Dotnet8FolderAspNet.Name
+$DotnetAsp8FolderSymbolicLinkAspNetPath = "/usr/lib/dotnet/shared/Microsoft.AspNetCore.App/$DotnetAsp8FolderVersion"
+Write-Information "Criando o link simbólico em $DotnetAsp8FolderSymbolicLinkAspNetPath para acessar $Dotnet8FolderAspNet"
+sudo pwsh -C "New-Item -ItemType SymbolicLink -Path $DotnetAsp8FolderSymbolicLinkAspNetPath -Target $Dotnet8FolderAspNet"
+
+$Dotnet8FolderVersion = $Dotnet8FolderNet.Name
+$Dotnet8FolderSymbolicLinkNetPath = "/usr/lib/dotnet/shared/Microsoft.NETCore.App/$Dotnet8FolderVersion"
+Write-Information "Criando o link simbólico em $Dotnet8FolderSymbolicLinkNetPath para acessar $Dotnet8FolderNet"
+sudo pwsh -C "New-Item -ItemType SymbolicLink -Path $Dotnet8FolderSymbolicLinkNetPath -Target $Dotnet8FolderNet"
+
