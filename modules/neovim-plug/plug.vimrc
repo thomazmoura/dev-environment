@@ -67,7 +67,6 @@ Plug 'folke/noice.nvim'
 
 " TMUX integration
 Plug 'christoomey/vim-tmux-navigator'
-Plug 'tmux-plugins/vim-tmux-focus-events'
 Plug 'roxma/vim-tmux-clipboard'
 Plug 'aserowy/tmux.nvim'
 
