@@ -4,6 +4,13 @@ param(
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 
+# Verifies if there is any .node-version on levels below and change to it if found
+# This is useful to open NeoVim with the correct node version on .NET + Angular projects
+$nodeVersionFile = fd -H .node-version -d 2
+if( $nodeVersionFile ) {
+  nvs use (cat $nodeVersionFile)
+}
+
 $NodeVersion = node --version
 $InstalledNodeVersionsFolder = "$HOME/.installed-node-versions"
 $NodeVersionCache = "$InstalledNodeVersionsFolder/$NodeVersion"
