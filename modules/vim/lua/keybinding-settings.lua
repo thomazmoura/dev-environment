@@ -20,7 +20,6 @@ vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>', default_global_options)
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
 local function angularFormat()
-
   -- Save the current cursor position
   local current_pos = vim.fn.getpos('.')
 
@@ -70,4 +69,35 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
+-- Pascal to Snake Case conversion
+local function pascal_to_snake_case(str)
+  -- Convert PascalCase to snake_case
+  local result = str:gsub('(%u)', function(upper)
+    return '_' .. upper:lower()
+  end)
 
+  -- Remove leading underscore if present
+  result = result:gsub('^_', '')
+
+  -- Convert to lowercase
+  return result:lower()
+end
+
+local function convert_quotes_to_snake_case()
+  -- Get the current line
+  local line = vim.api.nvim_get_current_line()
+
+  -- Find all quoted strings in the line
+  local new_line = line:gsub('"([^"]*)"', function(match)
+    -- Convert the matched text from PascalCase to snake_case
+    return '"' .. pascal_to_snake_case(match) .. '"'
+  end)
+
+  -- Replace the current line with the modified line
+  vim.api.nvim_set_current_line(new_line)
+end
+
+-- Create a command to call the function
+vim.api.nvim_create_user_command('ConvertToSnakeCase', convert_quotes_to_snake_case, {})
+
+vim.keymap.set('n', 'gS', convert_quotes_to_snake_case, default_global_options)
