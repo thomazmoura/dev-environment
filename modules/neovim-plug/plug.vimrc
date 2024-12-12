@@ -22,6 +22,7 @@ Plug 'ThePrimeagen/harpoon'
 Plug 'folke/which-key.nvim'
 Plug 'mbbill/undotree'
 Plug 'folke/trouble.nvim'
+Plug 'arthurxavierx/vim-caser'
 " I'm disabling copilot for the time being
 " Plug 'github/copilot.vim'
 
