@@ -18,7 +18,6 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('keybinding-settings')
   require('scrolling-settings')
   require('hop-settings')
-  require('movement-handler')
 
   -- nvim-tree setup
   require 'nvim-tree'.setup {
