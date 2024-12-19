@@ -146,7 +146,7 @@ end, bufopts)
 vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, bufopts)
 vim.keymap.set('n', '<Leader>r', vim.lsp.buf.rename, bufopts)
 vim.keymap.set('n', '<Leader>R', '<cmd>LspRestart<cr>')
-vim.keymap.set('n', '<Leader>.', vim.lsp.buf.code_action, bufopts)
+vim.keymap.set({'v', 'n'}, '<Leader>.', vim.lsp.buf.code_action, bufopts)
 vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
 vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format, bufopts)
 vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
@@ -267,7 +267,7 @@ lspconfig.jsonls.setup {
 }
 
 --TypeScript LS settings
-lspconfig.tsserver.setup {
+lspconfig.ts_ls.setup {
   capabilities = capabilities,
   flags = lsp_flags,
 }
