@@ -34,6 +34,6 @@ rm *.crt
 rm *.key
 
 Write-Information "`n->> Configuring Kestrel to use the certificate"
-"`$env:ASPNETCORE_Kestrel__Certificates__Default__Password='$pass'" >> $PROFILE.CurrentUserCurrentHost
-"`$env:ASPNETCORE_Kestrel__Certificates__Default__Path='/mnt/c/Users/$windowsUser/.aspnet/.ssl/localhost.pfx'" >> $PROFILE.CurrentUserCurrentHost
+"`$env:ASPNETCORE_Kestrel__Certificates__Default__Password='$pass'" >> $HOME/.profile.ps1
+"`$env:ASPNETCORE_Kestrel__Certificates__Default__Path='/mnt/c/Users/$windowsUser/.aspnet/.ssl/localhost.pfx'" >> $HOME/.profile.ps1
 
