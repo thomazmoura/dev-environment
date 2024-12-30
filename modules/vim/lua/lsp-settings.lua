@@ -146,7 +146,7 @@ end, bufopts)
 vim.keymap.set('n', '<Leader>D', vim.lsp.buf.type_definition, bufopts)
 vim.keymap.set('n', '<Leader>r', vim.lsp.buf.rename, bufopts)
 vim.keymap.set('n', '<Leader>R', '<cmd>LspRestart<cr>')
-vim.keymap.set({'v', 'n'}, '<Leader>.', vim.lsp.buf.code_action, bufopts)
+vim.keymap.set({ 'v', 'n' }, '<Leader>.', vim.lsp.buf.code_action, bufopts)
 vim.keymap.set('n', 'gr', '<cmd>Telescope lsp_references<cr>', bufopts)
 vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format, bufopts)
 vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
@@ -166,7 +166,7 @@ lspconfig.omnisharp.setup {
   capabilities = capabilities,
   flags = lsp_flags,
   handlers = {
-    ["textDocument/definition"] = require('omnisharp_extended').handler,
+        ["textDocument/definition"] = require('omnisharp_extended').handler,
   },
   cmd = {
     "dotnet", home_directory .. "/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
@@ -311,6 +311,22 @@ lspconfig.cssls.setup {
 
 -- HTML LS
 lspconfig.html.setup {
+  capabilities = capabilities,
+  flags = lsp_flags,
+}
+
+-- Cucumber
+lspconfig.cucumber_language_server.setup {
+  settings = {
+    cucumber = {
+      features = { "**/*.feature" },
+      glue = { "**/*.cs" },
+      parameterTypes = {},
+    },
+    features = { "**/*.feature" },
+    glue = { "**/*.cs" },
+    parameterTypes = {},
+  },
   capabilities = capabilities,
   flags = lsp_flags,
 }

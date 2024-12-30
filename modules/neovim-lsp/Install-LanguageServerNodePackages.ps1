@@ -31,6 +31,7 @@ npm install --global '@angular/language-server'
 npm install --global 'yaml-language-server'
 npm install --global 'vim-language-server'
 npm install --global 'emmet-ls'
+npm install --global '@cucumber/language-server'
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Node package installation took: $($stopwatch.ElapsedMilliseconds)"
 
