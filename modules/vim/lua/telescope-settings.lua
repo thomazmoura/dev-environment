@@ -1,4 +1,11 @@
 -- telescope
+
+-- Build the find_command array dynamically
+local find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git', '--exclude', '.plugged' }
+if vim.env.FZF_IGNORE_FOLDER then
+    table.insert(find_command, '--exclude')
+    table.insert(find_command, vim.env.FZF_IGNORE_FOLDER)
+end
 local telescope = require('telescope')
 telescope.setup {
   defaults = {
@@ -6,7 +13,7 @@ telescope.setup {
   },
   pickers = {
     find_files = {
-      find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git', '--exclude', '.plugged', '--exclude', vim.env.FZF_IGNORE_FOLDER }
+      find_command = find_command
     },
     buffers = {
       ignore_current_buffer = true,

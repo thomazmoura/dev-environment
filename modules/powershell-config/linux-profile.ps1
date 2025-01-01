@@ -28,10 +28,10 @@ function New-HorizontalTmuxSession ($FirstPaneCommand="psgit", $SecondPaneComman
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1)
 		& tmux new-session `; `
 			rename-session $currentDirectory `; `
-			split-window -h -p 20 `; `
+			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
 			send-keys "$SecondPaneCommand" C-m `; `
-			split-window -v -p 50 `; `
+			split-window -v -l 50% `; `
 			select-pane -t 2 `; `
 			send-keys "$FirstPaneCommand" C-m `; `
 			select-pane -t 1 `; `
@@ -48,7 +48,7 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 		$currentDirectory = ($pwd.Path.Split("/") | Select -Last 1)
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
-			split-window -h -p 20 `; `
+			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
 			send-keys "cd $FirstFolder" C-m `; `
 			send-keys "$FirstCommand" C-m `; `
@@ -56,7 +56,7 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 			send-keys "cd $FirstFolder" C-m `; `
 			send-keys nvim C-m `; `
 			new-window `; `
-			split-window -h -p 20 `; `
+			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
 			send-keys "cd $SecondFolder" C-m `; `
 			send-keys "$SecondCommand" C-m `; `
@@ -85,7 +85,7 @@ function New-VerticalTmuxSession  (
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
-			split-window -v -p 20 `; `
+			split-window -v -l 20% `; `
 			select-pane -t 1 `; `
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `

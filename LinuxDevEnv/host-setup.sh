@@ -4,8 +4,8 @@ sudo apt update \
     curl \
     gnupg \
     software-properties-common \
-  && curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - \
-  && sudo sh -c 'echo "deb [arch=amd64,arm64,armhf] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" > /etc/apt/sources.list.d/microsoft.list' \
+  && curl -sSL -O https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+  && sudo dpkg -i packages-microsoft-prod.deb \
   && sudo apt update \
   && sudo apt install -y \
     apt-utils \
@@ -74,7 +74,7 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.modules -Targ
 sudo pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path /root/.modules -Target $modules_path"
 
 # dotnet installation
-sudo pwsh -NoProfile -Command "$HOME/.modules/dotnet/ubuntu-22-04-dotnet-setup.ps1"
+sudo pwsh -NoProfile -Command "$HOME/.modules/dotnet/ubuntu-24-04-dotnet-setup.ps1"
 
 # PowerShell modules installation
 pwsh -NoProfile -File "$HOME/.modules/powershell/pwsh-setup.ps1"
