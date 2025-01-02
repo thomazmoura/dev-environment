@@ -21,7 +21,7 @@ if(Get-Command sudo -ErrorAction SilentlyContinue) {
   & apt-get install -y dotnet-sdk-6.0 dotnet-sdk-8.0
 }
 
-$AspNetSdkDirectories = @(Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.AspNetCore.App/")
+$AspNetSdkDirectories = @(Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.AspNetCore.App/" -ErrorAction SilentlyContinue)
 if($AspNetSdkDirectories) {
   foreach ($AspNetSdkDirectory in $AspNetSdkDirectories) {
     $Directory = $AspNetSdkDirectory.Name
@@ -42,7 +42,7 @@ if($AspNetSdkDirectories) {
   Write-Verbose "No Asp .NET Core directory found"
 }
 
-$DotnetSdkDirectories = @(Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.NETCore.App")
+$DotnetSdkDirectories = @(Get-ChildItem "/usr/lib/dotnet/shared/Microsoft.NETCore.App" -ErrorAction SilentlyContinue)
 if($DotnetSdkDirectories) {
   foreach ($DotnetSdkDirectory in $DotnetSdkDirectories) {
     $Directory = $DotnetSdkDirectory.Name
