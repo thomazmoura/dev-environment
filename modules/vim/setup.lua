@@ -19,6 +19,14 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('scrolling-settings')
   require('hop-settings')
 
+  -- avante
+  require('avante_lib').load()
+  require('avante').setup({
+    behaviour = {
+      auto_suggestions = false,
+    }
+  })
+
   -- nvim-tree setup
   require 'nvim-tree'.setup {
     update_focused_file = {
