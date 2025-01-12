@@ -105,6 +105,10 @@ else
     copy_sync = {
       sync_clipboard = true,
       sync_registers = false,
+    },
+    resize = {
+        -- enables default keybindings (A-hjkl) for normal mode
+        enable_default_keybindings = false,
     }
   })
 end
