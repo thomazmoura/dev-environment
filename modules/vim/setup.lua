@@ -24,7 +24,15 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('avante').setup({
     behaviour = {
       auto_suggestions = false,
+    },
+    file_selector = {
+      provider = 'telescope'
     }
+  })
+
+  --copilot
+  require('copilot').setup({
+    copilot_node_command = os.getenv('HOME') .. '/.nvs/copilot-node',
   })
 
   -- nvim-tree setup
