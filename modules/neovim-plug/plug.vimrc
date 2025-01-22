@@ -62,9 +62,7 @@ Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
 Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
-" I'm currently trying cinnamon as an alternative to neo-scroll (since it has more motions)
-"Plug 'karb94/neoscroll.nvim'
-Plug 'declancm/cinnamon.nvim'
+Plug 'karb94/neoscroll.nvim'
 Plug 'folke/noice.nvim'
 
 " TMUX integration
@@ -94,11 +92,10 @@ Plug 'theHamsta/nvim-dap-virtual-text'
 Plug 'nvim-telescope/telescope-dap.nvim'
 Plug 'nvim-neotest/nvim-nio'
 
-" Deps
+" Avante
 Plug 'stevearc/dressing.nvim'
-
-" Yay, pass source=true if you want to build from source
 Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
+Plug 'OXY2DEV/markview.nvim'
 
 call plug#end()
 

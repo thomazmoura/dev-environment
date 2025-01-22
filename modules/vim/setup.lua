@@ -27,7 +27,15 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
     },
     file_selector = {
       provider = 'telescope'
+    },
+    windows = {
+      width = 50
     }
+  })
+  require("markview").setup({
+    filetypes = { "Avante" },
+    buf_ignore = {},
+    max_length = 99999,
   })
 
   --copilot
@@ -99,12 +107,12 @@ if os.getenv('WSLENV') then
   vim.g.clipboard = {
     name = 'win32yank-wsl',
     copy = {
-      ['+'] = 'win32yank.exe -i --crlf',
-      ['*'] = 'win32yank.exe -i --crlf',
+          ['+'] = 'win32yank.exe -i --crlf',
+          ['*'] = 'win32yank.exe -i --crlf',
     },
     paste = {
-      ['+'] = 'win32yank.exe -o --lf',
-      ['*'] = 'win32yank.exe -o --lf',
+          ['+'] = 'win32yank.exe -o --lf',
+          ['*'] = 'win32yank.exe -o --lf',
     },
     cache_enabled = 0,
   }
@@ -115,9 +123,8 @@ else
       sync_registers = false,
     },
     resize = {
-        -- enables default keybindings (A-hjkl) for normal mode
-        enable_default_keybindings = false,
+      -- enables default keybindings (A-hjkl) for normal mode
+      enable_default_keybindings = false,
     }
   })
 end
-
