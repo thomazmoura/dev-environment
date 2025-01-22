@@ -23,8 +23,9 @@ Plug 'folke/which-key.nvim'
 Plug 'mbbill/undotree'
 Plug 'folke/trouble.nvim'
 Plug 'arthurxavierx/vim-caser'
-" I'm disabling copilot for the time being
+" I'm currently trying the lua version of copilot
 " Plug 'github/copilot.vim'
+Plug 'zbirenbaum/copilot.lua'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
@@ -95,11 +96,6 @@ Plug 'nvim-neotest/nvim-nio'
 
 " Deps
 Plug 'stevearc/dressing.nvim'
-
-" Optional deps
-Plug 'nvim-tree/nvim-web-devicons' "or Plug 'echasnovski/mini.icons'
-Plug 'HakonHarnes/img-clip.nvim'
-Plug 'zbirenbaum/copilot.lua'
 
 " Yay, pass source=true if you want to build from source
 Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
