@@ -41,6 +41,20 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   --copilot
   require('copilot').setup({
     copilot_node_command = os.getenv('HOME') .. '/.nvs/copilot-node',
+    suggestion = {
+        enabled = true,
+        auto_trigger = true,
+        hide_during_completion = true,
+        debounce = 150,
+        keymap = {
+          accept = "<End>",
+          accept_word = false,
+          accept_line = false,
+          next = "<M-.>",
+          prev = "<M-,>",
+          dismiss = "<C-]>",
+        },
+      },
   })
 
   -- nvim-tree setup

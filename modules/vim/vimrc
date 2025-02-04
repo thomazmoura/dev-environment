@@ -130,6 +130,7 @@ syntax enable
   highlight LineNrBelow guifg=#777777
   highlight Comment guifg=#819c98
   highlight DiagnosticUnnecessary guifg=#818181
+  highlight CopilotSuggestion guifg=#989898
   highlight JsonCommentError guifg=#819c98
   set fillchars+=vert:│
   highlight VertSplit guibg=none guifg=#414868
