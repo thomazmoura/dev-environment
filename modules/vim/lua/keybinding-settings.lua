@@ -1,6 +1,9 @@
 local default_global_options = { noremap = true, silent = true };
 local default_buffer_options = { noremap = true, silent = true, buffer = true };
 
+--Simple ones
+vim.keymap.set('n', '<leader>q', '<cmd>q<cr>', default_global_options)
+
 -- Vim dadbod keys
 vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', default_global_options)
 vim.keymap.set('n', '<leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', default_global_options)
