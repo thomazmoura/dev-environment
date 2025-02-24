@@ -47,6 +47,7 @@ require('lualine').setup {
       },
     },
     lualine_y = {
+      'selectioncount',
       dadbod_status,
       'progress',
       'filetype',
