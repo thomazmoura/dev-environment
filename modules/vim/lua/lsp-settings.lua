@@ -319,12 +319,12 @@ lspconfig.html.setup {
 lspconfig.cucumber_language_server.setup {
   settings = {
     cucumber = {
-      features = { "**/*.feature" },
-      glue = { "**/*.cs" },
+      features = { "**/Features/*.feature" },
+      glue = { "**/StepDefinitions/*.cs" },
       parameterTypes = {},
     },
-    features = { "**/*.feature" },
-    glue = { "**/*.cs" },
+    features = { "**/Features/*.feature" },
+    glue = { "**/StepDefinitions/*.cs" },
     parameterTypes = {},
   },
   capabilities = capabilities,
