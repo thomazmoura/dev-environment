@@ -26,6 +26,7 @@ Plug 'arthurxavierx/vim-caser'
 " I'm currently trying the lua version of copilot
 " Plug 'github/copilot.vim'
 Plug 'zbirenbaum/copilot.lua'
+Plug 'CopilotC-Nvim/CopilotChat.nvim'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}

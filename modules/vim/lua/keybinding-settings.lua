@@ -1,8 +1,25 @@
 local default_global_options = { noremap = true, silent = true };
 local default_buffer_options = { noremap = true, silent = true, buffer = true };
 
---Simple ones
+-- Simple ones
 vim.keymap.set('n', '<leader>q', '<cmd>q<cr>', default_global_options)
+
+-- QuickList
+local quick_list_open = false;
+local function toggleQuickList()
+  if quick_list_open then
+    vim.cmd('cclose')
+  else
+    vim.cmd('copen')
+  end
+  quick_list_open = not quick_list_open
+end
+vim.keymap.set(
+  "n",
+  "<Leader>Q",
+  toggleQuickList,
+  { desc = "Toggle quickfix list" }
+)
 
 -- Vim dadbod keys
 vim.keymap.set('n', '<leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', default_global_options)

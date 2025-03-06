@@ -18,44 +18,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('keybinding-settings')
   require('scrolling-settings')
   require('hop-settings')
-
-  -- avante
-  require('avante_lib').load()
-  require('avante').setup({
-    behaviour = {
-      auto_suggestions = false,
-    },
-    file_selector = {
-      provider = 'telescope'
-    },
-    windows = {
-      width = 50
-    }
-  })
-  require("markview").setup({
-    filetypes = { "Avante" },
-    buf_ignore = {},
-    max_length = 99999,
-  })
-
-  --copilot
-  require('copilot').setup({
-    copilot_node_command = os.getenv('HOME') .. '/.nvs/copilot-node',
-    suggestion = {
-        enabled = true,
-        auto_trigger = true,
-        hide_during_completion = true,
-        debounce = 150,
-        keymap = {
-          accept = "<End>",
-          accept_word = false,
-          accept_line = false,
-          next = "<M-.>",
-          prev = "<M-,>",
-          dismiss = "<C-]>",
-        },
-      },
-  })
+  require('ai-settings')
 
   -- nvim-tree setup
   require 'nvim-tree'.setup {
