@@ -16,6 +16,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('debug-settings')
   require('noice-settings')
   require('keybinding-settings')
+  require('commands-settings')
   require('scrolling-settings')
   require('hop-settings')
   require('ai-settings')
@@ -77,6 +78,8 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   vim.o.timeout = true
   vim.o.timeoutlen = 1000
   require("which-key").setup()
+else
+  require('commands-settings')
 end
 
 -- Clipboard integration
