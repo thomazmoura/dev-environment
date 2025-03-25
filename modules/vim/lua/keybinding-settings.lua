@@ -38,7 +38,7 @@ vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>', default_global_options)
 
 
 -- Copilot Chat shortcuts
-vim.keymap.set({'n','v'}, '<leader>ac', '<cmd>CopilotChat<cr>', default_global_options)
+vim.keymap.set({'n','v'}, '<leader>ac', '<cmd>CopilotChatToggle<cr>', default_global_options)
 
 
 -- Function to indent all @if and @else blocks that were added to Angular 17,
