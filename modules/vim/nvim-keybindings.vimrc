@@ -125,9 +125,3 @@ nnoremap <leader>mU @=":b#\<lt>CR>ggdap:b#\<lt>CR>Gp:g/^$/d\<lt>CR>:g/^using/nor
 nnoremap <leader>mt ^Wyiwciwasync Task<0>f(%iCancellationToken cancellationToken
 nnoremap <leader>mT ^Wyiwciwasync Task<0>f(%i, CancellationToken cancellationToken
 
-
-" Copilot
-if exists(':Copilot')
-  imap <silent><script><expr> <End> copilot#Accept("\<CR>")
-endif
-
