@@ -31,11 +31,13 @@ vim.keymap.set('v', 'S', ':s/\\%V', default_global_options)
 -- Fix highlight when reloading the file (after external git checkout to another branch)
 vim.keymap.set('n', '<leader>F', '<cmd>w<cr><cmd>e!<cr>', default_global_options)
 
+-- Quality of life improvements
+vim.keymap.set('n', '<leader>N', '<cmd>enew<cr><cmd>set filetype=markdown<cr>', default_global_options)
+
 -- Git utilities shortcuts
 vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>', default_global_options)
 vim.keymap.set('n', '<leader>Gm', '<cmd>Gvdiffsplit!<cr><C-w>J', default_global_options)
 vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>', default_global_options)
-
 
 -- Copilot Chat shortcuts
 vim.keymap.set({'n','v'}, '<leader>ac', '<cmd>CopilotChatToggle<cr>', default_global_options)

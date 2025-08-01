@@ -1,0 +1,19 @@
+{
+	"Multiline Documentation Summary": {
+		"prefix": "claude",
+		"body": [
+			"You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
+      "**Context:**",
+			"${3:Background}",
+      "**Requirements:**",
+      "- ${4:Requirement 1}",
+      "**Expected actions**:",
+      "1. ${5:Action 1}",
+      "2. ${6:Next action}",
+      "3. ${7:Final deliverance}",
+      "**Additional guidance:**",
+      "- ${8:Edge cases}"
+		],
+		"description": "Creates a new prompt based on a predifined template"
+	}
+}

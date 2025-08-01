@@ -24,6 +24,13 @@
           "sql"
         ],
         "path": "./sql.json"
+      },
+      {
+        "language": [
+          "markdown",
+          "md"
+        ],
+        "path": "./markdown.json"
       }
     ]
   }
