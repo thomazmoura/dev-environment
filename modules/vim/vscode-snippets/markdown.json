@@ -1,6 +1,6 @@
 {
 	"Multiline Documentation Summary": {
-		"prefix": "claude",
+		"prefix": "prompt",
 		"body": [
 			"You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
       "**Context:**",
