@@ -422,16 +422,150 @@ function Start-Yarn() {
   &yarn start
 }
 
-function ConvertTo-Base64([string]$Text) {
-  $Bytes = [System.Text.Encoding]::Unicode.GetBytes($Text)
-  $EncodedText = [Convert]::ToBase64String($Bytes)
-  $EncodedText
+function ConvertFrom-Base64 {
+    <#
+    .SYNOPSIS
+        Converts a base64 encoded string back to its original format.
+    
+    .DESCRIPTION
+        This function takes a base64 encoded string and decodes it back to the original data.
+        It can return the result as a string (UTF-8 decoded) or as raw bytes.
+    
+    .PARAMETER Base64String
+        The base64 encoded string to decode.
+    
+    .PARAMETER AsBytes
+        Switch parameter. If specified, returns the decoded data as a byte array.
+        If not specified, returns the decoded data as a UTF-8 string.
+    
+    .EXAMPLE
+        ConvertFrom-Base64String -Base64String "SGVsbG8gV29ybGQ="
+        Returns: "Hello World"
+    
+    .EXAMPLE
+        ConvertFrom-Base64String -Base64String "SGVsbG8gV29ybGQ=" -AsBytes
+        Returns: [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+    
+    .EXAMPLE
+        "VGhpcyBpcyBhIHRlc3Q=" | ConvertFrom-Base64String
+        Returns: "This is a test"
+    #>
+    
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Base64String,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$AsBytes
+    )
+    
+    process {
+        try {
+            # Remove any whitespace or line breaks that might be in the base64 string
+            $cleanBase64 = $Base64String.Trim() -replace '\s+', ''
+            
+            # Convert from base64 to byte array
+            $decodedBytes = [System.Convert]::FromBase64String($cleanBase64)
+            
+            if ($AsBytes) {
+                # Return as byte array
+                return $decodedBytes
+            } else {
+                # Convert bytes to UTF-8 string
+                $decodedString = [System.Text.Encoding]::UTF8.GetString($decodedBytes)
+                return $decodedString
+            }
+        }
+        catch [System.FormatException] {
+            Write-Error "Invalid base64 string format: $Base64String"
+            return $null
+        }
+        catch {
+            Write-Error "Error decoding base64 string: $($_.Exception.Message)"
+            return $null
+        }
+    }
 }
 
-function ConvertFrom-Base64([string]$Text) {
-  $Bytes = [System.Convert]::FromBase64String($Text);
-  $DecodedText = ([System.Text.Encoding]::Unicode.GetString($Bytes))
-  $DecodedText
+function ConvertTo-Base64 {
+    <#
+    .SYNOPSIS
+        Converts a string or byte array to a base64 encoded string.
+    
+    .DESCRIPTION
+        This function takes a plain text string or byte array and encodes it as a base64 string.
+        Supports different text encodings for string input.
+    
+    .PARAMETER InputString
+        The plain text string to encode to base64.
+    
+    .PARAMETER InputBytes
+        The byte array to encode to base64.
+    
+    .PARAMETER Encoding
+        The text encoding to use when converting string to bytes.
+        Valid values: UTF8 (default), ASCII, Unicode, UTF32, UTF7
+    
+    .EXAMPLE
+        ConvertTo-Base64String -InputString "Hello World"
+        Returns: "SGVsbG8gV29ybGQ="
+    
+    .EXAMPLE
+        ConvertTo-Base64String -InputString "This is a test" -Encoding ASCII
+        Returns: "VGhpcyBpcyBhIHRlc3Q="
+    
+    .EXAMPLE
+        "Hello World" | ConvertTo-Base64String
+        Returns: "SGVsbG8gV29ybGQ="
+    
+    .EXAMPLE
+        $bytes = [byte[]]@(72, 101, 108, 108, 111)
+        ConvertTo-Base64String -InputBytes $bytes
+        Returns: "SGVsbG8="
+    #>
+    
+    [CmdletBinding(DefaultParameterSetName = 'String')]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0, ParameterSetName = 'String')]
+        [AllowEmptyString()]
+        [string]$InputString,
+        
+        [Parameter(Mandatory = $true, ParameterSetName = 'Bytes')]
+        [byte[]]$InputBytes,
+        
+        [Parameter(Mandatory = $false, ParameterSetName = 'String')]
+        [ValidateSet('UTF8', 'ASCII', 'Unicode', 'UTF32', 'UTF7')]
+        [string]$Encoding = 'UTF8'
+    )
+    
+    process {
+        try {
+            if ($PSCmdlet.ParameterSetName -eq 'String') {
+                # Convert string to bytes using specified encoding
+                switch ($Encoding) {
+                    'UTF8' { $bytes = [System.Text.Encoding]::UTF8.GetBytes($InputString) }
+                    'ASCII' { $bytes = [System.Text.Encoding]::ASCII.GetBytes($InputString) }
+                    'Unicode' { $bytes = [System.Text.Encoding]::Unicode.GetBytes($InputString) }
+                    'UTF32' { $bytes = [System.Text.Encoding]::UTF32.GetBytes($InputString) }
+                    'UTF7' { $bytes = [System.Text.Encoding]::UTF7.GetBytes($InputString) }
+                    default { $bytes = [System.Text.Encoding]::UTF8.GetBytes($InputString) }
+                }
+            } else {
+                # Use provided byte array
+                $bytes = $InputBytes
+            }
+            
+            # Convert bytes to base64 string
+            $base64String = [System.Convert]::ToBase64String($bytes)
+            return $base64String
+        }
+        catch {
+            Write-Error "Error encoding to base64: $($_.Exception.Message)"
+            return $null
+        }
+    }
 }
 
 function GitList-ModifiedFiles() {
