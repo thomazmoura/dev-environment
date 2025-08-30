@@ -1,6 +1,30 @@
 {
-	"Multiline Documentation Summary": {
+	"Claude Code tailored prompt": {
 		"prefix": "prompt",
+		"body": [
+			"You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
+      "<context>",
+      "**Context:**",
+			"${3:Background}",
+			"</context>",
+			"<requirements>",
+      "**Requirements:**",
+      "- You must follow the instructions on <completion-criteria>",
+      "- Consider the <development-guidelines> when writing code",
+      "- Follow the <unit-tests-guidelines> when writing the tests",
+      "- Follow the <database-guidelines> to create/update the entities",
+      "- Follow the <frontend-guidelines> when updating the frontend",
+      "- ${4:Requirement 1}",
+			"</requirements>",
+			"<expected-actions>",
+      "**Expected actions**:",
+      "1. ${5:Action 1}",
+			"</expected-actions>"
+		],
+		"description": "Creates a new prompt based on a predifined template tailored to Claude Code"
+	},
+	"Classic Detailed Prompt": {
+		"prefix": "cprompt",
 		"body": [
 			"You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
       "**Context:**",
