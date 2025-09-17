@@ -141,6 +141,26 @@ function Get-OctalFilePermissions() {
   stat -c '%a | %n' *
 }
 
+function Copy-WindowsPrints([int]$Quantity = 1, [string]$OriginPath = $null, [string]$DestinationPath = $null) {
+  if(!($OriginPath) -and $env:WINDOWS_PRINTS_PATH) {
+    $OriginPath = $env:WINDOWS_PRINTS_PATH
+  }
+  if(!($DestinationPath) -and $env:PRINTS_RELATIVE_PATH) {
+    $DestinationPath = $env:PRINTS_RELATIVE_PATH
+  }
+  if(!($OriginPath) -or !($DestinationPath)) {
+    Write-Error "Both OriginPath and DestinationPath environment variables must be set."
+  }
+  $PrintsToBeCopied = Get-ChildItem $OriginPath |
+    Sort-Object CreationTime -Descending |
+    Select-Object -First $Quantity |
+    ForEach-Object {
+      Copy-Item -Path $_.FullName -Destination $DestinationPath -Force
+      return "$DestinationPath/$($_.Name)"
+    }
+  return [string]::Join(", ", $PrintsToBeCopied)
+}
+
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if((cat /etc/issue) -match 'ubuntu') { 
 	New-Alias -Force bat batcat
