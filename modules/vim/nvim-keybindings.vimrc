@@ -7,6 +7,9 @@ nnoremap <silent> <esc> :noh<CR>:Noice dismiss<CR>
 " Save on Leader Leader
 nnoremap <silent> <Leader><Leader> :w<CR>
 
+" Send the current file to the clipboard
+nnoremap <silent> <Leader>% :let @+=@%<CR>
+
 " Swap selection with deleted contents
 vnoremap gs p2g;P
 
