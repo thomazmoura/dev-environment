@@ -156,7 +156,7 @@ function Copy-WindowsPrints([int]$Quantity = 1, [string]$OriginPath = $null, [st
     Select-Object -First $Quantity |
     ForEach-Object {
       Copy-Item -Path $_.FullName -Destination $DestinationPath -Force
-      return "$DestinationPath/$($_.Name)"
+      return "'$DestinationPath/$($_.Name)'"
     }
   return [string]::Join(", ", $PrintsToBeCopied)
 }
