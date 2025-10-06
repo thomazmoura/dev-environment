@@ -1,0 +1,14 @@
+{
+  "name": "Ubuntu + Claude/Codex",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "claude --version && codex --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-dev"
+      ]
+    }
+  }
+}

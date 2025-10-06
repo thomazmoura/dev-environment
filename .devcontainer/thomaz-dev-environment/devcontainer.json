@@ -1,0 +1,15 @@
+{
+  "name": "thomaz/dev-environment + Claude/Codex",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "developer",
+  "postCreateCommand": "claude --version && codex --version",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-dev"
+      ]
+    }
+  }
+}

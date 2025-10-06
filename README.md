@@ -5,6 +5,7 @@ Dev Environment for developing with NeoVim. From inside the container itself.
 - [Overview](#overview)
 - [Showcase](#showcase)
 - [Goals](#goals)
+- [Dev Containers](#dev-containers)
 - [Current Stack and Tools](#current-stack-and-tools)
   - [Main Container](#main-container)
   - [Secondary Container (QMK)](#secondary-container-qmk)
@@ -32,6 +33,17 @@ My main intentions with this repo are:
   * Reduce the need of locally installing (or running) things as admin/root (the idea is that any root related settings will be done during build and the containers will run as non-privileged users);
   * Be a central reference to anyone who would like to check a particular tool or setting I use (basically a dotfile repo that you can run);
   * Have a working pipeline where I can update my settings and have them reproduced anywhere I might use them (possibly with automated tests like Software Composition Analysis);
+
+## Dev Containers
+
+Two Visual Studio Code / GitHub Codespaces dev container definitions live under `.devcontainer/`.
+
+- `ubuntu-claude-codex`: Ubuntu 24.04 base image with Node.js 20.x and the `claude`/`codex` CLIs (`@anthropic-ai/claude-code` and `@openai/codex`) pre-installed.
+- `thomaz-dev-environment`: Extends `thomazmoura/dev-environment` and layers the same Claude Code and Codex CLI setup on top of the original tooling.
+
+Both variants add the `anthropic.claude-dev` VS Code extension and run `claude --version && codex --version` after the container is created so the tools are ready to use. Remember to provide the required API keys (for example `CLAUDE_API_KEY` and `OPENAI_API_KEY`) through environment variables or Codespaces secrets before invoking the CLIs.
+
+When creating a Codespace or reopening the folder in a local Dev Container, pick the configuration that best fits the workflow you need.
 
 ## Current Stack and Tools
 
