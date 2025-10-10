@@ -1,13 +1,38 @@
 {
-  "Prompt pro Claude Code": {
-    "prefix": "ptprompt",
+  "Prompt pro Copilot": {
+    "prefix": "prompt-at",
     "body": [
-      "Você é um assistente especialista em ${2:FUNÇÃO}. Sua tarefa é ${3:OBJETIVO}.",
+      "Você é um assistente especialista em ${2:FUNÇÃO}. Seu objetivo é ${3:OBJETIVO}.",
+      "<instructions>Crie um plano de ação detalhado para atingir o objetivo, incluindo etapas específicas e considerações importantes.</instructions>",
       "<context>",
       "${4:Contexto}",
       "</context>",
       "<requirements>",
-      "- ${5:Requisito 1}",
+      "- Siga as <development-guidelines> em #file:${1:Projeto}.Dominio/AGENTS.md antes de escrever código",
+      "- Siga as <unit-tests-guidelines> em #file:${1:Projeto}.Testes/AGENTS.md ao escrever os testes",
+      "- Siga as <database-guidelines> em #file:${1:Projeto}.Dominio/Dados/AGENTS.md para criar/atualizar as entidades",
+      "- Siga as <frontend-guidelines> em #file:${1:Projeto}.Angular/AGENTS.md ao atualizar o frontend",
+      "- Siga as <backend-for-frontend-guidelines> em #file:${1:Projeto}.APIInterface/AGENTS.md ao atualizar a API backend para Angular (#file:${1:Projeto}.APIInterface)",
+      "- Siga as <email-guidelines> em #file:${1:Projeto}.API/AGENTS.md ao criar templates de email",
+      "- Siga as <documentation-sync-instructions> em #file:${1:Projeto}.Documentacao/AGENTS.md antes de atualizar arquivos AGENTS.md ou README.md",
+      "- Siga as <windows-service-guidelines> em #file:${1:Projeto}.WinService/AGENTS.md ao desenvolver ou atualizar Tarefas",
+      "</requirements>",
+      "<completion-criteria>",
+      "- ${5:Critérios de conclusão}",
+      "- Todos os testes devem passar conforme instruído em <completion-condition> em #file:AGENTS.md",
+      "</completion-criteria>"
+    ],
+    "description": "Cria um novo prompt baseado em um template predefinido adaptado para Claude Code"
+  },
+  "Prompt pro Claude Code": {
+    "prefix": "prompt-at-cc",
+    "body": [
+      "Você é um assistente especialista em ${2:FUNÇÃO}. Seu objetivo é ${3:OBJETIVO}.",
+      "<instructions>Crie um plano de ação detalhado para atingir o objetivo, incluindo etapas específicas e considerações importantes.</instructions>",
+      "<context>",
+      "${4:Contexto}",
+      "</context>",
+      "<requirements>",
       "- Siga as <development-guidelines> em @${1:Projeto}.Dominio/AGENTS.md antes de escrever código",
       "- Siga as <unit-tests-guidelines> em @${1:Projeto}.Testes/AGENTS.md ao escrever os testes",
       "- Siga as <database-guidelines> em @${1:Projeto}.Dominio/Dados/AGENTS.md para criar/atualizar as entidades",
@@ -17,12 +42,9 @@
       "- Siga as <documentation-sync-instructions> em @${1:Projeto}.Documentacao/AGENTS.md antes de atualizar arquivos AGENTS.md ou README.md",
       "- Siga as <windows-service-guidelines> em @${1:Projeto}.WinService/AGENTS.md ao desenvolver ou atualizar Tarefas",
       "</requirements>",
-      "<expected-actions>",
-      "1. ${6:Ação 1}",
-      "</expected-actions>",
       "<completion-criteria>",
-      "- ${6:Critérios de conclusão}",
-      "- Todos os testes devem passar conforme instruído em <completion-condition>",
+      "- ${5:Critérios de conclusão}",
+      "- Todos os testes devem passar conforme instruído em <completion-condition> em @AGENTS.md",
       "</completion-criteria>"
     ],
     "description": "Cria um novo prompt baseado em um template predefinido adaptado para Claude Code"
@@ -31,11 +53,11 @@
     "prefix": "prompt",
     "body": [
       "You are an expert ${2:ROLE} assistant. Your task it to ${3:OBJECTIVE}.",
+      "<instructions> Make a detailed action plan to achieve the objective, including specific steps and important considerations.</instructions>",
       "<context>",
       "${4:Background}",
       "</context>",
       "<requirements>",
-      "- ${5:Requirement 1}",
       "- Follow the <development-guidelines> on @${1:Projeto}.Dominio/AGENTS.md before writing code",
       "- Follow the <unit-tests-guidelines> on @${1:Projeto}.Testes/AGENTS.md when writing the tests",
       "- Follow the <database-guidelines> on @${1:Projeto}.Dominio/Dados/AGENTS.md to create/update the entities",
@@ -46,100 +68,12 @@
       "- Follow the <windows-service-guidelines> on @${1:Projeto}.WinService/AGENTS.md when developing or updating Tarefas",
       "</requirements>",
       "<expected-actions>",
-      "1. ${6:Action 1}",
       "</expected-actions>",
       "<completion-criteria>",
-      "- ${6:Completion criteria}",
+      "- ${5:Completion criteria}",
       "- All tests must pass as instructed on <completion-condition>",
       "</completion-criteria>"
     ],
     "description": "Creates a new prompt based on a predifined template tailored to Claude Code"
-  },
-  "Claude Code tailored prompt v4": {
-    "prefix": "promptv4",
-    "body": [
-      "You are an expert ${2:ROLE} assistant. Your task it to ${3:OBJECTIVE}.",
-      "<context>",
-      "${4:Background}",
-      "</context>",
-      "<requirements>",
-      "- ${5:Requirement 1}",
-      "- You must follow the instructions on <completion-condition>",
-      "- Consider the <development-guidelines> on @${1:Projeto}.Dominio/CLAUDE.md before writing code",
-      "- Follow the <unit-tests-guidelines> on @${1:Projeto}.Testes/CLAUDE.md when writing the tests",
-      "- Follow the <database-guidelines> on @${1:Projeto}.Dominio/Dados/CLAUDE.md to create/update the entities",
-      "- Follow the <frontend-guidelines> on @${1:Projeto}.Angular/CLAUDE.md when updating the frontend",
-      "- Follow the <email-guidelines> on @${1:Projeto}.API/CLAUDE.md when creating email templates",
-      "- Follow the <documentation-sync-instructions> on @${1:Projeto}.Documentacao/CLAUDE.md before updating CLAUDE.md or README.md files",
-      "</requirements>",
-      "<expected-actions>",
-      "1. ${6:Action 1}",
-      "</expected-actions>"
-    ],
-    "description": "Creates a new prompt based on a predifined template tailored to Claude Code"
-  },
-  "Claude Code tailored prompt v3": {
-    "prefix": "promptv3",
-    "body": [
-      "You are an expert ${2:ROLE} assistant. Your task it to ${3:OBJECTIVE}.",
-      "<context>",
-      "${4:Background}",
-      "</context>",
-      "<requirements>",
-      "- ${5:Requirement 1}",
-      "- You must follow the instructions on <completion-condition>",
-      "- Read the ${1:Projeto}.Dominio/CLAUDE.md and consider the <development-guidelines> before writing code",
-      "- Read the ${1:Projeto}.Testes/CLAUDE.md and follow the <unit-tests-guidelines> when writing the tests",
-      "- Read the ${1:Projeto}.Dominio/Dados/CLAUDE.md and follow the <database-guidelines> to create/update the entities",
-      "- Read the ${1:Projeto}.Angular/CLAUDE.md and follow the <frontend-guidelines> when updating the frontend",
-      "- Read the ${1:Projeto}.API/CLAUDE.md and follow the <email-guidelines> when creating email templates",
-      "- Read the ${1:Projeto}.Documentacao/CLAUDE.md and follow the <documentation-sync-instructions> before updating CLAUDE.md or README.md files",
-      "</requirements>",
-      "<expected-actions>",
-      "1. ${6:Action 1}",
-      "</expected-actions>"
-    ],
-    "description": "Creates a new prompt based on a predifined template tailored to Claude Code"
-  },
-  "Agent driven prompt v2": {
-    "prefix": "promptv2",
-    "body": [
-      "You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
-      "<context>",
-      "**Context:**",
-      "${3:Background}",
-      "</context>",
-      "<requirements>",
-      "**Requirements:**",
-      "- You must follow the instructions on <completion-criteria>",
-      "- Consider the <development-guidelines> when writing code",
-      "- Follow the <unit-tests-guidelines> when writing the tests",
-      "- Follow the <database-guidelines> to create/update the entities",
-      "- Follow the <frontend-guidelines> when updating the frontend",
-      "- ${4:Requirement 1}",
-      "</requirements>",
-      "<expected-actions>",
-      "**Expected actions**:",
-      "1. ${5:Action 1}",
-      "</expected-actions>"
-    ],
-    "description": "Creates a new prompt based on a predifined template tailored to Claude Code"
-  },
-  "Agent driven prompt": {
-    "prefix": "promptv1",
-    "body": [
-      "You are an expert ${1:ROLE} assistant. Your task it to ${2:OBJECTIVE}.",
-      "**Context:**",
-      "${3:Background}",
-      "**Requirements:**",
-      "- ${4:Requirement 1}",
-      "**Expected actions**:",
-      "1. ${5:Action 1}",
-      "2. ${6:Next action}",
-      "3. ${7:Final deliverance}",
-      "**Additional guidance:**",
-      "- ${8:Edge cases}"
-    ],
-    "description": "Creates a new prompt based on a predifined template"
   }
 }
