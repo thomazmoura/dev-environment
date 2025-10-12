@@ -1,0 +1,158 @@
+;; ------------------------------------------------------------
+;; KMonad config for Windows — port of your Anne Pro 2 QMK map
+;; - Ignores combos, AP2 LEDs/BT, and the mouse layer
+;; - Keeps layers, mod-taps, layer-taps, media/macros
+;; - Uses Win+Up/Down for maximize/minimize
+;; - Adapted for Logitech K380 (75% with F-row)
+;; ------------------------------------------------------------
+
+(defcfg
+  ;; Windows backend
+  input  (low-level-hook)
+  output (send-event-sink)
+  fallthrough true
+  allow-cmd false
+)
+
+;; ---------- Source (physical layout) ----------
+;; Logitech K380 layout (75% with F-row)
+(defsrc
+  esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12        del
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft      up
+  lctl lmet lalt           spc            ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- Per-key tap-hold timings (ms) ----------
+;; Mirrors your QMK get_tapping_term()
+(defalias
+  ;; home-row mods (left)
+  a_ctl  (tap-hold-next-release 200 a   lctl)
+  s_sft  (tap-hold-next-release 175 s   lsft)
+  d_gui  (tap-hold-next-release 200 d   lmet)  ;; Win == GUI
+  f_alt  (tap-hold-next-release 200 f   lalt)
+
+  ;; home-row mods (right)
+  j_alt  (tap-hold-next-release 200 j   lalt)
+  k_gui  (tap-hold-next-release 200 k   lmet)
+  l_sft  (tap-hold-next-release 175 l   rsft)
+  sc_ctl (tap-hold-next-release 175 ;   rctl)
+
+  ;; layer-taps on letters (while-held = momentary layer)
+  ;; NUMPAD on W/O uses 200ms, SYMBOLS on E/I uses 200ms
+  ltW-num (tap-hold-next-release 200 w (layer-toggle numpad))
+  ltE-sym (tap-hold-next-release 200 e (layer-toggle symbols))
+  ltI-sym (tap-hold-next-release 200 i (layer-toggle symbols))
+  ltO-num (tap-hold-next-release 200 o (layer-toggle numpad))
+
+  ;; function-keys layer on Z (225ms), brackets on X (200ms)
+  ltZ-fk  (tap-hold-next-release 225 z (layer-toggle fkeys))
+  ltX-br  (tap-hold-next-release 200 x (layer-toggle brackets))
+
+  ;; slash -> function-keys layer
+  ltSL-fk (tap-hold-next-release 200 / (layer-toggle fkeys))
+
+  ;; Caps -> Function layer (QMK uses LT(_FUNCTION_LAYER, KC_ESC))
+  ;; Note: K380 has ESC on F-row, so we use caps position
+  ltCAP-fn (tap-hold-next-release 225 esc (layer-toggle function))
+
+  ;; Space -> Correction layer (150ms)
+  ltSPC-cor (tap-hold-next-release 150 spc (layer-toggle correction))
+
+  ;; App/Menu tap, hold = LAlt (LALT_T(KC_APP))
+  app_alt (tap-hold-next-release 200 cmp lalt)
+
+  ;; Bottom-row arrow cluster mod-taps
+  up_sft   (tap-hold-next-release 175 up   rsft)
+  left_gui (tap-hold-next-release 200 left rmet)
+  down_fn  (tap-hold-next-release 225 down (layer-toggle function))
+  rght_ctl (tap-hold-next-release 175 rght rctl)
+
+  ;; Window management chords (maximize/minimize via Win+Up/Down)
+  maximize (around lmet up)      ;; hold Win while tapping Up
+  minimize (around lmet down)    ;; hold Win while tapping Down
+)
+
+;; ---------- Base layer ----------
+(deflayer base
+  esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12        del
+  grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    @ltW-num @ltE-sym r    t    y    u    @ltI-sym @ltO-num p    [    ]    \
+  @ltCAP-fn @a_ctl  @s_sft  @d_gui  @f_alt  g    h    @j_alt  @k_gui  @l_sft  @sc_ctl '    ret
+  lsft @ltZ-fk @ltX-br c    v    b    n    m    ,    .    @ltSL-fk rsft      @up_sft
+  lctl lmet  lalt            @ltSPC-cor       @app_alt @left_gui @down_fn @rght_ctl left down rght
+)
+
+;; ---------- FUNCTION layer (held via CAPS or DOWN) ----------
+(deflayer function
+  _    _    _    _    _    _    _    _    _    _    _    _    _          _
+  caps f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  del
+  prnt _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    ret
+  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- NUMPAD layer (held via W or O) ----------
+(deflayer numpad
+  _    _    _    _    _    _    _    _    _    _    _    _    _          _
+  _    _    _    _    _    _    _    _    kp*  _    kp/  kp-  kp+  _
+  _    1    _    up   4    5    6    7    8    9    ,    _    _    _
+  _    3    left down rght _    0    4    5    6    ;    .    ret
+  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- SYMBOLS layer (held via E or I) ----------
+(deflayer symbols
+  _    _    _    _    _    _    _    _    _    _    _    _    _          _
+  _    _    _    _    _    _    _    _    _    _    _    -    =    _
+  _    S-1  _    S-3  S-4  S-5  S-6  S-7  S-8  S-9  S-0  -    =    _
+  _    grv  _    grv  _    S-4  S-5  S-6  S--  =    _    _    ret
+  lsft _    _    _    _    _    _    _    _    _    \    rsft      up
+  lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- BRACKETS layer (held via X) ----------
+(deflayer brackets
+  _    _    _    _    _    _    _    _    _    _    _    _    _          _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    S-9  S-0  _    _    _    _
+  _    _    _    _    _    [    S-[  S-]  ]    _    _    _    ret
+  lsft _    _    _    _    _    _    _    S-,  S-.  _    rsft      up
+  lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- FUNCTION KEYS layer (held via Z or /) ----------
+(deflayer fkeys
+  _    _    _    _    _    _    _    _    _    _    _    _    _          del
+  caps f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    ret
+  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
+)
+
+;; ---------- CORRECTION layer (held via Space) ----------
+(deflayer correction
+  _    _    _    _    _    _    _    _    _    _    _    _    _          pause
+  _    _    _    _    _    _    _    _    _    _    _    _    _    ins
+  _    _    _    _    _    _    bspc _    del  _    _    _    _    _
+  0    _    _    _    _    _    _    _    _    _    _    _    ret
+  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lctl lmet lalt            _                  ralt (layer-toggle numpad) cmp  rctl left down rght
+)
+
+;; ---------- MEDIA + NAV layer ----------
+;; Note: In QMK this is accessed via space hold in Function layer
+;; In kmonad, we can access it similarly or make it a separate toggle
+(deflayer media
+  _    _    _    _    _    _    _    _    _    _    _    _    _          pause
+  _    _    _    up   _    _    mute prev pp   next _    _    _    _
+  _    _    left down rght home pgdn pgup end  _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lctl lmet lalt            spc                ralt rmet @minimize @maximize left down rght
+)
