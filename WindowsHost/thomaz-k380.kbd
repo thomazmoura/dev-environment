@@ -101,7 +101,7 @@
   _    _    _    _    _    _    _    _    kp*  _    kp/  kp-  kp+  _
   _    1    _    up   4    5    6    7    8    9    ,    _    _    _
   _    3    left down rght _    0    4    5    6    ;    .    ret
-  lsft _    _    _    _    _    _    _    _    _    _    rsft      up
+  lsft _    _    _    _    _    _    1    2    3    _    rsft      up
   lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
 )
 
@@ -109,9 +109,9 @@
 (deflayer symbols
   _    _    _    _    _    _    _    _    _    _    _    _    _          _
   _    _    _    _    _    _    _    _    _    _    _    -    =    _
-  _    S-1  _    S-3  S-4  S-5  S-6  S-7  S-8  S-9  S-0  -    =    _
-  _    grv  _    grv  _    S-4  S-5  S-6  S--  =    _    _    ret
-  lsft _    _    _    _    _    _    _    _    _    \    rsft      up
+  _    S-1  _    S-3  S-4  S-5  S-6  S-7  S-8  S-9  S-0  -    =   _
+  _    grv  _    grv  _    _    _    S-4  S-5  S-6  S--  S-=    ret
+  lsft _    _    _    _    _    _    S-1  S-2  S-3  \    rsft      up
   lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
 )
 
@@ -120,7 +120,7 @@
   _    _    _    _    _    _    _    _    _    _    _    _    _          _
   _    _    _    _    _    _    _    _    _    _    _    _    _    _
   _    _    _    _    _    _    _    _    S-9  S-0  _    _    _    _
-  _    _    _    _    _    [    S-[  S-]  ]    _    _    _    ret
+  _    _    _    _    _    _    _    [    S-[  S-]  ]    _    ret
   lsft _    _    _    _    _    _    _    S-,  S-.  _    rsft      up
   lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
 )
@@ -139,8 +139,8 @@
 (deflayer correction
   _    _    _    _    _    _    _    _    _    _    _    _    _          pause
   _    _    _    _    _    _    _    _    _    _    _    _    _    ins
-  _    _    _    _    _    _    bspc _    del  _    _    _    _    _
-  0    _    _    _    _    _    _    _    _    _    _    _    ret
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    bspc _    del  _    _    _    ret
   lsft _    _    _    _    _    _    _    _    _    _    rsft      up
   lctl lmet lalt            _                  ralt (layer-toggle numpad) cmp  rctl left down rght
 )
