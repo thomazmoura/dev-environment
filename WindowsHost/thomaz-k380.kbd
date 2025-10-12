@@ -100,7 +100,7 @@
   _    _    _    _    _    _    _    _    _    _    _    _    _          _
   _    _    _    _    _    _    _    _    kp*  _    kp/  kp-  kp+  _
   _    1    _    up   4    5    6    7    8    9    ,    _    _    _
-  _    3    left down rght _    0    4    5    6    ;    .    ret
+  _    3    left down rght _    0    4    5    6    S-;  .    ret
   lsft _    _    _    _    _    _    1    2    3    _    rsft      up
   lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
 )
@@ -110,7 +110,7 @@
   _    _    _    _    _    _    _    _    _    _    _    _    _          _
   _    _    _    _    _    _    _    _    _    _    _    -    =    _
   _    S-1  _    S-3  S-4  S-5  S-6  S-7  S-8  S-9  S-0  -    =   _
-  _    grv  _    grv  _    _    _    S-4  S-5  S-6  S--  S-=    ret
+  _    grv  _    grv  _    _    _    S-4  S-5  S-6  -    =    ret
   lsft _    _    _    _    _    _    S-1  S-2  S-3  \    rsft      up
   lctl lmet lalt            _                  ralt rmet cmp  rctl left down rght
 )
