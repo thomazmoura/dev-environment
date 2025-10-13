@@ -41,7 +41,8 @@
   sc_ctl (tap-hold-next-release 175 ;   rctl)
 
   ;; layer-taps on letters (while-held = momentary layer)
-  ;; NUMPAD on W/O uses 200ms, SYMBOLS on E/I uses 200ms
+  ;; MEDIA on Q uses 200ms, NUMPAD on W/O uses 200ms, SYMBOLS on E/I uses 200ms
+  ltQ-media (tap-hold-next-release 200 q (layer-toggle media))
   ltW-num (tap-hold-next-release 200 w (layer-toggle numpad))
   ltE-sym (tap-hold-next-release 200 e (layer-toggle symbols))
   ltI-sym (tap-hold-next-release 200 i (layer-toggle symbols))
@@ -79,7 +80,7 @@
 (deflayer base
   esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12        del
   grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
-  tab  q    @ltW-num @ltE-sym r    t    y    u    @ltI-sym @ltO-num p    [    ]    \
+  tab  @ltQ-media @ltW-num @ltE-sym r    t    y    u    @ltI-sym @ltO-num p    [    ]    \
   @ltCAP-fn @a_ctl  @s_sft  @d_gui  @f_alt  g    h    @j_alt  @k_gui  @l_sft  @sc_ctl '    ret
   lsft @ltZ-fk @ltX-br c    v    b    n    m    ,    .    @ltSL-fk rsft      @up_sft
   lctl lmet  lalt            @ltSPC-cor       @app_alt @left_gui @down_fn @rght_ctl left down rght
@@ -145,14 +146,12 @@
   lctl lmet lalt            _                  ralt (layer-toggle numpad) cmp  rctl left down rght
 )
 
-;; ---------- MEDIA + NAV layer ----------
-;; Note: In QMK this is accessed via space hold in Function layer
-;; In kmonad, we can access it similarly or make it a separate toggle
+;; ---------- MEDIA + NAV layer (held via Q) ----------
 (deflayer media
-  _    _    _    _    _    _    _    _    _    _    _    _    _          pause
+  _    _    _    _    _    _    _    _    _    _    _    _    _    pause
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
   _    _    _    up   _    _    mute prev pp   next _    _    _    _
-  _    _    left down rght home pgdn pgup end  _    _    _    _    _
-  _    _    _    _    _    _    _    _    _    _    _    _    _
+  prnt _    left down rght _    home pgdn pgup end  _    _    _
   lsft _    _    _    _    _    _    _    _    _    _    rsft      up
   lctl lmet lalt            spc                ralt rmet @minimize @maximize left down rght
 )
