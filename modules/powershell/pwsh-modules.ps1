@@ -46,6 +46,10 @@ function Import-PoshGit() {
   }
   Write-Verbose "`n->> Importing posh-git"
   Import-Module posh-git -ErrorAction Stop
+  if ($global:GitPromptSettings) {
+    # Keep tmux pane titles untouched by posh-git
+    $global:GitPromptSettings.WindowTitle = $false
+  }
   $stopwatch.Stop(); Write-Verbose "`n-->> Importação do Posh-git demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
@@ -92,4 +96,3 @@ function Start-DevSession() {
     Write-Verbose "Initial dev-environment configuration already set"
   }
 }
-

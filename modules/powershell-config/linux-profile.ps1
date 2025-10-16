@@ -28,14 +28,25 @@ function New-HorizontalTmuxSession ($FirstPaneCommand="psgit", $SecondPaneComman
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1)
 		& tmux new-session `; `
 			rename-session $currentDirectory `; `
+			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			send-keys "$SecondPaneCommand" C-m `; `
 			split-window -v -l 50% `; `
 			select-pane -t 2 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			send-keys "$FirstPaneCommand" C-m `; `
 			select-pane -t 1 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			send-keys nvim C-m
 	}
 	Write-Information "Cancelled by user"
@@ -48,22 +59,39 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 		$currentDirectory = ($pwd.Path.Split("/") | Select -Last 1)
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
+			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			send-keys "cd $FirstFolder" C-m `; `
 			send-keys "$FirstCommand" C-m `; `
 			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			send-keys "cd $FirstFolder" C-m `; `
 			send-keys nvim C-m `; `
 			new-window `; `
+			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			split-window -h -l 20% `; `
 			select-pane -t 1 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			send-keys "cd $SecondFolder" C-m `; `
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			send-keys "cd $SecondFolder" C-m `; `
 			send-keys nvim C-m `; `
 			new-window `; `
+			select-pane -t 0 `; `
+			select-pane -T "Terminal" `; `
+			set -p @pane_label "Terminal" `; `
 			send-keys "htop" C-m `; `
 			select-window -t 0
 	}
@@ -85,10 +113,17 @@ function New-VerticalTmuxSession  (
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
 		tmux new-session `; `
 			rename-session $currentDirectory `; `
+			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			split-window -v -l 20% `; `
 			select-pane -t 1 `; `
+			select-pane -T "Terminal" `; `
+			set -p '@pane_label' "Terminal" `; `
 			send-keys "$SecondCommand" C-m `; `
 			select-pane -t 0 `; `
+			select-pane -T "NeoVim" `; `
+			set -p '@pane_label' "NeoVim" `; `
 			send-keys "$Command" C-m `;
 	}
 	Write-Information "Cancelled by user"
@@ -183,4 +218,3 @@ Import-OhMyPoshOnLinux
 Set-AutoNodeVersion
 Run-CodeFolderScripts
 Start-DevSession
-
