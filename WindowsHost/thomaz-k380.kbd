@@ -147,11 +147,12 @@
 )
 
 ;; ---------- MEDIA + NAV layer (held via Q) ----------
+;; Home row: S=shift, D=ctrl, F=alt, G=win (explicit modifiers for use with nav keys)
 (deflayer media
   _    _    _    _    _    _    _    _    _    _    _    _    _    pause
   _    _    _    _    _    _    _    _    _    _    _    _    _    _
-  _    _    _    up   _    _    mute prev pp   next _    _    _    _
-  prnt _    left down rght _    home pgdn pgup end  _    _    _
+  _    _    lsft lctl lalt lmet mute prev pp   next _    _    _    _
+  prnt _    left down rght _    home pgdn pgup end  rsft rctl _
   lsft _    _    _    _    _    _    _    _    _    _    rsft      up
   lctl lmet lalt            spc                ralt rmet @minimize @maximize left down rght
 )
