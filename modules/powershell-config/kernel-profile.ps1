@@ -801,7 +801,7 @@ function Run-CodeFolderScripts() {
     return
   }
     
-  $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Split("/")[0]
+  $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Replace("AT/", "").Split("/")[0]
   $CodeScriptFolder = "$HOME/code/code-scripts/$CurrentFolder"
   if(!(Test-Path $CodeScriptFolder)) {
     Write-Verbose "`n->> This folder does not have a scripts folder on ($CodeScriptFolder). Skipping"
