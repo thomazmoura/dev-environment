@@ -9,13 +9,13 @@ if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) 
   New-Item -Type Directory -Force "$HOME/.local/bin/"
 
   Write-Output "=>> Downloading Neovim's realease tar package"
-  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.10.1/nvim-linux64.tar.gz -OutFile nvim-linux64.tar.gz
+  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz -OutFile nvim-linux-x86_64.tar.gz
 
   Write-Output "=>> Extracting Neovim package"
-  & tar -xzf nvim-linux64.tar.gz
+  & tar -xzf nvim-linux-x86_64.tar.gz
 
   Write-Output "=>> Moving Neovim files to expected destination"
-  Move-Item nvim-linux64/* "$HOME/neovim/"
+  Move-Item nvim-linux-x86_64/* "$HOME/neovim/"
 
   Write-Output "=>> Making nvim (Neovim) executable"
   & chmod +x $HOME/neovim/bin/nvim
@@ -26,8 +26,8 @@ if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) 
   New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vi" -Target "$HOME/neovim/bin/nvim"
 
   Write-Output "=>> Cleaning up"
-  Remove-Item -Recurse -Force nvim-linux64.tar.gz
-  Remove-Item -Recurse -Force nvim-linux64
+  Remove-Item -Recurse -Force nvim-linux-x86_64.tar.gz
+  Remove-Item -Recurse -Force nvim-linux-x86_64
 }
 
 Throw-ExceptionOnNativeFailure
