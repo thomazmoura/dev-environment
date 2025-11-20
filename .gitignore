@@ -5,4 +5,5 @@
 *.swl
 *.swj
 *.swk
+modules/vim/swapfiles
 

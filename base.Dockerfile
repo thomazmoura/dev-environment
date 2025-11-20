@@ -1,15 +1,23 @@
-FROM debian
+FROM debian:trixie
+
+ARG DEBIAN_FRONTEND=noninteractive
   
-RUN apt update \
-  && apt install -y \
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
     apt-transport-https \
+    ca-certificates \
     curl \
     gnupg \
-    software-properties-common \
-  && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-  && sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list' \
-  && apt update \
-  && apt install -y \
+    locales \
+    tzdata; \
+  # Microsoft docs recommend installing the repository via the packages-microsoft-prod helper deb
+  # (no software-properties-common needed on recent Debian images).
+  curl -sSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o /tmp/packages-microsoft-prod.deb; \
+  dpkg -i /tmp/packages-microsoft-prod.deb; \
+  rm /tmp/packages-microsoft-prod.deb; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
     apt-utils \
     bat \
     build-essential \
@@ -37,10 +45,11 @@ RUN apt update \
     tmux \
     tzdata \
     unzip \
-    wget \
-  && apt autoremove -y \
-  && rm -rf /var/lib/apt/lists/* \
-  && locale-gen C.UTF-8;
+    wget; \
+  apt-get autoremove -y; \
+  rm -rf /var/lib/apt/lists/*; \
+  echo "C.UTF-8 UTF-8" > /etc/locale.gen; \
+  locale-gen;
 
 ENV TZ="America/Sao_Paulo"
 ENV LANG="C.UTF-8"
@@ -77,4 +86,3 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-install/Install-Neovim
 # Debugger installation
 COPY --chown=developer:developer modules/debugging /home/developer/.modules/debugging
 RUN pwsh -NoProfile -File /home/developer/.modules/debugging/Install-NetCoreDbg.ps1
-
