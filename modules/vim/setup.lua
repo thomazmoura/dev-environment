@@ -19,7 +19,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('commands-settings')
   require('scrolling-settings')
   require('hop-settings')
-  require('ai-settings')
+  --require('ai-settings')
 
   -- nvim-tree setup
   require 'nvim-tree'.setup {

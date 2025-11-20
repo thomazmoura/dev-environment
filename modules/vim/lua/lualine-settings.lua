@@ -11,6 +11,65 @@ local function dadbod_status()
   })
 end
 
+local sidekick_status_component
+local sidekick_cli_component
+do
+  local ok, sidekick_status = pcall(require, "sidekick.status")
+  if ok then
+    sidekick_status_component = {
+      function()
+        return " "
+      end,
+      color = function()
+        local info = sidekick_status.get()
+        if not info then
+          return
+        end
+        if info.kind == "Error" then
+          return "DiagnosticError"
+        end
+        if info.busy then
+          return "DiagnosticWarn"
+        end
+        return "Special"
+      end,
+      cond = function()
+        return sidekick_status.get() ~= nil
+      end,
+    }
+
+    sidekick_cli_component = {
+      function()
+        local sessions = sidekick_status.cli()
+        return " " .. (#sessions > 1 and #sessions or "")
+      end,
+      cond = function()
+        return #sidekick_status.cli() > 0
+      end,
+      color = function()
+        return "Special"
+      end,
+    }
+  end
+end
+
+local lualine_x_components = {
+  {
+    require("noice").api.status.mode.get,
+    cond = require("noice").api.status.mode.has,
+    color = { fg = "#ff9e64" },
+  },
+  {
+    require("noice").api.status.search.get,
+    cond = require("noice").api.status.search.has,
+    color = { fg = "#ff9e64" },
+  },
+}
+
+if sidekick_cli_component then
+  table.insert(lualine_x_components, sidekick_cli_component)
+end
+
 --lualine settings
 require('lualine').setup {
   options = {
@@ -33,19 +92,8 @@ require('lualine').setup {
         path = 1,
       }
     },
-    lualine_c = {},
-    lualine_x = {
-      {
-        require("noice").api.status.mode.get,
-        cond = require("noice").api.status.mode.has,
-        color = { fg = "#ff9e64" },
-      },
-      {
-        require("noice").api.status.search.get,
-        cond = require("noice").api.status.search.has,
-        color = { fg = "#ff9e64" },
-      },
-    },
+    lualine_c = sidekick_status_component and { sidekick_status_component } or {},
+    lualine_x = lualine_x_components,
     lualine_y = {
       'selectioncount',
       dadbod_status,

@@ -17,6 +17,20 @@ local lspconfig = require('lspconfig')
 -- luasnip setup
 local luasnip = require 'luasnip'
 
+local function sidekick_nes_jump()
+  local ok, sidekick = pcall(require, "sidekick")
+  if not ok then
+    return false
+  end
+
+  local handler = sidekick.nes_jump_or_apply
+  if type(handler) ~= "function" then
+    return false
+  end
+
+  return handler() == true
+end
+
 -- lsp_lines
 Virtual_text = false
 local function toggle_lsp_lines()
@@ -55,6 +69,10 @@ if cmp ~= nil then
         select = true,
       },
           ['<Tab>'] = cmp.mapping(function(fallback)
+        if sidekick_nes_jump() then
+          return
+        end
+
         if cmp.visible() then
           cmp.select_next_item()
         elseif luasnip.expand_or_jumpable() then

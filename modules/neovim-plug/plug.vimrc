@@ -23,6 +23,7 @@ Plug 'folke/which-key.nvim'
 Plug 'mbbill/undotree'
 Plug 'folke/trouble.nvim'
 Plug 'arthurxavierx/vim-caser'
+Plug 'folke/sidekick.nvim'
 " I'm currently trying the lua version of copilot
 " Plug 'github/copilot.vim'
 Plug 'zbirenbaum/copilot.lua'
@@ -99,4 +100,3 @@ Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
 Plug 'OXY2DEV/markview.nvim'
 
 call plug#end()
-
