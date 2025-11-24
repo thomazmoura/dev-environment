@@ -216,5 +216,6 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou
 
 Import-OhMyPoshOnLinux
 Set-AutoNodeVersion
-Run-CodeFolderScripts
+# We dot-source this so that if there's any custom functions on the code-scripts folder, they get added to the global scope
+. Run-CodeFolderScripts 
 Start-DevSession

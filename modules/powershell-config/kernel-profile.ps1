@@ -785,14 +785,14 @@ function Exit-Session() {
 }
 
 function Set-AutoNodeVersion() {
+  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   if ( !(Get-Command node -ErrorAction SilentlyContinue) ) {
-    $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
     Write-Warning "`n->> No default node version detected, setting as LTS"
     nvs use lts
-    $stopwatch.Stop(); Write-Verbose "`n-->> Definição de versão padrão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
   }
   Write-Verbose "`n->> Setting nvs auto on"
   nvs auto on
+  $stopwatch.Stop(); Write-Information "`n-->> Definição de versão padrão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
 function Run-CodeFolderScripts() {
