@@ -1,1 +1,1 @@
-. /home/thomaz/code/dev-environment/modules/powershell-config/linux-profile.ps1
+. $HOME/code/dev-environment/modules/powershell-config/linux-profile.ps1
