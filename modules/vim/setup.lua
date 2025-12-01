@@ -96,7 +96,7 @@ if os.getenv('WSLENV') then
     },
     cache_enabled = 0,
   }
-else
+elseif os.getenv('TMUX') then
   require("tmux").setup({
     copy_sync = {
       sync_clipboard = true,

@@ -771,6 +771,20 @@ function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Inter
   }
 }
 
+function Start-PostgresqlDockerContainer($Version = "latest", [switch]$Interactive) {
+  if (Get-Command sudo -ErrorAction SilentlyContinue) {
+    $Prefix = 'sudo ';
+  } else {
+    $Prefix = '';
+  }
+  if ($Interactive) {
+    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -it --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
+  }
+  else {
+    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -d --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
+  }
+}
+
 function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Contexto", $DataSourceName = "::1", $UserId = "sa", $Password = "L0c4lD3v!") {
   if (!$DatabaseName) {
     $env:ConnectionStrings__Contexto = $null

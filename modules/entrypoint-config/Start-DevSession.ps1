@@ -127,19 +127,19 @@ function Setup-Copilot {
     return
   }
 
-  if( !(Test-Path "$HOME/.nvs/node/16.*") ) {
-    Write-Information "Installing Node 16"
-    nvs add 16
+  if( !(Test-Path "$HOME/.nvs/node/22.*") ) {
+    Write-Information "Installing Node 22"
+    nvs add 22
   }
 
   $PathToCopilotsNode = "$HOME/.nvs/copilot-node"
   if( !(Test-Path $PathToCopilotsNode) ) {
     Write-Information "Creating copilot's node symbolic link"
-    $Node16Folder = Get-Item "$HOME/.nvs/node/16.*"
+    $Node22Folder = Get-Item "$HOME/.nvs/node/22.*"
       | Sort-Object Name -Descending
       | Select-Object -First 1
-    $Node16Exe = "$Node16Folder/x64/bin/node"
-    New-Item -Type SymbolicLink -Path $PathToCopilotsNode -Target $Node16Exe
+    $Node22Exe = "$Node22Folder/x64/bin/node"
+    New-Item -Type SymbolicLink -Path $PathToCopilotsNode -Target $Node22Exe
   }
 }
 

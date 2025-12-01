@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(kmonad.exe:*)"
+      "Bash(kmonad.exe:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:wezterm.org)",
+      "Bash(echo:*)",
+      "Bash(setxkbmap:*)",
+      "WebFetch(domain:gist.github.com)"
     ],
     "deny": [],
     "ask": []
