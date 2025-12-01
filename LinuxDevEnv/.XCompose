@@ -5269,3 +5269,7 @@
 <dead_diaeresis> <Y>    : "\"Y"
 <dead_diaeresis> <z>    : "\"z"
 <dead_diaeresis> <Z>    : "\"Z"
+
+# Remove standalone accent marks - double apostrophe and double quotes should produce literals
+<dead_acute> <dead_acute>       : "''"
+<dead_diaeresis> <dead_diaeresis> : "\"\""
