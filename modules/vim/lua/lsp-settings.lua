@@ -23,7 +23,7 @@ local function toggle_lsp_lines()
   require("lsp_lines").toggle()
   Virtual_text = not Virtual_text
   vim.diagnostic.config({
-    virtual_text = Virtual_text,
+    virtual_text = not Virtual_text,
   })
 end
 vim.diagnostic.config({
@@ -36,6 +36,7 @@ vim.keymap.set(
   toggle_lsp_lines,
   { desc = "Toggle lsp_lines" }
 )
+toggle_lsp_lines()
 
 -- nvim-cmp setup
 local cmp = require 'cmp'
