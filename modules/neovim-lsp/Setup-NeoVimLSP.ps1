@@ -10,7 +10,7 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
 
 Write-Output "`n->> Installing OmniSharp (.NET LSP)"
-Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.11/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
+Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.15/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
 New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
 & tar -xzvf "./omnisharp-linux-x64-net6.tar.gz" -C "$HOME/.language-servers/omnisharp"
 & Remove-Item "./omnisharp-linux-x64-net6.tar.gz"
