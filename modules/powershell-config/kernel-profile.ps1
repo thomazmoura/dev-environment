@@ -386,6 +386,27 @@ function Start-DotnetWatchAPI([int[]]$HttpPorts, [int[]]$HttpsPorts) {
 }
 
 function Test-DotnetWatch() {
+  # Check if jq is available
+  if (Get-Command jq -ErrorAction SilentlyContinue) {
+    # Use fd to find appsettings.test.json with depth 2
+    $appSettingsFile = & fd -t f --max-depth 2 '^appsettings\.test\.json$' 2>$null | Select-Object -First 1
+
+    if ($appSettingsFile) {
+      # Use jq to check if TipoDeProvedorDeContextoPorContexto is PostgresqlViaBaseLocal
+      $providerType = & jq -r '.ConfiguracaoDoTeste.TipoDeProvedorDeContextoPorContexto.Contexto' $appSettingsFile 2>$null
+      if ($providerType -eq "PostgresqlViaBaseLocal") {
+        Write-Verbose "PostgreSQL provider detected, starting PostgreSQL container if needed..."
+        Start-PostgresqlDockerContainer
+      } else {
+        Write-Verbose "appsettings.test.json is not using PostgresqlViaBaseLocal, so skipping postgres container"
+      }
+    } else {
+      Write-Verbose "No appsettings.test.json file found"
+    }
+  } else {
+    Write-Verbose "jq not available"
+  }
+
   &dotnet watch test
 }
 
@@ -757,31 +778,39 @@ function Start-NpmInstallDockerContainer($Version = "lts-alpine") {
   docker container run --rm -v ${pwd}:/app/ -w /app -it node:$Version npm install
 }
 
-function Start-SqlServerDockerContainer($Version = "2017-latest", [switch]$Interactive) {
-  if (Get-Command sudo -ErrorAction SilentlyContinue) {
-    $Prefix = 'sudo ';
+function Start-SqlServerDockerContainer($Version = "2019-latest", [switch]$Interactive) {
+  if (!($env:ROOTLESS_DOCKER) -and (Get-Command sudo -ErrorAction SilentlyContinue)) {
+    $Command = 'sudo docker';
   } else {
-    $Prefix = '';
+    $Command = 'docker';
   }
   if ($Interactive) {
-    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Command run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
   }
   else {
-    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Command run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
 function Start-PostgresqlDockerContainer($Version = "latest", [switch]$Interactive) {
-  if (Get-Command sudo -ErrorAction SilentlyContinue) {
-    $Prefix = 'sudo ';
+  if (!($env:ROOTLESS_DOCKER) -and (Get-Command sudo -ErrorAction SilentlyContinue)) {
+    $Command = 'sudo docker';
   } else {
-    $Prefix = '';
+    $Command = 'docker';
   }
+
+  # Check if postgres container is already running
+  $runningContainer = & $Command ps --filter "name=postgres" --format "{{.Names}}" 2>$null
+  if ($runningContainer -eq "postgres") {
+    Write-Verbose "PostgreSQL container is already running"
+    return
+  }
+
   if ($Interactive) {
-    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -it --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
+    & $Command run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -it --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
   }
   else {
-    & $Prefix docker run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -d --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
+    & $Command run -e "TZ=America/Sao_Paulo" -e "POSTGRES_PASSWORD=L0c4lD3v!" -e "POSTGRES_USER=postgres" -p 5432:5432 -d --rm -v postgresdb:/var/lib/postgresql --name postgres postgres:$version
   }
 }
 
