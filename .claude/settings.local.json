@@ -7,7 +7,11 @@
       "WebFetch(domain:wezterm.org)",
       "Bash(echo:*)",
       "Bash(setxkbmap:*)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "Bash(pwsh:*)",
+      "Bash(timeout 5 pwsh:*)",
+      "Bash(timeout 3 pwsh:*)",
+      "Bash(timeout 3 script:*)"
     ],
     "deny": [],
     "ask": []

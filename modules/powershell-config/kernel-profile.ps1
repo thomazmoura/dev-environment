@@ -781,14 +781,16 @@ function Start-NpmInstallDockerContainer($Version = "lts-alpine") {
 function Start-SqlServerDockerContainer($Version = "2019-latest", [switch]$Interactive) {
   if (!($env:ROOTLESS_DOCKER) -and (Get-Command sudo -ErrorAction SilentlyContinue)) {
     $Command = 'sudo docker';
+    $UserFlag = @();
   } else {
     $Command = 'docker';
+    $UserFlag = @('-u', '0:0');  # Run as root in rootless Docker (maps to host user)
   }
   if ($Interactive) {
-    & $Command run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Command run @UserFlag -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -it --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
   }
   else {
-    & $Command run -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
+    & $Command run @UserFlag -e "TZ=America/Sao_Paulo" -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=L0c4lD3v!" -p 1433:1433 -d --rm -v localdb:/var/opt/mssql/data/ --memory=2g --memory-swap=0 --name mssql mcr.microsoft.com/mssql/server:$version
   }
 }
 
