@@ -11,7 +11,12 @@
       "Bash(pwsh:*)",
       "Bash(timeout 5 pwsh:*)",
       "Bash(timeout 3 pwsh:*)",
-      "Bash(timeout 3 script:*)"
+      "Bash(timeout 3 script:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh api:*)",
+      "Bash(DOCKER_BUILDKIT=1 docker build:*)",
+      "Bash(docker run:*)"
     ],
     "deny": [],
     "ask": []

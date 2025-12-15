@@ -28,13 +28,13 @@ RUN set -eux; \
     iproute2 \
     iputils-ping \
     less \
+    libicu-dev \
     locales \
     lsb-release \
     make \
     man-db \
     net-tools \
     pkg-config \
-    powershell \
     procps \
     pipx \
     python3 \
@@ -55,6 +55,11 @@ ENV TZ="America/Sao_Paulo"
 ENV LANG="C.UTF-8"
 ENV LC_ALL="C.UTF-8"
 ENV LANGUAGE="C.UTF-8"
+
+# PowerShell installation (from GitHub releases to avoid libicu version issues with debian:trixie)
+COPY modules/powershell-install /root/.modules/powershell-install
+RUN chmod +x /root/.modules/powershell-install/Install-Powershell.sh && \
+    /root/.modules/powershell-install/Install-Powershell.sh
 
 # Make fdfind be callable as fd
 RUN pwsh -c 'New-Item -Type HardLink -Path /usr/bin/fd -Target /usr/bin/fdfind'
