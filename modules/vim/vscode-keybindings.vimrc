@@ -1,12 +1,12 @@
 " VSCode-Neovim extension general keybindings
 source $HOME/.modules/vim/vscode-base-keybindings.vimrc
+lua require('vscode-keybinding-settings')
 
 " VSCode-specific
 nnoremap gK  :call VSCodeNotify('editor.debug.action.showDebugHover')<CR>
 nnoremap gH   :call VSCodeNotify('editor.debug.action.showDebugHover')<CR>
 nnoremap gi   :call VSCodeNotify('editor.action.goToImplementation')<CR>
 nnoremap gr   :call VSCodeNotify('editor.action.goToReferences')<CR>
-nnoremap <Leader>r   :call VSCodeNotify('editor.action.rename')<CR>
 nnoremap <Leader>t   :call VSCodeNotify('dotnet.test.runTestsInContext')<CR>
 nnoremap <Leader>d   :call VSCodeNotify('dotnet.test.debugTestsInContext')<CR>
 nnoremap <Leader>e   :call VSCodeNotify('workbench.view.explorer')<CR>
