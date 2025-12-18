@@ -1,30 +1,38 @@
 local default_buffer_options = { noremap = true, silent = true, buffer = true }
 
--- SQL Query Runner - per-buffer database type selection
-local function run_sql_query()
-  local db_type = vim.b.sql_db_type
-
-  if not db_type then
-    vim.api.nvim_echo({{"Database: (s)ql server / (p)ostgres", "Question"}}, false, {})
-    local char = vim.fn.getcharstr()
-    vim.cmd('redraw')
-
-    if char:lower() == 's' then
-      vim.b.sql_db_type = 'mssql'
-    elseif char:lower() == 'p' then
-      vim.b.sql_db_type = 'pgsql'
-    else
-      vim.api.nvim_echo({{"Invalid choice. Use 's' or 'p'.", "ErrorMsg"}}, false, {})
-      return
-    end
-    db_type = vim.b.sql_db_type
-  end
-
+-- Helper to execute the SQL command based on db type
+local function execute_sql_command(db_type)
   if db_type == 'mssql' then
     vim.fn.VSCodeNotify('mssql.runCurrentStatement')
   else
     vim.fn.VSCodeNotify('pgsql.runCurrentStatement')
   end
+end
+
+-- SQL Query Runner - per-buffer database type selection
+local function run_sql_query()
+  local db_type = vim.b.sql_db_type
+
+  if db_type then
+    execute_sql_command(db_type)
+    return
+  end
+
+  -- Use vim.ui.select which VSCode-Neovim shows as VS Code's quick pick
+  vim.ui.select(
+    { 'SQL Server', 'PostgreSQL' },
+    { prompt = 'Select database type:' },
+    function(choice)
+      if choice == 'SQL Server' then
+        vim.b.sql_db_type = 'mssql'
+      elseif choice == 'PostgreSQL' then
+        vim.b.sql_db_type = 'pgsql'
+      else
+        return -- User cancelled
+      end
+      execute_sql_command(vim.b.sql_db_type)
+    end
+  )
 end
 
 -- Reset database type for current buffer
