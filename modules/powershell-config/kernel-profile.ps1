@@ -885,6 +885,15 @@ function Install-NpmIfNeeded() {
   }
 }
 
+function Open-Files($Path = '.') {
+  if (Get-Command 'nautilus' -ErrorAction SilentlyContinue) {
+    nautilus $Path
+  } else {
+    explorer $Path
+  }
+
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
@@ -975,6 +984,7 @@ New-Alias -Force psaws Import-PsAWS
 New-Alias -Force psnvm Import-PsNvm
 New-Alias -Force psdocker Import-DockerCompletion
 
+New-Alias -Force files Open-Files
 New-Alias -Force npms Start-Npm
 New-Alias -Force yarns Start-Yarn
 New-Alias -Force :q Exit-Session
