@@ -79,10 +79,14 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição da CODE_FOLDER demorou: $($
 
 # Definição de scripts padrões
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
-$cicdFolder = (fd "^CI-CD$" --type d --max-depth 2 --base-directory $env:CODE_FOLDER --absolute-path 2>$null | Select-Object -First 1)
+$cicdFolder = (
+  fd "^CI-CD$" --type d --max-depth 2 --base-directory $env:CODE_FOLDER --absolute-path 2>$null |
+  Where-Object { $_ -NotMatch 'code-scripts' } |
+  Select-Object -First 1
+)
 if ($cicdFolder) {
   Write-Verbose "`n->> CI-CD folder found at $cicdFolder, adding Utilitarios and Scripts to PATH"
-  $env:PATH = "$cicdFolder/Utilitarios:$cicdFolder/QuickStarts/Scripts:${env:PATH}"
+  $env:PATH = "$($cicdFolder)Utilitarios:$($cicdFolder)QuickStarts/Scripts:${env:PATH}"
 }
 if ( (Test-Path "$HOME/.cargo/bin") -and !($env:PATH.Contains("$HOME/.cargo/bin")) ) {
   Write-Verbose "`n->> Rust's cargo folder found and not added to PATH. Adding now"
