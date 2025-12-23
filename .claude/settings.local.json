@@ -16,7 +16,10 @@
       "Bash(gh run view:*)",
       "Bash(gh api:*)",
       "Bash(DOCKER_BUILDKIT=1 docker build:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:code.visualstudio.com)"
     ],
     "deny": [],
     "ask": []
