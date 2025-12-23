@@ -149,17 +149,19 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
--- <leader>N handler: Create SQL file in Insiders, markdown in Stable
-local function handle_leader_n()
-  if is_vscode_insiders() then
-    create_dated_sql_file()
-  else
-    create_untitled_markdown()
-  end
+if is_vscode_insiders() then
+  vim.keymap.set('n', '<leader>N', create_dated_sql_file, {
+    noremap = true,
+    silent = true,
+    desc = "Create new SQL file (with automatic date as name)"
+  })
+  create_dated_sql_file()
+else
+  vim.keymap.set('n', '<leader>N', create_untitled_markdown, {
+    noremap = true,
+    silent = true,
+    desc = "Create new Markdown untitled file"
+  })
+  create_untitled_markdown()
 end
 
-vim.keymap.set('n', '<leader>N', handle_leader_n, {
-  noremap = true,
-  silent = true,
-  desc = "Create new file (SQL in Insiders, Markdown in Stable)"
-})

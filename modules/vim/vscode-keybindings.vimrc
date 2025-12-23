@@ -1,6 +1,7 @@
 " VSCode-Neovim extension general keybindings
 source $HOME/.modules/vim/vscode-base-keybindings.vimrc
 lua require('vscode-keybinding-settings')
+lua require('sql-cleanup')
 
 " VSCode-specific
 nnoremap gK  :call VSCodeNotify('editor.debug.action.showDebugHover')<CR>
