@@ -3,6 +3,7 @@
     "enableEditorConfigSupport": true
   },
   "RoslynExtensionsOptions": {
+    "enableDecompilationSupport": true,
     "enableImportCompletion": true,
     "enableAnalyzersSupport": true,
     "inlayHintsOptions": {
@@ -21,3 +22,4 @@
     }
   }
 }
+
