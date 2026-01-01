@@ -19,7 +19,8 @@
       "Bash(docker run:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
-      "WebFetch(domain:code.visualstudio.com)"
+      "WebFetch(domain:code.visualstudio.com)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

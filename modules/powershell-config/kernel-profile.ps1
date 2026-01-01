@@ -634,6 +634,40 @@ function GitGet-History() {
   & git log --oneline --graph --pretty=format:'%C(yellow)%h %Cred%ad %Cblue%an%Cgreen%d %Creset%s' --date=short --author-date-order
 }
 
+function GitGet-RecursiveCommitHistory(
+  [String]$Path = ".",
+  [String]$Name = "Thomaz Moura",
+  [DateTime]$StartDate = (Get-Date -Day 1).AddMonths(-1),
+  [DateTime]$EndDate = (Get-Date)
+) {
+  $StartDateFormatted = $StartDate.ToString("yyyy-MM-dd")
+  $EndDateFormatted = $EndDate.ToString("yyyy-MM-dd")
+
+  Get-ChildItem -Path $Path -Directory | ForEach-Object {
+    $repoPath = $_.FullName
+    $repoName = $_.Name
+
+    if (Test-Path (Join-Path $repoPath ".git")) {
+      Push-Location $repoPath
+      try {
+        git log --author="$Name" --after="$StartDateFormatted" --before="$EndDateFormatted" --format="%s|%ad" --date=short 2>$null |
+          ForEach-Object {
+            $parts = $_ -split '\|'
+            if ($parts.Count -ge 2) {
+              [PSCustomObject]@{
+                Description = $parts[0]
+                Date        = $parts[1]
+                Repository  = $repoName
+              }
+            }
+          }
+      } finally {
+        Pop-Location
+      }
+    }
+  }
+}
+
 function FuzzyFocus-RunningApplication() {
   $runningApplications = Get-Process | Where-Object { $_.mainwindowhandle -ne 0 }
   $chosenApplicationInput = ($runningApplications | Select-Object name, mainwindowtitle | fzf)
@@ -959,6 +993,7 @@ New-Alias -Force gitr Git-Reset
 New-Alias -Force gitfh GitFuzzyGet-History
 New-Alias -Force gitau GitAdd-Untracked
 New-Alias -Force gitif GitIgnoreLocally-File
+New-Alias -Force gitrh GitGet-RecursiveCommitHistory
 
 New-Alias -Force stop Stop-Process
 New-Alias -Force tasks Get-Process

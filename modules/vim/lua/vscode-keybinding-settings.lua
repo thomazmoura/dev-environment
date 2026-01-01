@@ -138,6 +138,22 @@ end
 -- Create autocommand group
 vim.api.nvim_create_augroup('VSCodeSqlFiles', { clear = true })
 
+local function focus_result()
+  local db_type = vim.b.sql_db_type
+  if db_type == nil then
+    vim.api.nvim_echo({{"db_type not yet set. Ignoring focus on result"}}, false, {})
+    return
+  end
+
+  if db_type == 'mssql' then
+    vim.fn.VSCodeNotify('queryResult.focus')
+    vim.api.nvim_echo({{"Focusing on SQL Server query results"}}, false, {})
+  else
+    vim.fn.VSCodeNotify('pgQueryResult.focus')
+    vim.api.nvim_echo({{"Focusing on Postgres query results"}}, false, {})
+  end
+end
+
 -- Set up key mappings only for sql files
 vim.api.nvim_create_autocmd('FileType', {
   group = 'VSCodeSqlFiles',
@@ -145,9 +161,11 @@ vim.api.nvim_create_autocmd('FileType', {
   callback = function()
     vim.keymap.set({'n', 'v'}, '<leader>r', run_current_sql_query, default_buffer_options)
     vim.keymap.set({'n', 'v'}, '<leader>R', run_full_sql_query, default_buffer_options)
+    vim.keymap.set({'n', 'v'}, '<leader>j', focus_result, default_buffer_options)
     vim.keymap.set('n', '<leader>mc', reset_sql_db_type, default_buffer_options)
   end
 })
+
 
 if is_vscode_insiders() then
   vim.keymap.set('n', '<leader>N', create_dated_sql_file, {
