@@ -668,6 +668,29 @@ function GitGet-RecursiveCommitHistory(
   }
 }
 
+function Get-AzureDevOpsWorkItems([int]$Days = 31) {
+  $wiql = @"
+SELECT [System.Id], [System.Title], [System.State], [System.WorkItemType], [System.CreatedDate], [System.ChangedDate]
+FROM workitems
+WHERE [System.AssignedTo] = @Me
+  AND [System.ChangedDate] >= @Today - $Days
+ORDER BY [System.ChangedDate] DESC
+"@
+
+  $result = az boards query --wiql $wiql --output json 2>$null | ConvertFrom-Json
+
+  $result | ForEach-Object {
+    [PSCustomObject]@{
+      Id          = $_.fields.'System.Id'
+      Title       = $_.fields.'System.Title'
+      State       = $_.fields.'System.State'
+      Type        = $_.fields.'System.WorkItemType'
+      CreatedDate = $_.fields.'System.CreatedDate'
+      ChangedDate = $_.fields.'System.ChangedDate'
+    }
+  }
+}
+
 function FuzzyFocus-RunningApplication() {
   $runningApplications = Get-Process | Where-Object { $_.mainwindowhandle -ne 0 }
   $chosenApplicationInput = ($runningApplications | Select-Object name, mainwindowtitle | fzf)
@@ -994,6 +1017,7 @@ New-Alias -Force gitfh GitFuzzyGet-History
 New-Alias -Force gitau GitAdd-Untracked
 New-Alias -Force gitif GitIgnoreLocally-File
 New-Alias -Force gitrh GitGet-RecursiveCommitHistory
+New-Alias -Force adoswi Get-AzureDevOpsWorkItems
 
 New-Alias -Force stop Stop-Process
 New-Alias -Force tasks Get-Process
