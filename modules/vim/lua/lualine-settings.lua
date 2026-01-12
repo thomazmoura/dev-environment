@@ -31,9 +31,11 @@ require('lualine').setup {
       {
         'filename',
         path = 1,
-      }
+      },
     },
-    lualine_c = {},
+    lualine_c = {
+      { require('workhorse').lualine.get },
+    },
     lualine_x = {
       {
         require("noice").api.status.mode.get,

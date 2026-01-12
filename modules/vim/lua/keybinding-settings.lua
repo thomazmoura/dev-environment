@@ -94,3 +94,8 @@ vim.api.nvim_create_autocmd('FileType', {
     vim.keymap.set('n', '<leader>r', '<Plug>(DBUI_ExecuteQuery)', default_buffer_options)
   end
 })
+
+-- Workhorse
+local workhorse = require('workhorse')
+vim.keymap.set("n", "<leader>wq", workhorse.pick_query, { desc = "Workhorse: Pick query" })
+vim.keymap.set("n", "<leader>wr", workhorse.refresh, { desc = "Workhorse: Refresh" })

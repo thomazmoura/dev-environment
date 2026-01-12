@@ -98,5 +98,9 @@ Plug 'stevearc/dressing.nvim'
 Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
 Plug 'OXY2DEV/markview.nvim'
 
+" Mine
+Plug '~/code/workhorse.nvim'
+" Plug 'thomazmoura/workhorse.nvim'
+
 call plug#end()
 

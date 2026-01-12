@@ -8,7 +8,7 @@ $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 # This is useful to open NeoVim with the correct node version on .NET + Angular projects
 $nodeVersionFile = fd -H .node-version -d 2
 if( $nodeVersionFile ) {
-  nvs use (cat $nodeVersionFile)
+  #nvs use (cat $nodeVersionFile)
 }
 
 $NodeVersion = node --version

@@ -20,7 +20,8 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "WebFetch(domain:code.visualstudio.com)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:discuss.kde.org)"
     ],
     "deny": [],
     "ask": []
