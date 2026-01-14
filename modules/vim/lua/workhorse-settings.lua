@@ -78,7 +78,7 @@ require("workhorse").setup({
   tag_title_colors = { ["User Story"] = { ["Suporte"] = "MiniIconsOrange", ["Projeto"] = "MiniIconsGreen", ["Melhoria"] = "MiniIconsBlue",}},
 
   -- UI options
-  confirm_changes = true,  -- Show confirmation dialog before saving
+  confirm_changes = false,  -- Show confirmation dialog before saving
   default_area_path = "GTI\\ArquiteturaNET",
 
   -- Cache settings
