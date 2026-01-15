@@ -94,3 +94,4 @@ vim.keymap.set('n', '<leader>wf', '<cmd>Workhorse query 38cfedab-c989-41bb-9d28-
 vim.keymap.set('n', '<leader>we', '<cmd>Workhorse query 7c0761cd-ba78-4769-a28e-68685934d0aa<cr>', default_global_options) --Epic
 vim.keymap.set('n', '<leader>wl', '<cmd>Workhorse query d53e77f7-d7c8-49ff-ba14-35a061d047e9<cr>', default_global_options) --LuaLine
 vim.keymap.set('n', '<leader>wa', '<cmd>Workhorse query 3c82101c-2a67-408f-9fd7-8ad00a55710c<cr>', default_global_options) --Full (All)
+vim.keymap.set('n', '<leader>wx', '<cmd>Workhorse query 9a90e30d-0827-4fe9-9426-e70a8fd62ca6<cr>', default_global_options) --Trash
