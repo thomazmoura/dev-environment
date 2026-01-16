@@ -10,10 +10,11 @@
 [CmdletBinding()]
 param(
     [int]$CacheTTLSeconds = 60,
+    [int]$ErrorCacheTTLSeconds = 10,
     [int]$MaxTitleLength = 80
 )
 
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Stop'
 
 # Exit silently if env var not set (opt-in behavior)
 $QueryId = $env:WORKHORSE_TMUX_QUERY_ID
@@ -31,14 +32,24 @@ function Get-CachedResult {
     }
 
     try {
-        $cache = Get-Content $CacheFile -Raw | ConvertFrom-Json
-        $cacheAge = (Get-Date) - [DateTime]::Parse($cache.timestamp)
+        $cacheContent = Get-Content $CacheFile -Raw -ErrorAction Stop
+        if (-not $cacheContent) {
+            return $null
+        }
 
-        if ($cacheAge.TotalSeconds -lt $CacheTTLSeconds -and $cache.queryId -eq $QueryId) {
+        $cache = $cacheContent | ConvertFrom-Json -ErrorAction Stop
+        $cacheTime = [DateTime]::ParseExact($cache.timestamp, "o", [System.Globalization.CultureInfo]::InvariantCulture)
+        $cacheAge = (Get-Date) - $cacheTime
+
+        # Use shorter TTL for error/empty results
+        $ttl = if ($cache.success -eq $true) { $CacheTTLSeconds } else { $ErrorCacheTTLSeconds }
+
+        if ($cacheAge.TotalSeconds -lt $ttl -and $cache.queryId -eq $QueryId) {
             return $cache.display
         }
     }
     catch {
+        # Cache is corrupted or unreadable, will be refreshed
         return $null
     }
 
@@ -46,17 +57,33 @@ function Get-CachedResult {
 }
 
 function Set-CachedResult {
-    param([string]$Display)
+    param(
+        [string]$Display,
+        [bool]$Success = $true
+    )
 
-    if (-not (Test-Path $CacheDir)) {
-        New-Item -ItemType Directory -Path $CacheDir -Force | Out-Null
+    try {
+        if (-not (Test-Path $CacheDir)) {
+            New-Item -ItemType Directory -Path $CacheDir -Force | Out-Null
+        }
+
+        # Use atomic write: write to temp file, then rename
+        $tempFile = "$CacheFile.tmp.$PID"
+        @{
+            timestamp = (Get-Date).ToString("o")
+            display   = $Display
+            queryId   = $QueryId
+            success   = $Success
+        } | ConvertTo-Json | Set-Content $tempFile -ErrorAction Stop
+
+        Move-Item -Path $tempFile -Destination $CacheFile -Force -ErrorAction Stop
     }
-
-    @{
-        timestamp = (Get-Date).ToString("o")
-        display   = $Display
-        queryId   = $QueryId
-    } | ConvertTo-Json | Set-Content $CacheFile
+    catch {
+        # Clean up temp file if it exists
+        if (Test-Path $tempFile) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Get-TruncatedTitle {
@@ -80,56 +107,30 @@ if ($null -ne $cached) {
 try {
     $queryResult = az boards query --id $QueryId --output json 2>$null
     if (-not $queryResult) {
-        Set-CachedResult -Display ""
+        Set-CachedResult -Display "" -Success $false
         exit 0
     }
 
     $workItems = $queryResult | ConvertFrom-Json
 
     if (-not $workItems -or $workItems.Count -eq 0) {
-        Set-CachedResult -Display ""
+        Set-CachedResult -Display "" -Success $false
         exit 0
     }
 
-    # Get work item IDs
-    $ids = $workItems | ForEach-Object { $_.id }
-
-    # Fetch full work item details with Stack Rank field
-    $idsString = $ids -join ","
-    $fields = "System.Id,System.Title,Microsoft.VSTS.Common.StackRank"
-    $itemsJson = az boards work-item show --ids $idsString --fields $fields --output json 2>$null
-
-    if (-not $itemsJson) {
-        # Fallback: use query results directly (without Stack Rank sorting)
-        $firstItem = $workItems | Select-Object -First 1
-        $title = Get-TruncatedTitle -Title $firstItem.fields.'System.Title' -MaxLength $MaxTitleLength
-        $display = "#$($firstItem.id) | $title"
-        Set-CachedResult -Display $display
-        Write-Output $display
-        exit 0
-    }
-
-    $items = $itemsJson | ConvertFrom-Json
-
-    # Handle single item (az returns object instead of array)
-    if ($items -isnot [array]) {
-        $items = @($items)
-    }
-
-    # Sort by Stack Rank ascending (null/missing goes last), then by ID as tiebreaker
-    $sortedItems = $items | Sort-Object {
+    # Sort query results by Stack Rank (highest first, null goes last)
+    $sortedItems = $workItems | Sort-Object {
         $rank = $_.fields.'Microsoft.VSTS.Common.StackRank'
-        if ($null -eq $rank) { [double]::MaxValue } else { [double]$rank }
-    }, { $_.id }
+        if ($null -eq $rank) { [double]::MinValue } else { [double]$rank }
+    }
 
     $firstItem = $sortedItems | Select-Object -First 1
 
     if (-not $firstItem) {
-        Set-CachedResult -Display ""
+        Set-CachedResult -Display "" -Success $false
         exit 0
     }
 
-    # Format output: #123 | Work item title
     $id = $firstItem.id
     $title = Get-TruncatedTitle -Title $firstItem.fields.'System.Title' -MaxLength $MaxTitleLength
     $display = "#$id | $title"
@@ -138,6 +139,7 @@ try {
     Write-Output $display
 }
 catch {
-    # Silent failure - don't clutter tmux status bar with errors
+    # Cache the error so we don't hammer the API on repeated failures
+    Set-CachedResult -Display "" -Success $false
     exit 0
 }
