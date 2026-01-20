@@ -95,6 +95,26 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
+-- Set up the key mapping only for JSON files
+vim.api.nvim_create_augroup('JsonFiles', { clear = true })
+
+local function jsonFormat()
+  -- Run jq only once per buffer
+  if not vim.b.json_jq_done then
+    vim.cmd('%jq .')
+    vim.b.json_jq_done = true
+  end
+  vim.lsp.buf.format()
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  group = 'JsonFiles',
+  pattern = {'json', 'jsonc'},
+  callback = function()
+    vim.keymap.set('n', '<leader>f', jsonFormat, default_buffer_options)
+  end
+})
+
 -- Workhorse
 local workhorse = require('workhorse')
 vim.keymap.set("n", "<leader>wq", workhorse.pick_query, { desc = "Workhorse: Pick query" })
