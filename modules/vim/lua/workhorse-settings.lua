@@ -61,6 +61,11 @@ require("workhorse").setup({
     "Entregue",
   },
 
+  -- Alternative column sorting
+  column_sorting = {
+    ["Entregue"] = "closed_date_desc"
+  },
+
   -- Work item type display (text and color independently configurable)
   work_item_type_display = {
     ["Epic"] = { text = "🏆", color = "WorkhorseTypeEpic" },
