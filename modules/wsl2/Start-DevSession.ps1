@@ -54,6 +54,12 @@ function Setup-DotFiles {
     New-Item -Type SymbolicLink -Path $OmnisharpFolder -Target "$HOME/.omnisharp"
   }
 
+  $SpotlightDimmerFolder = "$DotFilesFolder/spotlight-dimmer"
+  if( !(Test-Path $SpotlightDimmerFolder) ) {
+    Write-Information "Creating SpotlightDimmer Folder SymbolicLink"
+    New-Item -Type SymbolicLink -Path $SpotlightDimmerFolder -Target "$HOME/.config/SpotlightDimmer"
+  }
+
 }
 
 function Setup-Copilot {
