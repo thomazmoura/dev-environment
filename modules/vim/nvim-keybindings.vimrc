@@ -69,9 +69,6 @@ nnoremap <silent> <Leader>bD :bd#<CR>
 " Browsable command line history
 nnoremap <silent> <leader>: q:i
 
-" Force quit terminal
-tnoremap <silent> <Leader><ESC> <C-\><C-N>
-
 " Insert a GUID/UUID
 nnoremap <silent> <Leader>gg  mz<cmd>r!uuidgen<CR>y$dd`z"0p
 nnoremap <silent> <Leader>gG  mz<cmd>r!uuidgen<CR>y$dd`z"0P

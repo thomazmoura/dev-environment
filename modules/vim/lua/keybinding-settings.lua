@@ -39,9 +39,6 @@ vim.keymap.set('n', '<leader>Gd', '<cmd>Gdiffsplit<cr>', default_global_options)
 vim.keymap.set('n', '<leader>Gm', '<cmd>Gvdiffsplit!<cr><C-w>J', default_global_options)
 vim.keymap.set('n', '<leader>Gb', '<cmd>Git blame<cr>', default_global_options)
 
--- Copilot Chat shortcuts
-vim.keymap.set({'n','v'}, '<leader>ac', '<cmd>CopilotChatToggle<cr>', default_global_options)
-
 
 -- Function to indent all @if and @else blocks that were added to Angular 17,
 -- since the <leader>f is not indenting they right
@@ -92,6 +89,7 @@ vim.api.nvim_create_autocmd('FileType', {
   pattern = 'sql',
   callback = function()
     vim.keymap.set('n', '<leader>r', '<Plug>(DBUI_ExecuteQuery)', default_buffer_options)
+    vim.keymap.set('v', '<leader>r', "<cmd>'<,'>DB<cr>", default_buffer_options)
   end
 })
 

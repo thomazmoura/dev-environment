@@ -68,9 +68,9 @@ require("workhorse").setup({
 
   -- Work item type display (text and color independently configurable)
   work_item_type_display = {
-    ["Epic"] = { text = "🏆", color = "WorkhorseTypeEpic" },
-    ["Feature"] = { text = "🏅", color = "WorkhorseTypeFeature" },
-    ["User Story"] = { text = "📋", color = "WorkhorseTypeUserStory" },
+    ["Epic"] = { text = "👑", color = "WorkhorseTypeEpic" },
+    ["Feature"] = { text = "🏆", color = "WorkhorseTypeFeature" },
+    ["User Story"] = { text = "📖", color = "WorkhorseTypeUserStory" },
     ["Bug"] = { text = "🪲", color = "WorkhorseTypeBug" },
     ["Task"] = { text = "✅", color = "WorkhorseTypeTask" },
   },
@@ -93,6 +93,7 @@ require("workhorse").setup({
   },
 })
 
+vim.keymap.set('n', '<leader>wT', '<cmd>Workhorse query 0ce03ce4-34b3-417b-a7d7-928d45a970dc<cr>', default_global_options) --Tree
 vim.keymap.set('n', '<leader>wt', '<cmd>Workhorse query a7977848-adab-4453-a4cf-39c28163ac3c<cr>', default_global_options) --Tree
 vim.keymap.set('n', '<leader>wu', '<cmd>Workhorse query 729b31ef-3bce-4fcb-b300-0342e4ce69c8<cr>', default_global_options) --User Stories
 vim.keymap.set('n', '<leader>wf', '<cmd>Workhorse query 38cfedab-c989-41bb-9d28-71d2c4ad9464<cr>', default_global_options) --Feature

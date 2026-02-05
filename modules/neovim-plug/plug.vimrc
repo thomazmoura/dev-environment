@@ -23,10 +23,6 @@ Plug 'folke/which-key.nvim'
 Plug 'mbbill/undotree'
 Plug 'folke/trouble.nvim'
 Plug 'arthurxavierx/vim-caser'
-" I'm currently trying the lua version of copilot
-" Plug 'github/copilot.vim'
-Plug 'zbirenbaum/copilot.lua'
-Plug 'CopilotC-Nvim/CopilotChat.nvim'
 
 " LSP and AutoComplete configuration
 Plug 'L3MON4D3/LuaSnip', {'tag': 'v1.*'}
@@ -65,6 +61,7 @@ Plug 'luochen1990/rainbow'
 Plug 'nvim-lualine/lualine.nvim'
 Plug 'karb94/neoscroll.nvim'
 Plug 'folke/noice.nvim'
+Plug 'OXY2DEV/markview.nvim'
 
 " TMUX integration
 Plug 'christoomey/vim-tmux-navigator'
@@ -93,10 +90,11 @@ Plug 'theHamsta/nvim-dap-virtual-text'
 Plug 'nvim-telescope/telescope-dap.nvim'
 Plug 'nvim-neotest/nvim-nio'
 
-" Avante
-Plug 'stevearc/dressing.nvim'
-Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
-Plug 'OXY2DEV/markview.nvim'
+" AI
+Plug 'coder/claudecode.nvim'
+" I'm currently trying the lua version of copilot
+" Plug 'github/copilot.vim'
+Plug 'zbirenbaum/copilot.lua'
 
 " Mine
 Plug '~/code/workhorse.nvim'

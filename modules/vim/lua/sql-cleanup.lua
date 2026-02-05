@@ -1,37 +1,28 @@
 local vscode = require('vscode')
 
--- Check if running VS Code Insiders
-local function is_vscode_insiders()
-  local success, result = pcall(function()
-    return vscode.eval([[
-      return vscode.env.appName.toLowerCase().includes('insiders') ||
-             vscode.version.toLowerCase().includes('insider')
-    ]])
-  end)
-
-  if not success then
-    return false
-  end
-
-  return result
-end
-
 -- Cleanup empty SQL files in workspace root
 local function cleanup_empty_sql_files()
   vscode.eval_async([[
     const fs = await import('fs');
     const path = await import('path');
 
-    // Check if workspace folder exists
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || !workspaceFolders.length) {
-      throw new Error('No workspace folder open');
+    // Check for DEFAULT_VSCODE_QUERY_LOCATION environment variable first
+    const defaultLocation = process.env.DEFAULT_VSCODE_QUERY_LOCATION;
+    let targetPath;
+
+    if (defaultLocation) {
+      targetPath = defaultLocation;
+    } else {
+      // Fall back to workspace folder
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || !workspaceFolders.length) {
+        throw new Error('No workspace folder open');
+      }
+      targetPath = workspaceFolders[0].uri.fsPath;
     }
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
-
     // Read directory contents
-    const entries = await fs.promises.readdir(workspacePath, { withFileTypes: true });
+    const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
 
     // Filter for .sql files only (not directories)
     const sqlFiles = entries.filter(entry =>
@@ -43,7 +34,7 @@ local function cleanup_empty_sql_files()
 
     // Check each SQL file and delete if empty
     for (const file of sqlFiles) {
-      const filePath = path.join(workspacePath, file.name);
+      const filePath = path.join(targetPath, file.name);
       const stats = await fs.promises.stat(filePath);
 
       if (stats.size === 0) {
@@ -67,7 +58,4 @@ local function cleanup_empty_sql_files()
   })
 end
 
--- Auto-execute cleanup on module load if running VSCode Insiders
-if is_vscode_insiders() then
-  cleanup_empty_sql_files()
-end
+cleanup_empty_sql_files()

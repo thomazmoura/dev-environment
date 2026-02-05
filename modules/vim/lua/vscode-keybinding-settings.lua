@@ -58,35 +58,25 @@ local function reset_sql_db_type()
   vim.api.nvim_echo({{"Database type reset. Next <leader>r will prompt again.", "Normal"}}, false, {})
 end
 
--- Check if running VS Code Insiders
-local function is_vscode_insiders()
-  local success, result = pcall(function()
-    return vscode.eval([[
-      return vscode.env.appName.toLowerCase().includes('insiders') ||
-             vscode.version.toLowerCase().includes('insider')
-    ]])
-  end)
-
-  if not success then
-    print("Error checking VS Code version: " .. tostring(result))
-    return false
-  end
-
-  return result
-end
-
 -- Create new SQL file with current date and time as filename
 local function create_dated_sql_file()
   vscode.eval_async([[
     const path = await import('path');
 
-    // Check if workspace folder exists
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || !workspaceFolders.length) {
-      throw new Error('No workspace folder open');
-    }
+    // Check for DEFAULT_VSCODE_QUERY_LOCATION environment variable first
+    const defaultLocation = process.env.DEFAULT_VSCODE_QUERY_LOCATION;
+    let targetPath;
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
+    if (defaultLocation) {
+      targetPath = defaultLocation;
+    } else {
+      // Fall back to workspace folder
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || !workspaceFolders.length) {
+        throw new Error('No workspace folder open');
+      }
+      targetPath = workspaceFolders[0].uri.fsPath;
+    }
 
     // Generate timestamp: YYYY-MM-DD-HH-MM-SS
     const now = new Date();
@@ -95,7 +85,7 @@ local function create_dated_sql_file()
     const filename = `${timestamp}.sql`;
 
     // Construct full file path
-    const filePath = path.join(workspacePath, filename);
+    const filePath = path.join(targetPath, filename);
     const fileUri = vscode.Uri.file(filePath);
 
     // Create empty file
@@ -167,19 +157,9 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 
-if is_vscode_insiders() then
-  vim.keymap.set('n', '<leader>N', create_dated_sql_file, {
-    noremap = true,
-    silent = true,
-    desc = "Create new SQL file (with automatic date as name)"
-  })
-  create_dated_sql_file()
-else
-  vim.keymap.set('n', '<leader>N', create_untitled_markdown, {
-    noremap = true,
-    silent = true,
-    desc = "Create new Markdown untitled file"
-  })
-  create_untitled_markdown()
-end
-
+vim.keymap.set('n', '<leader>N', create_dated_sql_file, {
+  noremap = true,
+  silent = true,
+  desc = "Create new SQL file (with automatic date as name)"
+})
+create_dated_sql_file()

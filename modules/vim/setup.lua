@@ -70,6 +70,13 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   vim.keymap.set('n', '<Leader>mc', require('codewindow').close_minimap, opts)
   vim.keymap.set('n', '<Leader>mf', require('codewindow').toggle_focus, opts)
 
+  -- Markview (Markdown rendering on normal mode)
+  require("markview").setup({
+    buf_ignore = {},
+    max_length = 99999,
+  })
+
+
   -- tint (fade inactive windows)
   require("tint").setup({
     tint = -75,
