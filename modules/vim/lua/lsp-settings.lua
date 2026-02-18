@@ -163,6 +163,27 @@ local lsp_flags = {
 
 
 -- omnisharp settings
+local omnisharp_solution = require('omnisharp-solution')
+local initial_solution = omnisharp_solution.get_startup_solution()
+
+-- Build base command with solution if available
+local function build_omnisharp_cmd(solution)
+  local cmd = {
+    "dotnet",
+    home_directory .. "/.language-servers/omnisharp/OmniSharp.dll",
+    "--languageserver",
+    "--hostPID",
+    tostring(vim.fn.getpid())
+  }
+
+  if solution then
+    table.insert(cmd, "-s")
+    table.insert(cmd, solution)
+  end
+
+  return cmd
+end
+
 lspconfig.omnisharp.setup {
   capabilities = capabilities,
   flags = lsp_flags,
@@ -172,10 +193,12 @@ lspconfig.omnisharp.setup {
     ["textDocument/references"] = require('omnisharp_extended').references_handler,
     ["textDocument/implementation"] = require('omnisharp_extended').implementation_handler,
   },
-  cmd = {
-    "dotnet", home_directory .. "/.language-servers/omnisharp/OmniSharp.dll", "--languageserver", "--hostPID",
-    tostring(vim.fn.getpid())
-  },
+  cmd = build_omnisharp_cmd(initial_solution),
+  on_new_config = function(new_config, root_dir)
+    local solution = omnisharp_solution.selected_solution
+                  or omnisharp_solution.get_startup_solution()
+    new_config.cmd = build_omnisharp_cmd(solution)
+  end,
 
   -- Enables support for reading code style, naming convention and analyzer
   -- settings from .editorconfig.
@@ -212,6 +235,11 @@ lspconfig.omnisharp.setup {
   -- true
   analyze_open_documents_only = true,
 }
+
+-- Create command for manual solution selection
+vim.api.nvim_create_user_command("OmnisharpSelectSolution", function()
+  omnisharp_solution.select_solution()
+end, { desc = "Select OmniSharp solution file" })
 
 -- powershell settings
 lspconfig.powershell_es.setup {
