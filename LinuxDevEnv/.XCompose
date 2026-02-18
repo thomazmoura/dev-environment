@@ -6,12 +6,12 @@
 <Multi_key> <minus> <space>		: "~"	asciitilde # TILDE
 <Multi_key> <space> <minus>		: "~"	asciitilde # TILDE
 <dead_acute> <space>			: "'"	apostrophe # APOSTROPHE
-<dead_acute> <dead_acute>		: "´"	acute # ACUTE ACCENT
+<dead_acute> <dead_acute>		: "´´"	acute # ACUTE ACCENT
 <Multi_key> <apostrophe> <apostrophe>	: "´"	acute # ACUTE ACCENT
 <dead_grave> <space>			: "`"	grave # GRAVE ACCENT
-<dead_grave> <dead_grave>		: "`"	grave # GRAVE ACCENT
+<dead_grave> <dead_grave>       : "``" # GRAVE ACCENT
 <dead_circumflex> <space>		: "^"	asciicircum # CIRCUMFLEX ACCENT
-<dead_circumflex> <dead_circumflex>	: "^"	asciicircum # CIRCUMFLEX ACCENT
+<dead_circumflex> <dead_circumflex>	: "^^"	asciicircum # CIRCUMFLEX ACCENT
 <Multi_key> <greater> <space>		: "^"	asciicircum # CIRCUMFLEX ACCENT
 <Multi_key> <space> <greater>		: "^"	asciicircum # CIRCUMFLEX ACCENT
 <dead_abovering> <space>		: "°"	degree # DEGREE SIGN
@@ -33,7 +33,7 @@
 <dead_abovedot> <space>			: "˙"	abovedot # DOT ABOVE
 <dead_abovedot> <dead_abovedot>		: "˙"	abovedot # DOT ABOVE
 <Multi_key> <period> <space>		: "˙"	abovedot # DOT ABOVE
-<dead_diaeresis> <dead_diaeresis>	: "¨"	diaeresis # DIAERESIS
+<dead_diaeresis> <dead_diaeresis>	: "\"\"" # DOUBLE QUOTATION MARK
 <Multi_key> <quotedbl> <space>		: "¨"	diaeresis # DIAERESIS
 <Multi_key> <quotedbl> <quotedbl>	: "¨"	diaeresis # DIAERESIS
 <dead_diaeresis> <space>		: "\""	quotedbl # QUOTATION MARK
@@ -5269,7 +5269,3 @@
 <dead_diaeresis> <Y>    : "\"Y"
 <dead_diaeresis> <z>    : "\"z"
 <dead_diaeresis> <Z>    : "\"Z"
-
-# Remove standalone accent marks - double apostrophe and double quotes should produce literals
-<dead_acute> <dead_acute>       : "''"
-<dead_diaeresis> <dead_diaeresis> : "\"\""
