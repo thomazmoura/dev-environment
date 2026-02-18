@@ -14,5 +14,8 @@ Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-fugitive'
 Plug 'phaazon/hop.nvim'
 
+" Mine
+Plug '~/code/workhorse.nvim'
+
 call plug#end()
 

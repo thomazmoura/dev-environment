@@ -107,14 +107,18 @@ if ($null -ne $cached) {
 try {
     $queryResult = az boards query --id $QueryId --output json 2>$null
     if (-not $queryResult) {
-        Set-CachedResult -Display "" -Success $false
+        $display = 'Unable to get query results. Check the connection to the Azure DevOps Server/Service'
+        Set-CachedResult -Display $display -Success $false
+        Write-Output $display
         exit 0
     }
 
     $workItems = $queryResult | ConvertFrom-Json
 
     if (-not $workItems -or $workItems.Count -eq 0) {
-        Set-CachedResult -Display "" -Success $false
+        $display = "No items returned by the query. Check if there's any active work-items"
+        Set-CachedResult -Display $display -Success $false
+        Write-Output $display
         exit 0
     }
 
@@ -127,7 +131,9 @@ try {
     $firstItem = $sortedItems | Select-Object -First 1
 
     if (-not $firstItem) {
-        Set-CachedResult -Display "" -Success $false
+        $display = "No items returned by the query. Check if there's any active work-items"
+        Set-CachedResult -Display $display -Success $false
+        Write-Output $display
         exit 0
     }
 
@@ -139,7 +145,8 @@ try {
     Write-Output $display
 }
 catch {
-    # Cache the error so we don't hammer the API on repeated failures
-    Set-CachedResult -Display "" -Success $false
+    $display = 'Unable to get query results. Check the connection to the Azure DevOps Server/Service'
+    Set-CachedResult -Display $display -Success $false
+    Write-Output $display
     exit 0
 }

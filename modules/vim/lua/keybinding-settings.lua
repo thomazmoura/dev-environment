@@ -113,6 +113,9 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
+-- Markview
+vim.keymap.set("n", "<leader>mm", '<cmd>Markview splitToggle<cr>', { desc = "Toggle Markview Split" })
+
 -- Workhorse
 local workhorse = require('workhorse')
 vim.keymap.set("n", "<leader>wq", workhorse.pick_query, { desc = "Workhorse: Pick query" })

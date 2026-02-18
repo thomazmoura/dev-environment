@@ -63,13 +63,6 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
     )
   end
 
-  -- codewindow (minimap)
-  require('codewindow').setup()
-  local opts = { noremap = true, silent = true }
-  vim.keymap.set('n', '<Leader>mm', require('codewindow').open_minimap, opts)
-  vim.keymap.set('n', '<Leader>mc', require('codewindow').close_minimap, opts)
-  vim.keymap.set('n', '<Leader>mf', require('codewindow').toggle_focus, opts)
-
   -- Markview (Markdown rendering on normal mode)
   require("markview").setup({
     buf_ignore = {},
@@ -86,33 +79,35 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   vim.o.timeout = true
   vim.o.timeoutlen = 1000
   require("which-key").setup()
+
+  -- Clipboard integration
+  if os.getenv('WSLENV') then
+    vim.g.clipboard = {
+      name = 'win32yank-wsl',
+      copy = {
+            ['+'] = 'win32yank.exe -i --crlf',
+            ['*'] = 'win32yank.exe -i --crlf',
+      },
+      paste = {
+            ['+'] = 'win32yank.exe -o --lf',
+            ['*'] = 'win32yank.exe -o --lf',
+      },
+      cache_enabled = 0,
+    }
+  elseif os.getenv('TMUX') then
+    require("tmux").setup({
+      copy_sync = {
+        sync_clipboard = true,
+        sync_registers = false,
+      },
+      resize = {
+        -- enables default keybindings (A-hjkl) for normal mode
+        enable_default_keybindings = false,
+      }
+    })
+  end
 else
   require('commands-settings')
+  require('workhorse-vscode-settings')
 end
 
--- Clipboard integration
-if os.getenv('WSLENV') then
-  vim.g.clipboard = {
-    name = 'win32yank-wsl',
-    copy = {
-          ['+'] = 'win32yank.exe -i --crlf',
-          ['*'] = 'win32yank.exe -i --crlf',
-    },
-    paste = {
-          ['+'] = 'win32yank.exe -o --lf',
-          ['*'] = 'win32yank.exe -o --lf',
-    },
-    cache_enabled = 0,
-  }
-elseif os.getenv('TMUX') then
-  require("tmux").setup({
-    copy_sync = {
-      sync_clipboard = true,
-      sync_registers = false,
-    },
-    resize = {
-      -- enables default keybindings (A-hjkl) for normal mode
-      enable_default_keybindings = false,
-    }
-  })
-end
