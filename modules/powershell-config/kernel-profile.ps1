@@ -963,13 +963,36 @@ function Open-Files($Path = '.') {
 
 }
 
+function Copy-CoPilotCommand() {
+  param(
+    [switch]$Resume,
+    [Parameter(ValueFromRemainingArguments)]$remaining
+  )
+  nvs use latest
+  $settings = Get-Content "$HOME/.claude/settings.json" | ConvertFrom-Json
+  $allowTools = $settings.permissions.allow `
+    | Where-Object { $_ -match '^Bash\(' } `
+    | ForEach-Object { $_ -replace '^Bash\((.+)\)$', '--allow-tool ''shell($1)''' }
+  $allowToolsStr = $allowTools -join ' '
+  $resumeFlag = if ($Resume.IsPresent) { '--resume' } else { '' }
+  $command = "copilot $allowToolsStr $resumeFlag $remaining; exit"
+  Write-Verbose "Copying command to the clipboard: $command"
+  $command | clip
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 Write-Debug "`n->> Setting Aliases"
 
 if ( !(Test-Path "/usr/bin/clip") -and !(Test-Path "$HOME/.local/bin/clip") ) {
-  New-Alias -Force clip Set-Clipboard
+  if ((Get-Command "wl-copy" -ErrorAction SilentlyContinue)) {
+    New-Alias -Force clip wl-copy
+  } elseif ((Get-Command "clip.exe" -ErrorAction SilentlyContinue)) {
+    New-Alias -Force clip clip.exe
+  } else {
+    New-Alias -Force clip Set-Clipboard
+  }
 }
 
 New-Alias -Force guid Copy-NewGuidToClipboard
@@ -1059,6 +1082,7 @@ New-Alias -Force files Open-Files
 New-Alias -Force npms Start-Npm
 New-Alias -Force yarns Start-Yarn
 New-Alias -Force :q Exit-Session
+New-Alias -Force copylot Copy-CoPilotCommand
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases do kernel demorou: $($stopwatch.ElapsedMilliseconds)"
 
 
