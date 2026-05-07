@@ -5,3 +5,4 @@
 *.swm
 global.json
 .obsidian
+.docs
