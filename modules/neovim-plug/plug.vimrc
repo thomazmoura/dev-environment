@@ -51,7 +51,7 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-ui-select.nvim'
 
 " Jump motion
-Plug 'yuki-yano/hop.nvim'
+Plug 'smoka7/hop.nvim', {'tag': 'v2.*'}
 
 " General Settings
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }

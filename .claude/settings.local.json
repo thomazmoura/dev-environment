@@ -21,7 +21,10 @@
       "Bash(find:*)",
       "WebFetch(domain:code.visualstudio.com)",
       "Bash(ls:*)",
-      "WebFetch(domain:discuss.kde.org)"
+      "WebFetch(domain:discuss.kde.org)",
+      "Bash(nvim --headless -c \"quit\")",
+      "Bash(nvim --headless -c \"echo &runtimepath\" -c \"quit\")",
+      "Bash(nvim *)"
     ],
     "deny": [],
     "ask": []

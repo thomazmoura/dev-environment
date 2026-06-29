@@ -5,3 +5,5 @@
 *.swm
 global.json
 .obsidian
+
+**/.claude/settings.local.json
