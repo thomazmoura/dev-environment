@@ -46,6 +46,15 @@ Eu decidi criar esse sub-container (que usa o container principal como base) par
 * **C/C++** - Necessário para compilar o QMK. Eu uso C apenas para personalizações de layouts e features do QMK, portanto o suporte para C/C++ é limitado comparado a outras linguages.
 * **Rust** - Já que eu já tive que criar um segundo container para colocar os requisitos do QMK, achei que poderia aproveitar e instalar as dependências do Rust para poder rodá-lo como um contianer de estudo.
 
+### Container do Android
+
+Outro sub-container baseado no container principal (`:base`), para desenvolver aplicativos Android nativos em Kotlin inteiramente pelo NeoVim e pela linha de comando, sem inflar o container principal.
+
+* **JDK 17 / Kotlin** - Necessários para os builds do Android Gradle Plugin (via o wrapper `./gradlew` do próprio projeto).
+* **Android SDK** - `sdkmanager`, `adb`, `avdmanager`, build-tools, uma plataforma, o emulador e uma imagem de sistema `google_apis` x86_64.
+* **Emulador** - Emulador headless com um AVD `pixel_api35` já criado. Para acelerar por hardware é preciso rodar o container com `--device /dev/kvm`.
+* **kotlin-language-server** - O LSP de Kotlin (do `fwcd`) integrado ao NeoVim.
+
 ###  Scripts de Windows e Linux
 
 Eu faço a maior parte do desenvolvimento dentro do container, mas há situações onde é mais produtivo recorrer a "soluções menos isoladas", como o Visual Studio Code rodando no Windows ou o WSL2 (idealmente, os dois). Então eu acresventei alguns scripts para que eu possa mais facilmente configurar uma máquina nova para usar algumas das mesmas configurações que eu uso nos containers.

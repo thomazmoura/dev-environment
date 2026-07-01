@@ -33,6 +33,7 @@ Do not move or rename modules without updating every place they are referenced: 
 | `base.Dockerfile` | Stage 1 Docker image: apt packages, PowerShell, .NET, NeoVim, debugger |
 | `Dockerfile` | Stage 2 Docker image: Node, vim-plug, Azure CLI, tmux, LSP, dotfile symlinks |
 | `qmk-base.Dockerfile` | Stage 3 (optional): QMK + Rust on top of base |
+| `android-base.Dockerfile` | Stage 3 (optional): JDK + Android SDK + emulator + Kotlin LSP on top of base |
 | `LinuxDevEnv/host-setup.sh` | Master setup script for a bare Ubuntu 24.04 host |
 | `modules/entrypoint-config/Start-DevSession.ps1` | Container startup: folders, certs, dotfile symlinks, dotnet tools |
 | `modules/wsl2/Start-DevSession.ps1` | WSL2 session startup (subset of the container entrypoint) |
@@ -65,9 +66,11 @@ base.Dockerfile  →  :base
                     Dockerfile  →  :latest   (main dev image)
                         ↓
                     qmk-base.Dockerfile  →  :qmk_base  →  Dockerfile  →  :qmk
+                        ↓
+                    android-base.Dockerfile  →  :android_base  →  Dockerfile  →  :android
 ```
 
-The `Dockerfile` and `qmk-base.Dockerfile` both accept a `DockerBase` build argument that selects the upstream image. CI wires them together; see `.github/workflows/main.yml`.
+The `Dockerfile`, `qmk-base.Dockerfile` and `android-base.Dockerfile` all accept a `DockerBase` build argument that selects the upstream image. CI wires them together; see `.github/workflows/main.yml`.
 
 ## Conventions
 
@@ -101,7 +104,7 @@ docker build --build-arg DockerBase=thomazmoura/dev-environment:base -f Dockerfi
 ## CI behaviour
 
 - Every push triggers a Docker build.
-- `main` branch: publishes `:base`, `:latest`, `:qmk_base`, `:qmk`.
+- `main` branch: publishes `:base`, `:latest`, `:qmk_base`, `:qmk`, `:android_base`, `:android`.
 - Any other branch: publishes branch-namespaced tags (slashes in branch names become underscores).
 - Credentials: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` must be set as repository secrets.
 - Build cache: all stages use `--cache-from` against the previously published tag.

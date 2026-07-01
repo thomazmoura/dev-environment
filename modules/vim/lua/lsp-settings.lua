@@ -280,6 +280,13 @@ lspconfig.lua_ls.setup {
   },
 }
 
+-- Kotlin LS settings (fwcd kotlin-language-server, installed by the Android image)
+lspconfig.kotlin_language_server.setup {
+  capabilities = capabilities,
+  flags = lsp_flags,
+  cmd = { home_directory .. "/.language-servers/kotlin/server/bin/kotlin-language-server" },
+}
+
 -- Create an augroup named JsonToJsonc (so that comments won't be an issue anymore with JSON)
 local json_to_jsonc_group = vim.api.nvim_create_augroup("JsonToJsonc", { clear = true })
 

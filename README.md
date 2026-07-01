@@ -49,9 +49,10 @@ dev-environment/
 ├── DockerUbuntu/         # Dotfiles baked into the Docker image at build time
 ├── .devcontainer/        # VS Code / GitHub Codespaces dev container definitions
 ├── .github/workflows/    # CI/CD: builds and pushes Docker images on push
-├── base.Dockerfile       # Stage 1: Debian + PowerShell + .NET + NeoVim + debugger
-├── Dockerfile            # Stage 2: base + Node + plugins + Azure CLI + tmux + LSP
-└── qmk-base.Dockerfile   # Stage 3 (optional): base + QMK + Rust dependencies
+├── base.Dockerfile         # Stage 1: Debian + PowerShell + .NET + NeoVim + debugger
+├── Dockerfile              # Stage 2: base + Node + plugins + Azure CLI + tmux + LSP
+├── qmk-base.Dockerfile     # Stage 3 (optional): base + QMK + Rust dependencies
+└── android-base.Dockerfile # Stage 3 (optional): base + JDK + Android SDK + emulator + Kotlin LSP
 ```
 
 ### Module System
@@ -60,6 +61,7 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 
 | Module | Purpose |
 |---|---|
+| `android/` | Android SDK + emulator + AVD and the Kotlin language server (used by the Android image) |
 | `azure-cli/` | Azure CLI connection and DevOps scripts |
 | `azure-cli-extensions/` | Azure CLI extension installer |
 | `bin-tools/` | CLI utilities (`yank`/`clip`) made available system-wide |
@@ -110,6 +112,18 @@ Layered on top of `:base`. Adds Node.js (via NVS), NeoVim plugins (vim-plug), Az
 
 **`qmk-base.Dockerfile`** — `thomazmoura/dev-environment:qmk_base` / `:qmk`
 Same two-stage pattern but layered on `:base` instead of `:latest`. Adds QMK build dependencies (Python packages, ARM toolchain) and Rust.
+
+**`android-base.Dockerfile`** — `thomazmoura/dev-environment:android_base` / `:android`
+Same two-stage pattern, layered on `:base`. Adds the JDK, the Android SDK (command-line tools, platform-tools, build-tools, a platform, the emulator and a `google_apis` x86_64 system image), a ready-to-run `pixel_api35` AVD and the `fwcd` Kotlin language server. The final `:android` tag is the full `:latest` NeoVim environment plus this Android toolchain.
+
+Run the emulator from the command line (KVM acceleration requires `/dev/kvm` on the host):
+
+```bash
+docker run -it --device /dev/kvm --group-add kvm thomazmoura/dev-environment:android
+# inside the container:
+emulator -avd pixel_api35 -no-window -gpu swiftshader_indirect -no-audio &
+adb devices   # wait for emulator-5554 to report "device"
+```
 
 ### Linux Host Setup
 
@@ -169,6 +183,15 @@ Built on top of the main `:base` image for compiling [QMK](https://github.com/qm
 * **C/C++** — QMK firmware compilation.
 * **Rust** — study and experimentation container.
 
+### Android Container
+
+Built on top of the main `:base` image for developing native Android apps in Kotlin entirely from NeoVim and the command line, without bloating the main image.
+
+* **JDK 17 / Kotlin** — Android Gradle Plugin builds (via the project's `./gradlew` wrapper).
+* **Android SDK** — `sdkmanager`, `adb`, `avdmanager`, build-tools and a platform.
+* **Emulator** — headless emulator + a pre-made `pixel_api35` AVD (needs `--device /dev/kvm`).
+* **kotlin-language-server** — Kotlin LSP wired into NeoVim.
+
 ### Linux Host Scripts
 
 Scripts in `LinuxDevEnv/` and `LinuxHost/` let you apply the same configuration to a bare-metal Ubuntu machine or a WSL2 instance, sharing the same `modules/` directory used by the Docker builds.
@@ -177,8 +200,8 @@ Scripts in `LinuxDevEnv/` and `LinuxHost/` let you apply the same configuration 
 
 GitHub Actions (`.github/workflows/main.yml`) runs on every push:
 
-- **`main` branch** — builds and pushes `:base`, `:latest`, `:qmk_base`, and `:qmk` to Docker Hub.
-- **Other branches** — builds and pushes branch-namespaced tags (e.g. `base_my-branch`, `my-branch`, `qmk_base_my-branch`, `qmk_my-branch`) for testing.
+- **`main` branch** — builds and pushes `:base`, `:latest`, `:qmk_base`, `:qmk`, `:android_base`, and `:android` to Docker Hub.
+- **Other branches** — builds and pushes branch-namespaced tags (e.g. `base_my-branch`, `my-branch`, `qmk_base_my-branch`, `qmk_my-branch`, `android_base_my-branch`, `android_my-branch`) for testing.
 
 Docker layer caching (`--cache-from`) is used on all builds to keep CI fast.
 

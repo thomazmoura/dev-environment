@@ -68,6 +68,30 @@ jobs:
       - name: Push to docker hub as latest
         run: docker push $CACHE_IMAGE:qmk
 
+      - name: Build android-base from base using android-base.Dockerfile
+        run: |
+          docker build \
+            --cache-from $CACHE_IMAGE:android_base \
+            --tag $CACHE_IMAGE:android_base \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:base" \
+            --file android-base.Dockerfile \
+            "."
+      - name: Push to docker hub as latest
+        run: docker push $CACHE_IMAGE:android_base
+
+      - name: Build Android container from android-base using Dockerfile
+        run: |
+          docker build \
+            --cache-from $CACHE_IMAGE:android \
+            --tag $CACHE_IMAGE:android \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:android_base" \
+            --file Dockerfile \
+            "."
+      - name: Push to docker hub as latest
+        run: docker push $CACHE_IMAGE:android
+
   alt-build:
     name: Build alternative branch Docker Image
     runs-on: ubuntu-latest
@@ -146,4 +170,37 @@ jobs:
         run: |
           GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
           docker image push $CACHE_IMAGE:qmk_$GIT_BRANCH
+
+      - name: Build from base_GIT_BRANCH using android-base.Dockerfile
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+          docker build \
+            --cache-from $CACHE_IMAGE:android_base_$GIT_BRANCH \
+            --cache-from $CACHE_IMAGE:android_base \
+            --cache-from $CACHE_IMAGE:base \
+            --tag $CACHE_IMAGE:android_base_$GIT_BRANCH \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:base_$GIT_BRANCH" \
+            --file android-base.Dockerfile \
+            "."
+      - name: Push to docker hub as branch name (with '/' escaped as '_')
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+          docker image push $CACHE_IMAGE:android_base_$GIT_BRANCH
+
+      - name: Build android from android-base using Dockerfile
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+          docker build \
+            --cache-from $CACHE_IMAGE:android_$GIT_BRANCH \
+            --cache-from $CACHE_IMAGE:android \
+            --tag $CACHE_IMAGE:android_$GIT_BRANCH \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg DockerBase="$CACHE_IMAGE:android_base_$GIT_BRANCH" \
+            --file Dockerfile \
+            "."
+      - name: Push to docker hub as branch name (with '/' escaped as '_')
+        run: |
+          GIT_BRANCH=$(tr -s / _ <<< "$GITHUB_REF_NAME") &&
+          docker image push $CACHE_IMAGE:android_$GIT_BRANCH
 
