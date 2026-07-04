@@ -12,6 +12,16 @@ $AndroidHome = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$HOME/Androi
 $SdkManager = "$AndroidHome/cmdline-tools/latest/bin/sdkmanager"
 $AvdManager = "$AndroidHome/cmdline-tools/latest/bin/avdmanager"
 
+# sdkmanager/avdmanager are Java programs. The container gets its JDK from android-base.Dockerfile
+# before this script runs, but a local machine won't have one yet, so install it when missing.
+# (This is what made the script fail on a fresh local Linux machine.) It is a no-op in the container.
+if( -not (Get-Command java -ErrorAction SilentlyContinue) ) {
+  Write-Output "`n->> Java not found. Installing openjdk-17-jdk (required by sdkmanager/avdmanager)"
+  & sudo apt-get update
+  & sudo apt-get install -y --no-install-recommends openjdk-17-jdk
+  Throw-ExceptionOnNativeFailure
+}
+
 if( Test-Path "$AndroidHome/platform-tools" ) {
   Write-Output "`n->> Android SDK already installed at $AndroidHome. Skipping SDK install."
 } else {
