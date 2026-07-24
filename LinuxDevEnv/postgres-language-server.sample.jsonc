@@ -1,0 +1,39 @@
+{
+  // Sample configuration for the Postgres Language Server (VS Code extension: Supabase.postgrestools).
+  // Copy this file to the ROOT of a project as `postgres-language-server.jsonc` and adjust as needed.
+  // The extension also accepts a custom location via the `postgres-language-server.configFile` setting.
+  "$schema": "https://pg-language-server.com/latest/schema.json",
+
+  // Static lint rules — work without a database connection.
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+
+  // Type checking and plpgsql checks require a live `db` connection (see below).
+  "typecheck": {
+    "enabled": true
+  },
+  "plpgsqlCheck": {
+    "enabled": true
+  },
+
+  // Uncomment and fill in to enable DB-aware autocompletion, type checking and plpgsql checks.
+  // You can use `connectionString` instead of the individual fields (it takes precedence).
+  // "db": {
+  //   "host": "127.0.0.1",
+  //   "port": 5432,
+  //   "username": "postgres",
+  //   "password": "postgres",
+  //   "database": "postgres",
+  //   "connTimeoutSecs": 10,
+  //   "allowStatementExecutionsAgainst": ["127.0.0.1/*", "localhost/*"]
+  // },
+
+  // Restrict which files the server analyzes (optional).
+  "files": {
+    "ignore": ["**/node_modules", "**/dist"]
+  }
+}

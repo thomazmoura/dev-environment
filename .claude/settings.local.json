@@ -21,7 +21,12 @@
       "Bash(find:*)",
       "WebFetch(domain:code.visualstudio.com)",
       "Bash(ls:*)",
-      "WebFetch(domain:discuss.kde.org)"
+      "WebFetch(domain:discuss.kde.org)",
+      "Bash(kesl-control --app-info)",
+      "Bash(kesl-control --get-task-list)",
+      "Bash(kesl-control --get-settings 1)",
+      "Bash(ps -L -o pid,tid,pcpu,comm -p 1451)",
+      "Bash(sort -k3 -rn)"
     ],
     "deny": [],
     "ask": []

@@ -6,3 +6,6 @@
 global.json
 .obsidian
 .docs
+.claude/worktrees
+
+**/.claude/settings.local.json
