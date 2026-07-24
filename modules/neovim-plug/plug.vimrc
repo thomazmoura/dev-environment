@@ -51,7 +51,7 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-ui-select.nvim'
 
 " Jump motion
-Plug 'phaazon/hop.nvim'
+Plug 'yuki-yano/hop.nvim'
 
 " General Settings
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
@@ -96,8 +96,8 @@ Plug 'coder/claudecode.nvim'
 Plug 'zbirenbaum/copilot.lua'
 
 " Mine
-Plug '~/code/workhorse.nvim'
-" Plug 'thomazmoura/workhorse.nvim'
+" Plug '~/code/workhorse.nvim'
+Plug 'thomazmoura/workhorse.nvim'
 
 call plug#end()
 
