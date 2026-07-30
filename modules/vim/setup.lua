@@ -97,8 +97,17 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   elseif os.getenv('TMUX') then
     require("tmux").setup({
       copy_sync = {
-        sync_clipboard = true,
-        sync_registers = false,
+        -- Without this the whole copy_sync block is inert
+        enable = true,
+        -- Keep the autodetected wl-copy provider for +, so that text copied
+        -- outside of tmux (browsers and such) is still reachable through "+p
+        sync_clipboard = false,
+        sync_registers = true,
+        -- Assigning to the unnamed register also writes through to register 0,
+        -- so syncing it would clobber the last yank
+        sync_unnamed = false,
+        -- Tmux buffers land on registers 2 to 9, leaving 0 and 1 untouched
+        register_offset = 2,
       },
       resize = {
         -- enables default keybindings (A-hjkl) for normal mode
