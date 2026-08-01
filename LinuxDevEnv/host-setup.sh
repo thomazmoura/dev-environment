@@ -109,6 +109,9 @@ chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$H
 # NeoVim LSP Configuration
 pwsh -NoProfile -File $HOME/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
 
+# Postgres Language Server (VS Code extension Supabase.postgrestools)
+pwsh -NoProfile -File "$script_path/Install-PostgresLanguageServer.ps1"
+
 # Shell config folders and .files
 pwsh -NoProfile -Command "New-Item -ItemType SymbolicLink -Path $HOME/.vim -Target $HOME/.local/share/nvim/site"
 
