@@ -64,7 +64,6 @@ Plug 'OXY2DEV/markview.nvim'
 
 " TMUX integration
 Plug 'christoomey/vim-tmux-navigator'
-Plug 'roxma/vim-tmux-clipboard'
 Plug 'aserowy/tmux.nvim'
 
 " Colorschemes
