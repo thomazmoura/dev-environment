@@ -68,11 +68,11 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `dotnet-tools/` | .NET global tools setup (runs at session start) |
 | `entrypoint-config/` | Docker container startup script (`Start-DevSession.ps1`) |
 | `git/` | Installs `delta` (fancy git diff viewer) |
-| `neovim-base/` | NeoVim npm dependencies (e.g. the `neovim` npm package) |
+| `neovim-base/` | NeoVim npm dependencies (e.g. the `neovim` npm package) and spell files |
 | `neovim-install/` | Downloads and installs NeoVim from GitHub releases |
 | `neovim-lsp/` | Roslyn Language Server, PowerShell Editor Services, Lua Language Server |
 | `neovim-plug/` | `vim-plug` plugin list (`plug.vimrc`) |
-| `neovim-treesitter/` | Tree-sitter grammar installation |
+| `neovim-treesitter/` | Tree-sitter CLI installer (grammars themselves are installed by `nvim-treesitter`) |
 | `node/` | Node Version Switcher (NVS) setup |
 | `nvim-config/` | NeoVim entry point (`init.vim`) |
 | `powershell/` | PowerShell module installers (Oh My Posh, etc.) |

@@ -12,8 +12,6 @@ require("neodev").setup({
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 
-local lspconfig = require('lspconfig')
-
 -- luasnip setup
 local luasnip = require 'luasnip'
 
@@ -156,10 +154,19 @@ vim.keymap.set('n', '<Leader>X', '<cmd>Telescope diagnostics<cr>', bufopts)
 vim.keymap.set('n', '<Leader>o', '<cmd>SymbolsOutline<cr>', bufopts)
 vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
 
-local lsp_flags = {
-  -- This is the default in Nvim 0.7+
-  debounce_text_changes = 150,
-}
+-- Defaults shared by every server. The '*' entry is merged into each named
+-- config by vim.lsp.config, so capabilities and flags no longer need repeating
+-- once per server the way the old lspconfig.<server>.setup{} calls did.
+--
+-- Server cmd/filetypes/root_markers come from nvim-lspconfig's lsp/<name>.lua
+-- definitions, which are picked up from runtimepath automatically.
+vim.lsp.config('*', {
+  capabilities = capabilities,
+  flags = {
+    -- This is the default in Nvim 0.7+
+    debounce_text_changes = 150,
+  },
+})
 
 
 -- C# settings (Roslyn language server, via seblyng/roslyn.nvim)
@@ -182,7 +189,6 @@ require('roslyn').setup {
 }
 
 vim.lsp.config('roslyn', {
-  capabilities = capabilities,
   settings = {
     -- Keep background passes scoped to open files. Analysing the whole solution
     -- is what pinned a CPU core under OmniSharp. Cross-solution `gd`/`gr` still
@@ -214,16 +220,12 @@ vim.lsp.config('roslyn', {
 })
 
 -- powershell settings
-lspconfig.powershell_es.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
+vim.lsp.config('powershell_es', {
   bundle_path = home_directory .. '/.language-servers/powershell',
-}
+})
 
 -- lua LS settings
-lspconfig.lua_ls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
+vim.lsp.config('lua_ls', {
   cmd = { home_directory .. "/.language-servers/lua/bin/lua-language-server" },
   settings = {
     Lua = {
@@ -250,7 +252,7 @@ lspconfig.lua_ls.setup {
       }
     },
   },
-}
+})
 
 -- Create an augroup named JsonToJsonc (so that comments won't be an issue anymore with JSON)
 local json_to_jsonc_group = vim.api.nvim_create_augroup("JsonToJsonc", { clear = true })
@@ -264,28 +266,24 @@ vim.api.nvim_create_autocmd("FileType", {
   group = json_to_jsonc_group,
 })
 
--- json LS settings
-lspconfig.jsonls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
---TypeScript LS settings
-lspconfig.ts_ls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
 -- Angular LS settings
-lspconfig.angularls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
+--
+-- angularls claims every typescript and html buffer, so without this it starts
+-- an ngserver in plain TypeScript projects too. Under the old lspconfig
+-- framework a root_dir that found nothing meant "do not attach"; vim.lsp.enable
+-- only uses root_markers to *compute* a root, and still attaches when none
+-- match. Declining to call on_dir is what suppresses the attach now.
+vim.lsp.config('angularls', {
+  root_dir = function(bufnr, on_dir)
+    local root = vim.fs.root(bufnr, { 'angular.json', 'nx.json' })
+    if root then
+      on_dir(root)
+    end
+  end,
+})
 
 -- YAML LS settings
-require('lspconfig').yamlls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
+vim.lsp.config('yamlls', {
   settings = {
     yaml = {
       schemas = {
@@ -293,34 +291,10 @@ require('lspconfig').yamlls.setup {
       },
     },
   }
-}
-
--- VIM LS settings
-lspconfig.vimls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
--- Emmet LS
-lspconfig.emmet_ls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
--- CSS LS
-lspconfig.cssls.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
-
--- HTML LS
-lspconfig.html.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-}
+})
 
 -- Cucumber
-lspconfig.cucumber_language_server.setup {
+vim.lsp.config('cucumber_language_server', {
   settings = {
     cucumber = {
       features = { "**/Features/*.feature" },
@@ -331,8 +305,25 @@ lspconfig.cucumber_language_server.setup {
     glue = { "**/StepDefinitions/*.cs" },
     parameterTypes = {},
   },
-  capabilities = capabilities,
-  flags = lsp_flags,
+})
+
+-- Servers that need nothing beyond the nvim-lspconfig defaults plus the '*'
+-- entry above: jsonls, ts_ls, vimls, emmet_ls, cssls, html.
+--
+-- roslyn is absent on purpose: roslyn.nvim's own plugin/roslyn.lua already
+-- calls vim.lsp.enable('roslyn').
+vim.lsp.enable {
+  'powershell_es',
+  'lua_ls',
+  'jsonls',
+  'ts_ls',
+  'angularls',
+  'yamlls',
+  'vimls',
+  'emmet_ls',
+  'cssls',
+  'html',
+  'cucumber_language_server',
 }
 
 -- Proper icons

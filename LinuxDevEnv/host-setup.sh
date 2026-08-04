@@ -103,6 +103,10 @@ pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1
 # NeoVim Requirements
 pwsh -NoProfile -File $HOME/.modules/neovim-base/neovim-setup.ps1
 
+# Tree-sitter CLI (required by nvim-treesitter's main branch, and by the
+# :TSUpdate that runs as part of PlugInstall below)
+pwsh -NoProfile -File $HOME/.modules/neovim-treesitter/Install-TreeSitterCli.ps1
+
 # NeoVim Plug Modules installation
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site/autoload -Target $modules_path/vim-autoload"
 pwsh -NoProfile -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
@@ -135,6 +139,9 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -
 
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
+
+# Spell files (needs the site symlink above, since it writes through it)
+pwsh -NoProfile -File $HOME/.modules/neovim-base/Install-SpellFiles.ps1
 
 # User environment variables
 pwsh -NoProfile -Command "if ( ! (Test-Path $HOME/.profile.ps1) ) { New-Item -Path $HOME/.profile.ps1 }"

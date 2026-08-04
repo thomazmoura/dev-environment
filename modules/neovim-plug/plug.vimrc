@@ -75,8 +75,12 @@ Plug 'catppuccin/nvim'
 Plug 'levouh/tint.nvim'
 
 " Highlighting
-Plug 'nvim-treesitter/nvim-treesitter'
-Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+" The master branches of both were archived in 2025 and break on NeoVim 0.11+:
+" their query directives still expect a single TSNode where Neovim now passes a
+" list, which surfaces as `attempt to call method 'range' (a nil value)`.
+" The main branches are a full rewrite and do not support lazy-loading.
+Plug 'nvim-treesitter/nvim-treesitter', { 'branch': 'main', 'do': ':TSUpdate' }
+Plug 'nvim-treesitter/nvim-treesitter-textobjects', { 'branch': 'main' }
 
 " Tree Explorer
 Plug 'kyazdani42/nvim-web-devicons'
