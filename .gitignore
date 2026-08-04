@@ -7,3 +7,8 @@
 *.swk
 modules/vim/swapfiles
 
+# Internal/corporate operational notes. This repo is public: notes naming an
+# employer, its endpoint security stack or its internal solutions do not belong
+# here, even when they contain no credentials. Keep them outside the worktree.
+docs/
+
