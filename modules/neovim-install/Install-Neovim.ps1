@@ -1,15 +1,30 @@
 . "$HOME/.modules/powershell/Check-Failure.ps1"
 
-if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) {
-  Write-Output ">>> Installing NeoVim"
+# 0.12+ is required by roslyn.nvim (the C# language server client)
+$NeovimVersion = "v0.12.4"
+
+$InstalledVersion = $null
+if ( Test-Path "$HOME/neovim/bin/nvim" ) {
+  $InstalledVersion = (& "$HOME/neovim/bin/nvim" --version | Select-Object -First 1) -replace '^NVIM\s+', ''
+}
+
+if ( ($InstalledVersion -ne $NeovimVersion) -or ! (Test-Path "$HOME/.local/bin/nvim") ) {
+  if ( $InstalledVersion ) {
+    Write-Output ">>> Updating NeoVim from $InstalledVersion to $NeovimVersion"
+  } else {
+    Write-Output ">>> Installing NeoVim $NeovimVersion"
+  }
   Set-Location $HOME
+
+  Write-Output "=>> Removing any previous installation"
+  Remove-Item -Recurse -Force "$HOME/neovim/" -ErrorAction SilentlyContinue
   New-Item -Type Directory -Force "$HOME/neovim/"
 
   Write-Output "=>> Ensuring the ~/.local/bin directory exists"
   New-Item -Type Directory -Force "$HOME/.local/bin/"
 
   Write-Output "=>> Downloading Neovim's realease tar package"
-  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz -OutFile nvim-linux-x86_64.tar.gz
+  Invoke-WebRequest https://github.com/neovim/neovim/releases/download/$NeovimVersion/nvim-linux-x86_64.tar.gz -OutFile nvim-linux-x86_64.tar.gz
 
   Write-Output "=>> Extracting Neovim package"
   & tar -xzf nvim-linux-x86_64.tar.gz
@@ -21,9 +36,9 @@ if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) 
   & chmod +x $HOME/neovim/bin/nvim
 
   Write-Output "=>> Creating symbolic links"
-  New-Item -Type SymbolicLink -Path "$HOME/.local/bin/nvim" -Target "$HOME/neovim/bin/nvim"
-  New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vim" -Target "$HOME/neovim/bin/nvim"
-  New-Item -Type SymbolicLink -Path "$HOME/.local/bin/vi" -Target "$HOME/neovim/bin/nvim"
+  New-Item -Force -Type SymbolicLink -Path "$HOME/.local/bin/nvim" -Target "$HOME/neovim/bin/nvim"
+  New-Item -Force -Type SymbolicLink -Path "$HOME/.local/bin/vim" -Target "$HOME/neovim/bin/nvim"
+  New-Item -Force -Type SymbolicLink -Path "$HOME/.local/bin/vi" -Target "$HOME/neovim/bin/nvim"
 
   Write-Output "=>> Cleaning up"
   Remove-Item -Recurse -Force nvim-linux-x86_64.tar.gz
@@ -31,4 +46,3 @@ if ( ! (Test-Path "$HOME/neovim/") -or ! (Test-Path "$HOME/.local/bin/nvim")  ) 
 }
 
 Throw-ExceptionOnNativeFailure
-

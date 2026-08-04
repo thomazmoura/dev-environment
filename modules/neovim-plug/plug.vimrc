@@ -38,7 +38,7 @@ Plug 'simrat39/symbols-outline.nvim'
 Plug 'https://git.sr.ht/~whynothugo/lsp_lines.nvim'
 Plug 'artempyanykh/marksman'
 Plug 'aca/emmet-ls'
-Plug 'Hoffs/omnisharp-extended-lsp.nvim'
+Plug 'seblyng/roslyn.nvim'
 Plug 'williamboman/mason.nvim'
 Plug 'tpope/vim-dadbod'
 Plug 'kristijanhusak/vim-dadbod-ui'
@@ -51,7 +51,8 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'nvim-telescope/telescope-ui-select.nvim'
 
 " Jump motion
-Plug 'yuki-yano/hop.nvim'
+" Maintained fork; yuki-yano's is frozen at a 2021 commit that predates setup()
+Plug 'smoka7/hop.nvim'
 
 " General Settings
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }

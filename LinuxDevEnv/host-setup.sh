@@ -59,6 +59,17 @@ fi
 if ! grep -q "^DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $environment_file; then
     echo "DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | sudo tee -a $environment_file
 fi
+# Skip the telemetry upload and first-run banner on every dotnet invocation
+if ! grep -q "^DOTNET_CLI_TELEMETRY_OPTOUT" $environment_file; then
+    echo "DOTNET_CLI_TELEMETRY_OPTOUT=1" | sudo tee -a $environment_file
+fi
+if ! grep -q "^DOTNET_NOLOGO" $environment_file; then
+    echo "DOTNET_NOLOGO=1" | sudo tee -a $environment_file
+fi
+# The first-run experience re-extracts bundled assets; nothing here needs it
+if ! grep -q "^DOTNET_SKIP_FIRST_TIME_EXPERIENCE" $environment_file; then
+    echo "DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1" | sudo tee -a $environment_file
+fi
 
 echo "Installing fzf (newer version)"
 pwsh -NoProfile -Command "Invoke-WebRequest https://github.com/junegunn/fzf/releases/download/v0.54.3/fzf-0.54.3-linux_amd64.tar.gz -OutFile fzf.tar.gz && tar -xzvf ./fzf.tar.gz -C $HOME/.local/bin && rm ./fzf.tar.gz"
@@ -139,6 +150,12 @@ if ! grep -q "^\$env:DOTNET_SKIP_AUTO_URLS" $powershell_profile; then
 fi
 if ! grep -q "^\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT" $powershell_profile; then
     echo "\$env:DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:DOTNET_CLI_TELEMETRY_OPTOUT" $powershell_profile; then
+    echo "\$env:DOTNET_CLI_TELEMETRY_OPTOUT=1" | tee -a $powershell_profile
+fi
+if ! grep -q "^\$env:DOTNET_NOLOGO" $powershell_profile; then
+    echo "\$env:DOTNET_NOLOGO=1" | tee -a $powershell_profile
 fi
 if ! grep -q "^\$env:DOTNET_ROOT" $powershell_profile; then
     echo "\$env:DOTNET_ROOT='/usr/share/dotnet'" | tee -a $powershell_profile

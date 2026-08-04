@@ -48,12 +48,6 @@ function Setup-DotFiles {
     New-Item -Type SymbolicLink -Path $ModulesFolder -Target "$HOME/.modules"
   }
 
-  $OmnisharpFolder = "$DotFilesFolder/omnisharp"
-  if( !(Test-Path $OmnisharpFolder) ) {
-    Write-Information "Creating Omnisharp Local Folder SymbolicLink"
-    New-Item -Type SymbolicLink -Path $OmnisharpFolder -Target "$HOME/.omnisharp"
-  }
-
   $SpotlightDimmerFolder = "$DotFilesFolder/spotlight-dimmer"
   if( !(Test-Path $SpotlightDimmerFolder) ) {
     Write-Information "Creating SpotlightDimmer Folder SymbolicLink"

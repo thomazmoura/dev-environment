@@ -162,84 +162,56 @@ local lsp_flags = {
 }
 
 
--- omnisharp settings
-local omnisharp_solution = require('omnisharp-solution')
-local initial_solution = omnisharp_solution.get_startup_solution()
+-- C# settings (Roslyn language server, via seblyng/roslyn.nvim)
+--
+-- Replaces OmniSharp, which was archived upstream. The server binary comes from
+-- the `roslyn-language-server` global dotnet tool installed by
+-- modules/neovim-lsp/Setup-NeoVimLSP.ps1, and is found on PATH via ~/.dotnet/tools.
+--
+-- roslyn.nvim resolves the .sln/.csproj target on its own, so the old
+-- omnisharp-solution.lua picker (and its `**/*.sln` glob, which walked every
+-- node_modules on startup) is gone. Use `:Roslyn target` to switch solutions.
+require('roslyn').setup {
+  -- Let the server own file watching instead of running Neovim's watcher over
+  -- the same tree as well.
+  filewatching = 'roslyn',
 
--- Build base command with solution if available
-local function build_omnisharp_cmd(solution)
-  local cmd = {
-    "dotnet",
-    home_directory .. "/.language-servers/omnisharp/OmniSharp.dll",
-    "--languageserver",
-    "--hostPID",
-    tostring(vim.fn.getpid())
-  }
-
-  if solution then
-    table.insert(cmd, "-s")
-    table.insert(cmd, solution)
-  end
-
-  return cmd
-end
-
-lspconfig.omnisharp.setup {
-  capabilities = capabilities,
-  flags = lsp_flags,
-  handlers = {
-    ["textDocument/definition"] = require('omnisharp_extended').definition_handler,
-    ["textDocument/typeDefinition"] = require('omnisharp_extended').type_definition_handler,
-    ["textDocument/references"] = require('omnisharp_extended').references_handler,
-    ["textDocument/implementation"] = require('omnisharp_extended').implementation_handler,
-  },
-  cmd = build_omnisharp_cmd(initial_solution),
-  on_new_config = function(new_config, root_dir)
-    local solution = omnisharp_solution.selected_solution
-                  or omnisharp_solution.get_startup_solution()
-    new_config.cmd = build_omnisharp_cmd(solution)
-  end,
-
-  -- Enables support for reading code style, naming convention and analyzer
-  -- settings from .editorconfig.
-  enable_editorconfig_support = true,
-
-  -- If true, MSBuild project system will only load projects for files that
-  -- were opened in the editor. This setting is useful for big C# codebases
-  -- and allows for faster initialization of code navigation features only
-  -- for projects that are relevant to code that is being edited. With this
-  -- setting enabled OmniSharp may load fewer projects and may thus display
-  -- incomplete reference lists for symbols.
-  enable_ms_build_load_projects_on_demand = false,
-
-  -- Enables support for roslyn analyzers, code fixes and rulesets.
-  enable_roslyn_analyzers = true,
-
-  -- Specifies whether 'using' directives should be grouped and sorted during
-  -- document formatting.
-  organize_imports_on_format = true,
-
-  -- Enables support for showing unimported types and unimported extension
-  -- methods in completion lists. When committed, the appropriate using
-  -- directive will be added at the top of the current file. This option can
-  -- have a negative impact on initial completion responsiveness,
-  -- particularly for the first few completion sessions after opening a
-  -- solution.
-  enable_import_completion = true,
-
-  -- Specifies whether to include preview versions of the .NET SDK when
-  -- determining which version to use for project loading.
-  sdk_include_prereleases = true,
-
-  -- Only run analyzers against open files when 'enableRoslynAnalyzers' is
-  -- true
-  analyze_open_documents_only = true,
+  -- Solutions here sit at the root of their own directory, so the plain upward
+  -- search suffices; broad_search would walk sibling trees on every attach.
+  broad_search = false,
 }
 
--- Create command for manual solution selection
-vim.api.nvim_create_user_command("OmnisharpSelectSolution", function()
-  omnisharp_solution.select_solution()
-end, { desc = "Select OmniSharp solution file" })
+vim.lsp.config('roslyn', {
+  capabilities = capabilities,
+  settings = {
+    -- Keep background passes scoped to open files. Analysing the whole solution
+    -- is what pinned a CPU core under OmniSharp. Cross-solution `gd`/`gr` still
+    -- work, since those are on-demand queries rather than background analysis.
+    ['csharp|background_analysis'] = {
+      dotnet_analyzer_diagnostics_scope = 'openFiles',
+      dotnet_compiler_diagnostics_scope = 'openFiles',
+    },
+
+    -- Replaces OmniSharp's enableDecompilationSupport: lets `gd` descend into
+    -- code that only exists in NuGet dependencies.
+    ['csharp|symbol_search'] = {
+      dotnet_search_reference_assemblies = true,
+    },
+
+    -- OmniSharp had every inlay hint category switched on; these are the ones
+    -- that earn their cost.
+    ['csharp|inlay_hints'] = {
+      dotnet_enable_inlay_hints_for_parameters = true,
+      csharp_enable_inlay_hints_for_implicit_variable_types = true,
+      csharp_enable_inlay_hints_for_implicit_object_creation = true,
+      csharp_enable_inlay_hints_for_lambda_parameter_types = true,
+    },
+
+    ['csharp|code_lens'] = {
+      dotnet_enable_references_code_lens = true,
+    },
+  },
+})
 
 -- powershell settings
 lspconfig.powershell_es.setup {

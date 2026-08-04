@@ -9,15 +9,14 @@ Write-Output "`n->> Creating default Language Servers folder"
 New-Item -Force -Type Directory -Path $HOME/.language-servers
 Push-Location $HOME/.language-servers
 
-Write-Output "`n->> Installing OmniSharp (.NET LSP)"
-Invoke-WebRequest "https://github.com/OmniSharp/omnisharp-roslyn/releases/download/v1.39.15/omnisharp-linux-x64-net6.0.tar.gz" -OutFile "omnisharp-linux-x64-net6.tar.gz"
-New-Item -Force -Type Directory -Path $HOME/.language-servers/omnisharp
-& tar -xzvf "./omnisharp-linux-x64-net6.tar.gz" -C "$HOME/.language-servers/omnisharp"
-& Remove-Item "./omnisharp-linux-x64-net6.tar.gz"
+Write-Output "`n->> Installing the Roslyn Language Server (.NET LSP)"
+# Replaces OmniSharp, which was archived upstream. This is the same server VS Code's
+# C# extension uses, and roslyn.nvim finds it on PATH via ~/.dotnet/tools.
+# The Azure DevOps feed is updated several times a day; nuget.org lags well behind.
+$RoslynFeed = "https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json"
+& dotnet tool update --global roslyn-language-server --prerelease --source $RoslynFeed
 
 Write-Output "`n->> Copying custom language config files to user folder"
-New-Item -Force -Type Directory -Path $HOME/.omnisharp
-Copy-Item "$HOME/.modules/neovim-lsp/omnisharp.json" "$HOME/.omnisharp/omnisharp.json"
 Copy-Item "$HOME/.modules/neovim-lsp/editorconfig" "$HOME/.editorconfig"
 
 

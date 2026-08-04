@@ -70,7 +70,7 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `git/` | Installs `delta` (fancy git diff viewer) |
 | `neovim-base/` | NeoVim npm dependencies (e.g. the `neovim` npm package) |
 | `neovim-install/` | Downloads and installs NeoVim from GitHub releases |
-| `neovim-lsp/` | OmniSharp, PowerShell Editor Services, Lua Language Server |
+| `neovim-lsp/` | Roslyn Language Server, PowerShell Editor Services, Lua Language Server |
 | `neovim-plug/` | `vim-plug` plugin list (`plug.vimrc`) |
 | `neovim-treesitter/` | Tree-sitter grammar installation |
 | `node/` | Node Version Switcher (NVS) setup |
