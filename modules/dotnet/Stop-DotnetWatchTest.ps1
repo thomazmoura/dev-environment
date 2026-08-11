@@ -14,6 +14,7 @@
     Pass -Stop to actually terminate.
 
     Works on Windows PowerShell 5.1 and on PowerShell 7+ (Windows, Linux, macOS).
+    The one exception is -Path, which needs /proc and is therefore Linux/WSL only.
 
 .PARAMETER Stop
     Terminate the sessions that were found. Without this switch nothing is killed.
@@ -25,6 +26,20 @@
 
 .PARAMETER GracePeriodSeconds
     How long to wait after SIGTERM before force-killing whatever survived.
+
+.PARAMETER Path
+    Keep only the sessions whose working directory is this path or a directory
+    below it. This is the reliable way to single out one solution: `dotnet watch
+    test` is normally started after cd-ing into the project, with no --project
+    argument, so every concurrent watcher has an identical command line and
+    -Match cannot tell them apart.
+
+    Linux/WSL only - reading another process's working directory needs /proc.
+    Passing it elsewhere is an error; use -Match there instead.
+
+    A session whose working directory cannot be read (owned by another user, or
+    already gone) is dropped rather than kept, so -Stop never kills a watcher
+    that was not proven to belong to Path. Use -Verbose to see the exclusions.
 
 .PARAMETER Match
     Extra substring that must appear in the watcher's command line. Useful when
@@ -48,9 +63,17 @@
 .EXAMPLE
     ./Stop-DotnetWatchTest.ps1 -Stop -Match 'SGI.Testes' -Force
     Force-kills only the watcher whose command line mentions SGI.Testes.
+
+.EXAMPLE
+    ./Stop-DotnetWatchTest.ps1 ~/code/my-solution -Stop -Confirm:$false
+    Stops only the watcher running inside ~/code/my-solution, leaving watchers
+    for other solutions untouched.
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
+    [Parameter(Position = 0)]
+    [string] $Path,
+
     [switch] $Stop,
     [switch] $Force,
 
@@ -67,6 +90,20 @@ $ErrorActionPreference = 'Stop'
 # $IsWindows only exists in PowerShell Core; on 5.1 we are always on Windows.
 $script:OnWindows = $true
 if (Test-Path -Path 'variable:IsWindows') { $script:OnWindows = $IsWindows }
+
+# -Path reads /proc/<pid>/cwd, so gate on /proc itself rather than on "not
+# Windows" - that way macOS gets the same honest error instead of silently
+# matching nothing.
+$script:FilterByPath = $PSBoundParameters.ContainsKey('Path') -and $Path
+$script:PathRoot     = $null
+if ($script:FilterByPath) {
+    if (-not (Test-Path -LiteralPath '/proc')) {
+        throw '-Path needs /proc to read a process working directory and is only supported on Linux/WSL. Use -Match on this platform.'
+    }
+    # Resolve so that '.', '~' and relative paths work; a bad path is a typo.
+    $script:PathRoot = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath.TrimEnd('/')
+    if ($script:PathRoot.Length -eq 0) { $script:PathRoot = '/' }
+}
 
 #region helpers -----------------------------------------------------------
 
@@ -138,6 +175,38 @@ function Get-ProcessDescendant {
     }
 
     return $found
+}
+
+function Get-ProcessWorkingDirectory {
+    <#
+        The working directory of an arbitrary process, or $null when it cannot
+        be read - the process is gone, or it belongs to another user (EACCES).
+        Both must degrade quietly, hence the catch: $ErrorActionPreference is
+        'Stop' for this script.
+    #>
+    param([int] $ProcessId)
+
+    try   { return (Get-Item -LiteralPath "/proc/$ProcessId/cwd" -Force -ErrorAction Stop).Target }
+    catch { return $null }
+}
+
+function Test-PathUnder {
+    <#
+        True when Candidate is Root or sits below it. The trailing separator is
+        what keeps -Path /code/Api from also matching /code/ApiLegacy, and the
+        comparison is ordinal because Linux filesystems are case-sensitive.
+    #>
+    param([string] $Candidate, [string] $Root)
+
+    if ([string]::IsNullOrWhiteSpace($Candidate)) { return $false }
+
+    $normalized = $Candidate.TrimEnd('/')
+    if ($normalized.Length -eq 0) { $normalized = '/' }
+
+    if ([string]::Equals($normalized, $Root, [System.StringComparison]::Ordinal)) { return $true }
+
+    $prefix = if ($Root -eq '/') { '/' } else { "$Root/" }
+    return $normalized.StartsWith($prefix, [System.StringComparison]::Ordinal)
 }
 
 function Test-ProcessAlive {
@@ -233,6 +302,26 @@ $roots = @(
     }
 )
 
+# Applied after the nesting reduction on purpose: dropping a root here cannot
+# promote one of its nested children into a root of its own. One filter also
+# covers both exit paths below, since each consumes $roots.
+if ($script:FilterByPath) {
+    $roots = @(
+        $roots | Where-Object {
+            $cwd = Get-ProcessWorkingDirectory $_.ProcessId
+            if (-not $cwd) {
+                Write-Verbose "Skipping PID $($_.ProcessId): working directory could not be read."
+                $false
+            }
+            elseif (-not (Test-PathUnder -Candidate $cwd -Root $script:PathRoot)) {
+                Write-Verbose "Skipping PID $($_.ProcessId): '$cwd' is outside '$($script:PathRoot)'."
+                $false
+            }
+            else { $true }
+        }
+    )
+}
+
 if ($Quiet) {
     # Still honour -Stop, just say less about it.
     if ($Stop) {
@@ -248,7 +337,12 @@ if ($Quiet) {
 }
 
 if ($roots.Count -eq 0) {
-    Write-Verbose 'No `dotnet watch test` session found.'
+    if ($script:FilterByPath) {
+        Write-Verbose "No ``dotnet watch test`` session found under '$($script:PathRoot)'."
+    }
+    else {
+        Write-Verbose 'No `dotnet watch test` session found.'
+    }
     return
 }
 
