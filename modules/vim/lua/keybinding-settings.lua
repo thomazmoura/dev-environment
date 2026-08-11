@@ -113,8 +113,47 @@ vim.api.nvim_create_autocmd('FileType', {
   end
 })
 
--- Markview
-vim.keymap.set("n", "<leader>mm", '<cmd>Markview splitToggle<cr>', { desc = "Toggle Markview Split" })
+-- Markview / conceal
+--
+-- 'conceallevel' and 'concealcursor' are window-local, not buffer-local, so when markview sets
+-- them to 3/"nc" for a markdown buffer they stay behind on the window and conceal whatever comes
+-- next - most visibly the quotes on JSON files. Keep the intent per buffer instead and re-apply
+-- it whenever a buffer lands in a window.
+local markview_filetypes = { markdown = true, quarto = true, rmd = true, typst = true }
+
+-- Filetypes that conceal on purpose (markview's doing or their own ftplugin's) and are left alone
+local concealing_filetypes = vim.tbl_extend('force', markview_filetypes, {
+  help = true, man = true, rust = true, tex = true, latex = true, norg = true, org = true
+})
+
+local function applyConceal()
+  if concealing_filetypes[vim.bo.filetype] then
+    return
+  end
+  local window = vim.api.nvim_get_current_win()
+  if vim.b.conceal_enabled then
+    vim.wo[window].conceallevel = 3
+    vim.wo[window].concealcursor = 'nc'
+  else
+    vim.wo[window].conceallevel = 0
+    vim.wo[window].concealcursor = ''
+  end
+end
+
+vim.api.nvim_create_augroup('ConcealControl', { clear = true })
+vim.api.nvim_create_autocmd({ 'BufWinEnter', 'BufEnter', 'WinEnter' }, {
+  group = 'ConcealControl',
+  callback = applyConceal
+})
+
+vim.keymap.set("n", "<leader>mm", function()
+  if markview_filetypes[vim.bo.filetype] then
+    vim.cmd('Markview splitToggle')
+  else
+    vim.b.conceal_enabled = not vim.b.conceal_enabled
+    applyConceal()
+  end
+end, { desc = "Toggle Markview Split / conceal" })
 
 -- Workhorse
 local workhorse = require('workhorse')
