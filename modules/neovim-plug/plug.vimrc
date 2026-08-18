@@ -3,7 +3,7 @@ call plug#begin('~/.local/share/nvim/site/.plugged')
 " Lua requirements
 Plug 'nvim-lua/plenary.nvim'
 Plug 'lewis6991/impatient.nvim'
-Plug 'nvim-telescope/telescope.nvim', { 'branch': '0.1.x' }
+Plug 'nvim-telescope/telescope.nvim', { 'tag': 'v0.2.*' }
 Plug 'MunifTanjim/nui.nvim'
 Plug 'rcarriga/nvim-notify'
 Plug 'folke/neodev.nvim'
