@@ -6,6 +6,15 @@ $env:DOTNET_ENVIRONMENT="Development"
 $env:NVS_HOME="$env:HOME/.nvs"
 $env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 
+# MSBuild reads any property a project does not define itself from the
+# environment, so these disable analyzer execution for local builds without
+# touching a single .csproj. Analyzers are the largest slice of Csc time on a
+# `dotnet watch` rebuild and are redundant here twice over: the Roslyn LSP
+# reports the same diagnostics live while typing, and CI builds without these
+# variables set, so the full analyzer pass still gates merges.
+$env:RunAnalyzers="false"
+$env:RunAnalyzersDuringBuild="false"
+
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
@@ -127,6 +136,42 @@ function New-VerticalTmuxSession  (
 			send-keys "$Command" C-m `;
 	}
 	Write-Information "Cancelled by user"
+}
+
+function Start-Frontend() {
+  <#
+    .SYNOPSIS
+      Runs the project's `npm run frontend` (ng serve + dotnet watch run) at a
+      lowered scheduling priority.
+
+    .DESCRIPTION
+      A `dotnet watch` rebuild recompiles every source file in the API project
+      and its domain project - there is no sub-project incrementality in Roslyn -
+      and MSBuild sizes its parallelism to the core count, so a single rude edit
+      saturates the machine while the Angular esbuild workers are also running.
+
+      CPUWeight is a *relative share that only applies under contention*: on an
+      idle machine the rebuild still gets every core at full speed, but as soon
+      as something interactive wants CPU the editor and browser win. That is why
+      this uses CPUWeight rather than CPUQuota, which would slow rebuilds down
+      unconditionally.
+  #>
+  if (!(Test-Path "package.json")) {
+    Write-Warning "No package.json here. Run this from the Angular project folder."
+    return
+  }
+
+  if (Get-Command systemd-run -ErrorAction SilentlyContinue) {
+    Write-Verbose "Starting frontend in a de-prioritised systemd scope"
+    & systemd-run --user --scope --quiet -p CPUWeight=20 -p IOWeight=50 -- npm run frontend
+  } elseif (Get-Command nice -ErrorAction SilentlyContinue) {
+    # Same only-under-contention semantics, without the IO component.
+    Write-Verbose "systemd-run unavailable. Falling back to nice"
+    & nice -n 10 npm run frontend
+  } else {
+    Write-Verbose "Neither systemd-run nor nice available. Running unthrottled"
+    & npm run frontend
+  }
 }
 
 function Enable-Bash ($enable = $true) {

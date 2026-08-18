@@ -370,6 +370,7 @@ function Start-DotnetWatch([String]$LaunchProfile, [Switch]$SkipAutoUrls) {
   if($ApplicationUrls -and $ApplicationUrls -match "0.0.0.0") {
     Write-Verbose "Running with the following URLs (Based on ./Properties/launchSettings.json): $ApplicationUrls"
     dotnet watch run
+    return
   }
   if($ApplicationUrls) {
     $ExposedUrls = $ApplicationUrls.Replace("localhost", "0.0.0.0")
@@ -942,7 +943,15 @@ function Build-DotnetProjectIfNeeded() {
   if ((Test-Path "*.sln") -and !(Test-Path ".vs")) {
     Write-Verbose "Project not yet built. Building now and creating .vs folder as a way to skip build next time..."
     & dotnet build
-    New-Item -Type Directory .vs
+    # The .vs folder is a receipt for a *successful* build, not an attempted one.
+    # Native command failures do not stop the script, so without this check a
+    # build that died on a bad restore would still mark the project as done and
+    # every later session would skip it - leaving the LSP without packages.
+    if ($LASTEXITCODE -eq 0) {
+      New-Item -Type Directory .vs | Out-Null
+    } else {
+      Write-Warning "dotnet build failed with exit code $LASTEXITCODE. Not creating .vs, so the build is retried next session."
+    }
   } else {
     Write-Verbose "Project already built."
   }
