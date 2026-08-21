@@ -151,7 +151,7 @@ vim.keymap.set('n', '<Leader>f', vim.lsp.buf.format, bufopts)
 vim.keymap.set('n', '<Leader>t', '<cmd>Telescope lsp_dynamic_workspace_symbols<cr>', bufopts)
 vim.keymap.set('n', '<Leader>x', '<cmd>Trouble diagnostics toggle<cr>', bufopts)
 vim.keymap.set('n', '<Leader>X', '<cmd>Telescope diagnostics<cr>', bufopts)
-vim.keymap.set('n', '<Leader>o', '<cmd>SymbolsOutline<cr>', bufopts)
+vim.keymap.set('n', '<Leader>o', '<cmd>Outline<cr>', bufopts)
 vim.keymap.set('i', '<C-k>', vim.lsp.buf.signature_help, bufopts)
 
 -- Defaults shared by every server. The '*' entry is merged into each named
@@ -340,7 +340,7 @@ require("luasnip.loaders.from_vscode").lazy_load({
 })
 
 -- Symbols outline
-require("symbols-outline").setup()
+require("outline").setup()
 
 -- Trouble.nvim
 require("trouble").setup()

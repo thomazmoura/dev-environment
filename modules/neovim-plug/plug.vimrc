@@ -34,7 +34,9 @@ Plug 'neovim/nvim-lspconfig'
 Plug 'rafamadriz/friendly-snippets'
 Plug 'saadparwaiz1/cmp_luasnip'
 Plug 'windwp/nvim-autopairs'
-Plug 'simrat39/symbols-outline.nvim'
+" Maintained successor; simrat39's is archived and calls the removed
+" vim.lsp.buf_get_clients()
+Plug 'hedyhli/outline.nvim'
 Plug 'https://git.sr.ht/~whynothugo/lsp_lines.nvim'
 Plug 'artempyanykh/marksman'
 Plug 'aca/emmet-ls'
