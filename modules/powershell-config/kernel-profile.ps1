@@ -989,6 +989,38 @@ function Copy-CoPilotCommand() {
   $command | clip
 }
 
+function ConvertFrom-Jwt {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline, Position = 0)]
+        [string]$Token
+    )
+
+    process {
+        $parts = $Token.Trim().Split('.')
+        if ($parts.Count -lt 2) {
+            Write-Error 'Not a JWT: expected at least two dot-separated segments.'
+            return
+        }
+
+        $decode = {
+            param([string]$Segment)
+            $s = $Segment.Replace('-', '+').Replace('_', '/')
+            switch ($s.Length % 4) {
+                2 { $s += '==' }
+                3 { $s += '=' }
+                1 { throw 'Invalid base64url segment.' }
+            }
+            [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($s))
+        }
+
+        [pscustomobject]@{
+            Header  = & $decode $parts[0] | ConvertFrom-Json
+            Payload = & $decode $parts[1] | ConvertFrom-Json
+        }
+    }
+}
+
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de functions demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
@@ -1003,6 +1035,7 @@ if ( !(Test-Path "/usr/bin/clip") -and !(Test-Path "$HOME/.local/bin/clip") ) {
     New-Alias -Force clip Set-Clipboard
   }
 }
+
 
 New-Alias -Force guid Copy-NewGuidToClipboard
 
