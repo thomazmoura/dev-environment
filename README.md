@@ -131,6 +131,7 @@ Additional scripts:
 | Script | Purpose |
 |---|---|
 | `wezterm-setup.sh` | Installs WezTerm terminal emulator from the official apt repo |
+| `ghostty-setup.sh` | Installs Ghostty terminal emulator from the community `mkasberg/ghostty-ubuntu` PPA |
 | `flameshot-install.sh` | Installs Flameshot and maps it to the Print Screen key under GNOME/Wayland |
 | `cedilla-wayland-setup.sh` | Fixes the `ç` dead-key compose sequence for Wayland apps (symlinks `.XCompose`) |
 | `setup-login-timeout.sh` | Creates a systemd timer that powers off the machine 5 min after boot if no user is logged in |

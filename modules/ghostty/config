@@ -1,0 +1,60 @@
+# =====================================================================
+#  Ghostty — hosts tmux. tmux owns sessions, panes, status bar and keys;
+#  this file only makes Ghostty a correct, fast host that stays out of
+#  its way. Ported from modules/wezterm/wezterm.lua.
+#  Symlinked to ~/.config/ghostty by LinuxDevEnv/host-setup.sh
+#
+#  What is deliberately NOT here: splits, pane navigation, session
+#  management, launcher bindings. Ghostty has no session model, no
+#  status bar, no per-split chrome, no conditional keybinds and no
+#  remote-control surface, so all of that stays in tmux.conf.
+#
+#  NOTE: Ghostty only accepts `#` comments at the START of a line.
+#  A trailing comment is parsed as part of the value.
+# =====================================================================
+
+# --- Shell: straight into tmux (wezterm default_prog) ----------------
+# This bypasses the login shell, so modules/shell/bashrc does not run.
+# That already matches current WezTerm behaviour.
+command = pwsh -C vtmux
+
+# --- Font (wezterm font_with_fallback + font_size) -------------------
+font-family = Cascadia Code
+font-family = CaskaydiaCove Nerd Font
+font-size = 12
+
+# --- Theme -----------------------------------------------------------
+theme = tokyonight_night
+
+# --- Undercurl legibility in NeoVim (wezterm underline_*) ------------
+adjust-underline-position = -1
+adjust-underline-thickness = 2
+
+# --- Window (wezterm initial_cols/rows, gui-startup, padding) --------
+fullscreen = true
+# window-width/height are used when not fullscreen
+window-width = 180
+window-height = 50
+window-padding-x = 2,0
+window-padding-y = 0
+window-decoration = none
+# tmux owns windows; no double tab bar
+window-show-tab-bar = never
+# wezterm window_close_confirmation = NeverPrompt
+confirm-close-surface = false
+# `title` is deliberately NOT set: forcing it would block tmux's
+# set-titles-string "tmux:#S/#W" (tmux.conf) from reaching the WM.
+
+# --- Input / clipboard -----------------------------------------------
+mouse-hide-while-typing = true
+clipboard-read = allow
+# OSC 52 passthrough for NeoVim yank
+clipboard-write = allow
+clipboard-trim-trailing-spaces = true
+
+# --- Keep tmux's keys intact -----------------------------------------
+# Ghostty's Linux defaults are all ctrl+shift+*, so tmux's ctrl+b prefix,
+# the ctrl+h/j/k/l vim-navigator bindings and alt+y / alt+shift+y
+# already pass through untouched.
+# Matches the one custom wezterm binding (SpawnTab).
+keybind = ctrl+shift+n=new_tab

@@ -55,6 +55,8 @@ When setup runs, these symlinks are created (both in Docker and on the host):
 | `~/.config/nvim` | `nvim-config/` |
 | `~/.config/powershell` | `powershell-config/` |
 | `~/.shell` | `shell/` |
+| `~/.config/ghostty` | `ghostty/` |
+| `~/.wezterm.lua` | `wezterm/wezterm.lua` |
 | `~/.modules` | `modules/` (host symlink) or the directory itself (Docker COPY) |
 
 ## Docker image layers

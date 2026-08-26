@@ -137,6 +137,10 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/powers
 
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -Target $modules_path/nvim-config"
 
+# Terminal emulators (both act as hosts for tmux)
+pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/ghostty -Target $modules_path/ghostty"
+pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.wezterm.lua -Target $modules_path/wezterm/wezterm.lua"
+
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
 
