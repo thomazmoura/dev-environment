@@ -117,6 +117,9 @@ export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME
 # Delta diff installation
 pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1
 
+# demux (tmux session dashboard, bound to prefix + e as a sticky sidebar)
+pwsh -NoProfile -File $HOME/.modules/demux/Install-Demux.ps1
+
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
@@ -136,6 +139,11 @@ pwsh -NoProfile -Command "New-Item -Type Directory $HOME/.config -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/powershell -Target $modules_path/powershell-config"
 
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -Target $modules_path/nvim-config"
+
+# demux config (the file, not the directory: demux writes its state DB and log
+# next to it and those must not land in the repo)
+pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.config/demux -Force"
+pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/demux/demux.toml -Target $modules_path/demux/demux.toml"
 
 # Terminal emulators (both act as hosts for tmux)
 pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/ghostty -Target $modules_path/ghostty"

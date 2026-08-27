@@ -1,0 +1,49 @@
+# demux configuration — symlinked to ~/.config/demux/demux.toml
+#
+# Only the settings that differ from demux's defaults live here. Run
+# `demux config init` to print the full annotated default config, including the
+# whole [theme] block (Catppuccin Mocha, left untouched on purpose).
+
+# Sticky sidebar — the per-client pane that runs `demux --sticky` and follows
+# the attached client across session switches. Toggled with `prefix + e`
+# (see the `bind e` line in modules/tmux/tmux.conf and modules/wsl2/tmux.conf).
+[sidebar.sticky]
+# Initial width the first time the pane is created. After that tmux owns it:
+# resize normally and demux preserves the width across session moves.
+width = 35
+
+# Jump straight into the sidebar when it opens, so `prefix + e` is enough to
+# start navigating without a follow-up pane switch.
+focus_on_open = true
+
+# Left off deliberately:
+#   slots = true                       # one reserved pane per window; avoids the
+#                                      # join-pane flicker at the cost of an extra
+#                                      # pane in every window, which fights the
+#                                      # Set-NeovimLayout.sh splits
+#   auto_show = true                   # sidebar on every attach — on demand only
+#   focus_before_toggle_close = true   # makes `prefix + e` focus-then-close
+#                                      # instead of a plain toggle
+
+# Sidebar process labels for the AI tools spawned by the `prefix + t` key table
+# (see the custom-t-menu bindings in modules/wsl2/tmux.conf), so a glance at the
+# sidebar shows which agent is running where.
+[[sidebar.processes]]
+match = ["claude", "claude*"]
+label = "claude"
+fg = "#cba6f7"
+
+[[sidebar.processes]]
+match = ["codex", "codex*"]
+label = "codex"
+fg = "#89dceb"
+
+[[sidebar.processes]]
+match = ["copilot", "copilot*"]
+label = "copilot"
+fg = "#a6e3a1"
+
+[[sidebar.processes]]
+match = ["opencode", "opencode*"]
+label = "opencode"
+fg = "#f9e2af"

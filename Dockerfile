@@ -24,6 +24,11 @@ RUN export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x /
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
 RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
 
+# demux (tmux session dashboard, bound to prefix + e as a sticky sidebar)
+COPY --chown=developer:developer modules/demux /home/developer/.modules/demux
+COPY --chown=developer:developer modules/demux/demux.toml /home/developer/.config/demux/demux.toml
+RUN pwsh -NoProfile -File /home/developer/.modules/demux/Install-Demux.ps1
+
 # Tmux plugins installation
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
