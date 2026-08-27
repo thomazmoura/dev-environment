@@ -26,6 +26,14 @@ font-size = 12
 # --- Theme -----------------------------------------------------------
 theme = tokyonight_night
 
+# --- Cursor shader ---------------------------------------------------
+# Neovide-like cursor trail. The path is resolved relative to this config
+# file, i.e. ~/.config/ghostty. Tunables (DURATION, TRAIL_SIZE,
+# FADE_ENABLED, easing function) live at the top of the .glsl itself.
+# custom-shader-animation stays at its default `true`: the warp finishes
+# within DURATION of a keystroke, so no unfocused animation loop needed.
+custom-shader = shaders/cursor_warp.glsl
+
 # --- Undercurl legibility in NeoVim (wezterm underline_*) ------------
 adjust-underline-position = -1
 adjust-underline-thickness = 2
