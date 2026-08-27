@@ -47,3 +47,31 @@ fg = "#a6e3a1"
 match = ["opencode", "opencode*"]
 label = "opencode"
 fg = "#f9e2af"
+
+# Tool identity: gives states written with `--tool <key>` a readable name, a
+# marker in the sidebar/status bar, and a color. The table key must match the
+# --tool value exactly. Unconfigured tools still show up, just with a generic
+# fallback marker.
+#
+# demux ships no vendor hooks -- nothing writes these states on its own. Each
+# agent has to push them through its own lifecycle hooks; the Claude Code side
+# is wired up in ~/.claude/settings.json.
+[tools.claude]
+name = "Claude"
+icon = "C"
+color = "#cba6f7"
+
+[tools.codex]
+name = "Codex"
+icon = "X"
+color = "#89dceb"
+
+[tools.copilot]
+name = "Copilot"
+icon = "P"
+color = "#a6e3a1"
+
+[tools.opencode]
+name = "OpenCode"
+icon = "O"
+color = "#f9e2af"
