@@ -22,15 +22,24 @@ wezterm.on('format-window-title', function(tab, pane, tabs, panes, config)
   return 'wezterm ' .. index .. tab.active_pane.title
 end)
 
--- The background image lives outside this repo, so the image layer is
--- only added when it is actually present. Everywhere else the gradient
--- stands on its own.
+-- The background image is not part of this repo: whichever of
+-- ~/.terminal-background.{png,jpg,jpeg} exists is used, and the image
+-- layer is skipped entirely when none is, leaving the gradient to stand
+-- on its own. Ghostty reads the same convention (modules/ghostty/config).
 local background = {}
 
-local background_image = wezterm.home_dir .. '/code/LinuxResources/Windows/Images/GeneratedAILinuxHacker.jpg'
-local image_handle = io.open(background_image, 'r')
-if image_handle ~= nil then
-  image_handle:close()
+local background_image
+for _, ext in ipairs { 'png', 'jpg', 'jpeg' } do
+  local candidate = wezterm.home_dir .. '/.terminal-background.' .. ext
+  local image_handle = io.open(candidate, 'r')
+  if image_handle ~= nil then
+    image_handle:close()
+    background_image = candidate
+    break
+  end
+end
+
+if background_image ~= nil then
   table.insert(background, {
     source = { File = background_image },
     height = "200%",

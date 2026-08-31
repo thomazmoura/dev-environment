@@ -149,6 +149,26 @@ pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config
 pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/ghostty -Target $modules_path/ghostty"
 pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.wezterm.lua -Target $modules_path/wezterm/wezterm.lua"
 
+# Ghostty background image: the photo is not part of this repo. Whichever
+# of ~/.terminal-background.{png,jpg,jpeg} exists is wired into the
+# optional `config-file = ?background.conf` include; with none present the
+# include is simply absent and Ghostty stays on the theme background.
+# (wezterm.lua probes the same paths on its own.)
+ghostty_background=""
+for ext in png jpg jpeg; do
+    if [ -f "$HOME/.terminal-background.$ext" ]; then
+        ghostty_background="$HOME/.terminal-background.$ext"
+        break
+    fi
+done
+if [ -n "$ghostty_background" ]; then
+    sed "s|@IMAGE@|$ghostty_background|" \
+        "$modules_path/ghostty/background.conf.template" \
+        > "$modules_path/ghostty/background.conf"
+else
+    rm -f "$modules_path/ghostty/background.conf"
+fi
+
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
 

@@ -26,6 +26,16 @@ font-size = 12
 # --- Theme -----------------------------------------------------------
 theme = tokyonight_night
 
+# --- Background image (wezterm `background` layer stack) --------------
+# The photo is not part of this repo. host-setup.sh generates
+# background.conf from background.conf.template pointing at whichever of
+# ~/.terminal-background.{png,jpg,jpeg} exists; the `?` prefix makes the
+# include optional, so a machine without the image starts on the plain
+# theme background with no config-error banner.
+# NOTE: included files load AFTER the file that includes them, so the
+# background keys there win regardless of this line's position.
+config-file = ?background.conf
+
 # --- Cursor shader ---------------------------------------------------
 # Neovide-like cursor trail. The path is resolved relative to this config
 # file, i.e. ~/.config/ghostty. Tunables (DURATION, TRAIL_SIZE,

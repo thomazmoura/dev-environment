@@ -1,0 +1,19 @@
+# =====================================================================
+#  Ghostty background image — generated into ./background.conf by
+#  LinuxDevEnv/host-setup.sh when ~/.terminal-background.{png,jpg,jpeg}
+#  exists. Edit this template, never the generated file.
+#
+#  Ghostty has no layer stack, so wezterm's "photo + 90%-opaque gradient"
+#  collapses into one scalar: background-image-opacity mixes the photo
+#  toward the solid `background` below it (tokyonight_night's #1a1b26),
+#  which is the theme-matching solid overlay. 0.10 reproduces wezterm's
+#  ~10% visibility.
+# =====================================================================
+background-image = @IMAGE@
+# wezterm used height 200% / width 120% / align Right; `cover` at
+# center-right is the closest single-knob equivalent.
+background-image-fit = cover
+background-image-position = center-right
+background-image-opacity = 0.10
+# Explicit: the window itself stays fully opaque, as in wezterm.
+background-opacity = 1
