@@ -17,4 +17,4 @@ background-image-position = center-right
 background-image-opacity = 0.01
 # Explicit: the window itself stays fully opaque, as in wezterm.
 background-opacity = 1
-background = #151b2e
+background = #110633
