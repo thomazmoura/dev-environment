@@ -29,6 +29,12 @@ COPY --chown=developer:developer modules/demux /home/developer/.modules/demux
 COPY --chown=developer:developer modules/demux/demux.toml /home/developer/.config/demux/demux.toml
 RUN pwsh -NoProfile -File /home/developer/.modules/demux/Install-Demux.ps1
 
+# herdr (terminal multiplexer used as the runtime for coding agents; also
+# installs the agent state hooks and the Claude Code agent skill)
+COPY --chown=developer:developer modules/herdr /home/developer/.modules/herdr
+COPY --chown=developer:developer modules/herdr/config.toml /home/developer/.config/herdr/config.toml
+RUN pwsh -NoProfile -File /home/developer/.modules/herdr/Install-Herdr.ps1
+
 # Tmux plugins installation
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf

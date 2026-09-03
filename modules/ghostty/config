@@ -16,7 +16,7 @@
 # --- Shell: straight into tmux (wezterm default_prog) ----------------
 # This bypasses the login shell, so modules/shell/bashrc does not run.
 # That already matches current WezTerm behaviour.
-command = pwsh -C vtmux
+command = pwsh
 
 # --- Font (wezterm font_with_fallback + font_size) -------------------
 font-family = Cascadia Code

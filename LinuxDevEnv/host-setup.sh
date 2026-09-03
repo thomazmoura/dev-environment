@@ -120,6 +120,10 @@ pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1
 # demux (tmux session dashboard, bound to prefix + e as a sticky sidebar)
 pwsh -NoProfile -File $HOME/.modules/demux/Install-Demux.ps1
 
+# herdr (terminal multiplexer used as the runtime for coding agents; also
+# installs the agent state hooks and the Claude Code agent skill)
+pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
+
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
@@ -144,6 +148,11 @@ pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.config/nvim -
 # next to it and those must not land in the repo)
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.config/demux -Force"
 pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/demux/demux.toml -Target $modules_path/demux/demux.toml"
+
+# herdr config (the file, not the directory: herdr writes its logs, sockets and
+# session state next to it and those must not land in the repo)
+pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.config/herdr -Force"
+pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/herdr/config.toml -Target $modules_path/herdr/config.toml"
 
 # Terminal emulators (both act as hosts for tmux)
 pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.config/ghostty -Target $modules_path/ghostty"
