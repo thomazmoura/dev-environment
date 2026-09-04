@@ -11,6 +11,16 @@ delivery = "herdr"
 name = "tokyo-night"
 auto_switch = false
 
+# ctrl+alt+h/j/k/l: move focus between panes without the prefix, mirroring the
+# tmux C-h/j/k/l bindings in modules/tmux/tmux.conf. ctrl+alt instead of bare
+# ctrl because herdr has no is_vim passthrough: a bare ctrl+l binding would
+# swallow clear-screen in every pane. prefix+h/j/k/l keeps working.
+[keys]
+focus_pane_left = ["prefix+h", "ctrl+alt+h"]
+focus_pane_down = ["prefix+j", "ctrl+alt+j"]
+focus_pane_up = ["prefix+k", "ctrl+alt+k"]
+focus_pane_right = ["prefix+l", "ctrl+alt+l"]
+
 # prefix+ctrl+n: fuzzy-find a project under ~/code, then focus the workspace
 # already rooted there or build a new one (agent pane + short pwsh pane).
 # The herdr counterpart of the tmux prefix+C-n binding. prefix+n stays next_tab.
