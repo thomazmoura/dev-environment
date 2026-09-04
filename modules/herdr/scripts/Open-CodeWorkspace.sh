@@ -4,9 +4,15 @@
 # The herdr counterpart of the tmux `prefix + C-n` binding in
 # modules/tmux/tmux.conf. If a workspace is already rooted at the chosen
 # directory it is focused; otherwise a new one is built with three tabs:
-# the agent CLI (tab labelled after the agent kind), "NeoVim" running nvim,
-# and "Terminal" running pwsh. Picking "NeoVim" in the agent picker skips the
-# agent tab and builds only the editor and shell tabs.
+# the agent CLI (tab labelled after the agent kind), "NeoVim" and "Terminal".
+# Picking "NeoVim" in the agent picker skips the agent tab and builds only the
+# editor and shell tabs.
+#
+# The tabs themselves are opened by the shared helpers in workspace-actions.sh,
+# the same ones the prefix+shift+s action menu calls one at a time -- building a
+# workspace is running Open Agent, Open NeoVim and Open Terminal at once. They
+# run vtmux's command lines, so the editor tab installs the LSP node packages
+# before nvim and the shell tab runs psgit && psfzf && Build-DotnetProjectIfNeeded.
 #
 # Bound to prefix+ctrl+n as a popup command in modules/herdr/config.toml.
 #
@@ -31,17 +37,10 @@ set -uo pipefail
 
 CODE_DIR="${CODE_DIR:-$HOME/code}"
 
-# die is for failures before the workspace exists: the popup is then the only
-# surface an error can show up on, so it is held open until the user reads it.
-die() { printf '%s\n' "$*" >&2; read -rsn1 -p "Press any key to close..." _; exit 1; }
-
-# warn is for failures after the workspace exists and is focused: the user is
-# already looking at it, so the message goes to a toast instead of pinning the
-# popup on top of it. [ui.toast] delivery = "herdr" routes these in-app.
-warn() {
-  herdr notification show "Open-CodeWorkspace" --body "$*" --sound none >/dev/null 2>&1
-  exit 0
-}
+# die, warn, pane_id_of, new_tab, the open_* helpers, pick_agent_kind and
+# start_agent all live here, shared with Select-Action.sh. Sourced before the
+# argument parsing below, which redefines die for the detached build.
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/workspace-actions.sh"
 
 # Steps 4-6 need no popup and take a second or two, so they are re-entered here
 # in a detached process (see the handoff at the end of step 3): the popup dies
@@ -78,17 +77,8 @@ case "${1:-}" in
     ;;
 esac
 
-for tool in herdr fd fzf python3; do
-  command -v "$tool" >/dev/null || die "Required tool not found: $tool"
-done
+require_tools herdr fd fzf python3
 [ -d "$CODE_DIR" ] || die "Directory does not exist: $CODE_DIR"
-
-# pane_id_of reads the pane id out of a `workspace create` or `tab create`
-# reply; both wrap the new tab's first pane under result.root_pane.
-pane_id_of() {
-  printf '%s' "$1" | python3 -c \
-    'import json,sys; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])'
-}
 
 # workspace_at answers "is a workspace already rooted at this directory" --
 # the question both the keybinding's step 2 and the startup build's step 4 ask.
@@ -167,31 +157,9 @@ if [ -z "$build_mode" ]; then
   fi
 
   # --- 3. Pick an agent ------------------------------------------------------
-  # Offer only kinds herdr knows about that are actually executable here.
-  kinds=$(herdr agent 2>&1 | sed -n 's/^ *kinds: *//p' | tr '|' '\n')
-  [ -n "$kinds" ] || die "Could not read the agent kind list from herdr"
-
-  available=""
-  for kind in $kinds; do
-    if command -v "$kind" >/dev/null 2>&1; then
-      available="${available}${kind}"$'\n'
-    fi
-  done
-  # "NeoVim" is the no-agent choice: build the editor and shell tabs only. herdr
-  # kind names are lowercase, so the capitalised spelling is both the label the
-  # picker shows and a value that can never collide with a real agent kind.
-  if command -v nvim >/dev/null 2>&1; then
-    available="${available}NeoVim"$'\n'
-  fi
-  available=$(printf '%s' "$available" | sed '/^$/d')
-  [ -n "$available" ] || die "No supported agent CLI or nvim found in PATH"
-
-  if [ "$(printf '%s\n' "$available" | wc -l)" -eq 1 ]; then
-    agent_kind="$available"
-  else
-    agent_kind=$(printf '%s\n' "$available" \
-      | fzf --reverse --prompt="agent> " --height=100%) || exit 0
-  fi
+  # Shared with the "Open Agent" row of the prefix+shift+s menu: herdr's kind
+  # list filtered by what is executable here, plus the "NeoVim" no-agent choice.
+  agent_kind=$(pick_agent_kind) || exit 0
   [ -n "$agent_kind" ] || exit 0
 
   # The popup lives exactly as long as this script, so the rest of the work is
@@ -285,76 +253,25 @@ if [ -n "$startup_mode" ]; then
 fi
 
 # --- 5. Fill in the tabs -----------------------------------------------------
-# --no-focus everywhere below leaves the focus where workspace create put it, on
-# the first tab. new_tab publishes the new tab's pane in $tab_pane rather than
-# echoing it: warn exits, and an exit from inside a $(...) would only end the
-# substitution and let the build carry on with an empty pane id.
-tab_pane=""
-new_tab() {
-  local created
-  created=$(herdr tab create --workspace "$workspace_id" --cwd "$target" \
-    --label "$1" --no-focus) || warn "Could not create the $1 tab"
-  tab_pane=$(pane_id_of "$created") || warn "Could not read the $1 tab pane"
-}
-
+# --no-focus everywhere leaves the focus where workspace create put it, on the
+# first tab. These are the same helpers the prefix+shift+s menu runs one at a
+# time; only the focus flag differs, since there the new tab is the point.
 if [ "$agent_kind" = "NeoVim" ]; then
   # No agent: the first tab is the editor and there is no second one.
   herdr tab rename "$first_tab" "NeoVim" >/dev/null
-  herdr pane run "$root_pane" "nvim" >/dev/null
+  herdr pane run "$root_pane" "$NVIM_COMMAND" >/dev/null
 else
   herdr tab rename "$first_tab" "$agent_kind" >/dev/null
-  new_tab "NeoVim"
-  herdr pane run "$tab_pane" "nvim" >/dev/null
+  open_nvim_tab "$workspace_id" "$target" --no-focus
 fi
 
-new_tab "Terminal"
-if command -v pwsh >/dev/null 2>&1; then
-  herdr pane run "$tab_pane" "pwsh" >/dev/null
-fi
+open_terminal_tab "$workspace_id" "$target" --no-focus
 
 # --- 6. Start the agent in the first tab -------------------------------------
 # Last, because `herdr agent start` only returns once the agent is ready for
 # prompts: the editor and shell tabs are already in place by then.
 [ "$agent_kind" = "NeoVim" ] && exit 0
 
-# Agent names must match [a-z][a-z0-9_-]{0,31} and be unique among live agents.
-# `herdr agent start` only exits 0 once the agent is ready for prompts, so an
-# agent sitting on a first-run question counts as started here too (see below).
-base=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_-' '-')
-base=$(printf '%s' "$base" | sed 's/^[^a-z]*//; s/-*$//')
-base=${base:-project}
-base=${base:0:31}
-
-live=$(herdr agent list 2>/dev/null | python3 -c '
-import json, sys
-try:
-    print("\n".join(a.get("name") or "" for a in json.load(sys.stdin)["result"]["agents"]))
-except Exception:
-    pass
-')
-
-agent_name="$base"
-suffix=2
-while printf '%s\n' "$live" | grep -qx "$agent_name"; do
-  agent_name="${base:0:29}-$suffix"
-  suffix=$((suffix + 1))
-done
-
-if ! start=$(herdr agent start "$agent_name" --kind "$agent_kind" \
-    --pane "$root_pane" 2>&1); then
-  # A first-run prompt (copilot's "Confirm folder trust") leaves the agent
-  # blocked rather than idle, which herdr reports as agent_not_ready. The agent
-  # is running in the pane and only needs an answer, so that is a normal
-  # outcome: leave it alone for the user to reply to.
-  code=$(printf '%s\n' "$start" | python3 -c '
-import json, sys
-for line in sys.stdin:
-    try:
-        print(json.loads(line)["error"]["code"])
-        break
-    except Exception:
-        pass
-')
-  [ "$code" = "agent_not_ready" ] \
-    || warn "The $agent_kind agent did not start cleanly: $start"
-fi
+# Agent naming, de-duplication and the agent_not_ready carve-out are shared
+# with the menu's "Open Agent" row.
+start_agent "$root_pane" "$agent_kind" "$label"

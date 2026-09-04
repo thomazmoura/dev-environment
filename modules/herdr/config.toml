@@ -1,6 +1,9 @@
 onboarding = false
 
 [ui]
+# SpotlightDimmer: the invisible U+2063 marker tells the daemon which Herdr
+# workspace this window is showing (docs/HERDR_INTEGRATION.md).
+window_title = "{hostname}: {workspace}⁣sd:herdr:{workspace}"
 show_agent_labels_on_pane_borders = true
 
 agent_panel_sort = "priority"
@@ -52,5 +55,20 @@ height = "40%"
 key = "prefix+/"
 type = "popup"
 command = "$HOME/.modules/herdr/scripts/Select-Workspace.sh"
+width = "40%"
+height = "40%"
+
+# prefix+shift+s: fuzzy-find one of the workspace actions -- open an agent,
+# NeoVim or Terminal tab, or start the .NET watch tests, the Angular + .NET
+# frontend or the Windows service. The herdr counterpart of the tmux prefix+t
+# agent menu and the prefix+T/a/W bindings in modules/wsl2/tmux.conf, except
+# that each action opens a tab rather than splitting the current window: tabs
+# are what a herdr workspace is built out of, and what prefix+t finds by name.
+# The first three rows are the very helpers prefix+ctrl+n uses to build a whole
+# workspace, so that binding is these three at once. prefix+s stays settings.
+[[keys.command]]
+key = "prefix+shift+s"
+type = "popup"
+command = "$HOME/.modules/herdr/scripts/Select-Action.sh"
 width = "40%"
 height = "40%"
