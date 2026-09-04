@@ -22,7 +22,9 @@ focus_pane_up = ["prefix+k", "ctrl+alt+k"]
 focus_pane_right = ["prefix+l", "ctrl+alt+l"]
 
 # prefix+ctrl+n: fuzzy-find a project under ~/code, then focus the workspace
-# already rooted there or build a new one (agent pane + short pwsh pane).
+# already rooted there or build a new one: one tab per the picked agent CLI, a
+# "NeoVim" tab and a "Terminal" tab running pwsh. Picking "NeoVim" in the agent
+# picker skips the agent tab.
 # The herdr counterpart of the tmux prefix+C-n binding. prefix+n stays next_tab.
 [[keys.command]]
 key = "prefix+ctrl+n"

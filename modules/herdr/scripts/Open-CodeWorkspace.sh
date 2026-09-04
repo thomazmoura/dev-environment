@@ -3,16 +3,16 @@
 #
 # The herdr counterpart of the tmux `prefix + C-n` binding in
 # modules/tmux/tmux.conf. If a workspace is already rooted at the chosen
-# directory it is focused; otherwise a new one is created with an agent pane
-# and a short pwsh pane below it.
+# directory it is focused; otherwise a new one is built with three tabs:
+# the agent CLI (tab labelled after the agent kind), "NeoVim" running nvim,
+# and "Terminal" running pwsh. Picking "NeoVim" in the agent picker skips the
+# agent tab and builds only the editor and shell tabs.
 #
 # Bound to prefix+ctrl+n as a popup command in modules/herdr/config.toml.
 
 set -uo pipefail
 
 CODE_DIR="${CODE_DIR:-$HOME/code}"
-# Height in rows of the pwsh pane below the agent.
-SHELL_PANE_ROWS="${SHELL_PANE_ROWS:-5}"
 
 # die is for failures before the workspace exists: the popup is then the only
 # surface an error can show up on, so it is held open until the user reads it.
@@ -44,6 +44,13 @@ for tool in herdr fd fzf python3; do
   command -v "$tool" >/dev/null || die "Required tool not found: $tool"
 done
 [ -d "$CODE_DIR" ] || die "Directory does not exist: $CODE_DIR"
+
+# pane_id_of reads the pane id out of a `workspace create` or `tab create`
+# reply; both wrap the new tab's first pane under result.root_pane.
+pane_id_of() {
+  printf '%s' "$1" | python3 -c \
+    'import json,sys; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])'
+}
 
 if [ -z "$build_mode" ]; then
   # --- 1. Pick a directory ---------------------------------------------------
@@ -87,8 +94,14 @@ for pane in panes:
       available="${available}${kind}"$'\n'
     fi
   done
+  # "NeoVim" is the no-agent choice: build the editor and shell tabs only. herdr
+  # kind names are lowercase, so the capitalised spelling is both the label the
+  # picker shows and a value that can never collide with a real agent kind.
+  if command -v nvim >/dev/null 2>&1; then
+    available="${available}NeoVim"$'\n'
+  fi
   available=$(printf '%s' "$available" | sed '/^$/d')
-  [ -n "$available" ] || die "No supported agent CLI found in PATH"
+  [ -n "$available" ] || die "No supported agent CLI or nvim found in PATH"
 
   if [ "$(printf '%s\n' "$available" | wc -l)" -eq 1 ]; then
     agent_kind="$available"
@@ -113,31 +126,46 @@ label=$(basename "$target" | tr '.' '_')
 
 create=$(herdr workspace create --cwd "$target" --label "$label" --focus) \
   || die "Could not create the workspace"
-root_pane=$(printf '%s' "$create" | python3 -c \
-  'import json,sys; print(json.load(sys.stdin)["result"]["root_pane"]["pane_id"])') \
+root_pane=$(pane_id_of "$create") \
   || die "Could not read the new workspace root pane"
+workspace_id=$(printf '%s' "$create" | python3 -c \
+  'import json,sys; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
+first_tab=$(printf '%s' "$create" | python3 -c \
+  'import json,sys; print(json.load(sys.stdin)["result"]["tab"]["tab_id"])')
 
-# --- 5. Split off the pwsh pane ---------------------------------------------
-# --ratio sizes the *existing* pane, so the top pane keeps everything but the
-# rows reserved for the shell below it.
-height=$(herdr pane layout --pane "$root_pane" | python3 -c \
-  'import json,sys; print(json.load(sys.stdin)["result"]["layout"]["area"]["height"])')
-ratio=$(python3 -c "
-height = $height
-rows = min($SHELL_PANE_ROWS, max(1, height // 2))
-print((height - rows) / height if height > rows else 0.5)
-")
+# --- 5. Fill in the tabs -----------------------------------------------------
+# --no-focus everywhere below leaves the focus where workspace create put it, on
+# the first tab. new_tab publishes the new tab's pane in $tab_pane rather than
+# echoing it: warn exits, and an exit from inside a $(...) would only end the
+# substitution and let the build carry on with an empty pane id.
+tab_pane=""
+new_tab() {
+  local created
+  created=$(herdr tab create --workspace "$workspace_id" --cwd "$target" \
+    --label "$1" --no-focus) || warn "Could not create the $1 tab"
+  tab_pane=$(pane_id_of "$created") || warn "Could not read the $1 tab pane"
+}
 
-split=$(herdr pane split "$root_pane" --direction down --ratio "$ratio" \
-  --cwd "$target" --no-focus) || warn "Could not split the pane"
-shell_pane=$(printf '%s' "$split" | python3 -c \
-  'import json,sys; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
-
-if command -v pwsh >/dev/null 2>&1; then
-  herdr pane run "$shell_pane" "pwsh" >/dev/null
+if [ "$agent_kind" = "NeoVim" ]; then
+  # No agent: the first tab is the editor and there is no second one.
+  herdr tab rename "$first_tab" "NeoVim" >/dev/null
+  herdr pane run "$root_pane" "nvim" >/dev/null
+else
+  herdr tab rename "$first_tab" "$agent_kind" >/dev/null
+  new_tab "NeoVim"
+  herdr pane run "$tab_pane" "nvim" >/dev/null
 fi
 
-# --- 6. Start the agent in the top pane -------------------------------------
+new_tab "Terminal"
+if command -v pwsh >/dev/null 2>&1; then
+  herdr pane run "$tab_pane" "pwsh" >/dev/null
+fi
+
+# --- 6. Start the agent in the first tab -------------------------------------
+# Last, because `herdr agent start` only returns once the agent is ready for
+# prompts: the editor and shell tabs are already in place by then.
+[ "$agent_kind" = "NeoVim" ] && exit 0
+
 # Agent names must match [a-z][a-z0-9_-]{0,31} and be unique among live agents.
 # `herdr agent start` only exits 0 once the agent is ready for prompts, so an
 # agent sitting on a first-run question counts as started here too (see below).
