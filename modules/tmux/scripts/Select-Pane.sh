@@ -4,9 +4,13 @@
 # back to the window name for panes created outside them.
 #
 # Usage: Select-Pane.sh
-#   Meant to be run from a tmux binding (see `bind t` on tmux.conf), so the tmux commands
-#   below act on the client that opened it.
-set -euo pipefail
+#   Meant to be run from a tmux binding (prefix+t then t, see modules/tmux/common.conf),
+#   so the tmux commands below act on the client that opened it.
+set -uo pipefail
+
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
+
+require_tools tmux fzf
 
 current="$(tmux display-message -p '#{pane_id}')"
 
