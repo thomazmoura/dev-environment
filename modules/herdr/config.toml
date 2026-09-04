@@ -4,6 +4,7 @@ onboarding = false
 show_agent_labels_on_pane_borders = true
 
 agent_panel_sort = "priority"
+status_indicators = "symbols"
 [ui.toast]
 delivery = "herdr"
 
@@ -32,3 +33,24 @@ type = "popup"
 command = "$HOME/.modules/herdr/scripts/Open-CodeWorkspace.sh"
 width = "60%"
 height = "60%"
+
+# prefix+t: fuzzy-find a tab in the focused workspace by name and switch to it.
+# prefix+1..9 only reaches tabs by number and prefix+n/p only cycle, so this is
+# the quick way between the agent, "NeoVim" and "Terminal" tabs by name.
+# prefix+shift+t stays rename_tab.
+[[keys.command]]
+key = "prefix+t"
+type = "popup"
+command = "$HOME/.modules/herdr/scripts/Select-Tab.sh"
+width = "40%"
+height = "40%"
+
+# prefix+/: fuzzy-find one of the workspaces that are already open and focus it.
+# Only lists live spaces, where prefix+ctrl+n searches every project under ~/code
+# and can build a new one.
+[[keys.command]]
+key = "prefix+/"
+type = "popup"
+command = "$HOME/.modules/herdr/scripts/Select-Workspace.sh"
+width = "40%"
+height = "40%"
