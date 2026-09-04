@@ -9,6 +9,11 @@
 # agent tab and builds only the editor and shell tabs.
 #
 # Bound to prefix+ctrl+n as a popup command in modules/herdr/config.toml.
+#
+# --startup runs the same pickers before herdr itself is up, for the very first
+# workspace of a session: see Start-Herdr.sh. There is no server to talk to yet,
+# so instead of creating a workspace it prints the picked directory for the
+# caller to launch herdr from, and adopts the workspace herdr opens there.
 
 set -uo pipefail
 
@@ -30,15 +35,32 @@ warn() {
 # in a detached process (see the handoff at the end of step 3): the popup dies
 # with this process, so the sooner it exits, the sooner the popup gets out of
 # the way of the workspace it just created.
+# adopt_mode fills in the workspace herdr opens by itself on launch instead of
+# creating one. Set by --startup and carried into the detached build through
+# --build --adopt, since by then the workspace exists but this script did not
+# make it.
 build_mode=""
-if [ "${1:-}" = "--build" ]; then
-  build_mode=1
-  target="$2"
-  agent_kind="$3"
-  # Nothing is left to read a message, let alone hold a popup open for a
-  # keypress, so failures toast in this mode too.
-  die() { warn "$@"; }
-fi
+adopt_mode=""
+startup_mode=""
+case "${1:-}" in
+  --startup)
+    startup_mode=1
+    adopt_mode=1
+    ;;
+  --build)
+    build_mode=1
+    shift
+    if [ "${1:-}" = "--adopt" ]; then
+      adopt_mode=1
+      shift
+    fi
+    target="${1:-}"
+    agent_kind="${2:-}"
+    # Nothing is left to read a message, let alone hold a popup open for a
+    # keypress, so failures toast in this mode too.
+    die() { warn "$@"; }
+    ;;
+esac
 
 for tool in herdr fd fzf python3; do
   command -v "$tool" >/dev/null || die "Required tool not found: $tool"
@@ -65,7 +87,9 @@ if [ -z "$build_mode" ]; then
   # --- 2. Focus the workspace already rooted there, if any -------------------
   # pane list reports cwd and workspace_id together, so this asks the real
   # question rather than trying to match a mangled workspace label.
-  existing=$(herdr pane list 2>/dev/null | python3 -c '
+  # Skipped at startup: there is no server yet, so there is nothing to focus.
+  existing=""
+  [ -z "$startup_mode" ] && existing=$(herdr pane list 2>/dev/null | python3 -c '
 import json, sys
 target = sys.argv[1]
 try:
@@ -116,22 +140,66 @@ for pane in panes:
   # agent selection and the workspace fills in behind it. setsid keeps the build
   # out of the popup's session so tearing down its pty does not take the build
   # with it, and stdio goes to /dev/null because no terminal outlives this exit.
-  setsid -f "$(readlink -f "${BASH_SOURCE[0]}")" --build "$target" "$agent_kind" \
-    </dev/null >/dev/null 2>&1
+  # At startup the same handoff buys something else: the build waits for a server
+  # that only comes up once this process has exited and the caller has exec'd
+  # herdr, so it cannot run inline.
+  if [ -n "$adopt_mode" ]; then
+    setsid -f "$(readlink -f "${BASH_SOURCE[0]}")" --build --adopt "$target" "$agent_kind" \
+      </dev/null >/dev/null 2>&1
+    # The one thing on stdout, and only in startup mode: fzf drew on the tty, so
+    # this reaches the caller clean, and it is what herdr gets launched from.
+    printf '%s\n' "$target"
+  else
+    setsid -f "$(readlink -f "${BASH_SOURCE[0]}")" --build "$target" "$agent_kind" \
+      </dev/null >/dev/null 2>&1
+  fi
   exit 0
 fi
 
-# --- 4. Create the workspace -------------------------------------------------
+# --- 4. Get hold of the workspace --------------------------------------------
 label=$(basename "$target" | tr '.' '_')
 
-create=$(herdr workspace create --cwd "$target" --label "$label" --focus) \
-  || die "Could not create the workspace"
-root_pane=$(pane_id_of "$create") \
-  || die "Could not read the new workspace root pane"
-workspace_id=$(printf '%s' "$create" | python3 -c \
-  'import json,sys; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
-first_tab=$(printf '%s' "$create" | python3 -c \
-  'import json,sys; print(json.load(sys.stdin)["result"]["tab"]["tab_id"])')
+if [ -n "$adopt_mode" ]; then
+  # Startup: herdr is booting right now and opens one workspace rooted at the
+  # cwd it was launched from, which is $target. Waiting for that one and filling
+  # it in beats creating a second one and closing the first: no flicker, and no
+  # stray "~" space left over if the close ever fails.
+  # pane list carries pane_id, tab_id and workspace_id together, so one match
+  # answers all three questions. 60 x 0.5s covers a cold server start.
+  workspace_id=""
+  first_tab=""
+  root_pane=""
+  for _ in $(seq 60); do
+    read -r workspace_id first_tab root_pane <<<"$(herdr pane list 2>/dev/null | python3 -c '
+import json, sys
+target = sys.argv[1]
+try:
+    panes = json.load(sys.stdin)["result"]["panes"]
+except Exception:
+    sys.exit(0)
+for pane in panes:
+    if target in (pane.get("cwd"), pane.get("foreground_cwd")):
+        print(pane["workspace_id"], pane["tab_id"], pane["pane_id"])
+        break
+' "$target")"
+    [ -n "$root_pane" ] && break
+    sleep 0.5
+  done
+  # No toast either: a herdr that never came up has nothing to show one on.
+  [ -n "$root_pane" ] || exit 1
+  # herdr labels its own workspace from the cwd, so this only normalises the
+  # dots the create path also strips; failure is cosmetic, hence no die.
+  herdr workspace rename "$workspace_id" "$label" >/dev/null 2>&1
+else
+  create=$(herdr workspace create --cwd "$target" --label "$label" --focus) \
+    || die "Could not create the workspace"
+  root_pane=$(pane_id_of "$create") \
+    || die "Could not read the new workspace root pane"
+  workspace_id=$(printf '%s' "$create" | python3 -c \
+    'import json,sys; print(json.load(sys.stdin)["result"]["workspace"]["workspace_id"])')
+  first_tab=$(printf '%s' "$create" | python3 -c \
+    'import json,sys; print(json.load(sys.stdin)["result"]["tab"]["tab_id"])')
+fi
 
 # --- 5. Fill in the tabs -----------------------------------------------------
 # --no-focus everywhere below leaves the focus where workspace create put it, on

@@ -13,10 +13,16 @@
 #  A trailing comment is parsed as part of the value.
 # =====================================================================
 
-# --- Shell: straight into tmux (wezterm default_prog) ----------------
-# This bypasses the login shell, so modules/shell/bashrc does not run.
-# That already matches current WezTerm behaviour.
-command = pwsh
+# --- Shell: pick the session on startup ------------------------------
+# Select-Shell.sh offers herdr (default), tmux, bash and PowerShell, then
+# execs into the pick. This bypasses the login shell, so
+# modules/shell/bashrc does not run. That already matches current WezTerm
+# behaviour.
+# The `shell:` prefix routes the value through /bin/sh -c so $HOME expands;
+# without it Ghostty would look for a binary literally named "$HOME/...".
+# `command` rather than `initial-command`, so ctrl+shift+n tabs get the
+# picker too.
+command = shell:$HOME/.modules/ghostty/scripts/Select-Shell.sh
 
 # --- Font (wezterm font_with_fallback + font_size) -------------------
 font-family = Cascadia Code
