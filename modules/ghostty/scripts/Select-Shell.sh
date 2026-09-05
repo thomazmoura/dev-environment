@@ -22,8 +22,8 @@ set -uo pipefail
 # and keep the window alive one keystroke too long.
 launch() {
   case "$1" in
-    herdr)      exec "$HOME/.modules/herdr/scripts/Start-Herdr.sh" ;;
     tmux)       exec pwsh -C vtmux ;;
+    herdr)      exec "$HOME/.modules/herdr/scripts/Start-Herdr.sh" ;;
     powershell) exec pwsh ;;
     bash)       exec bash ;;
   esac
@@ -32,7 +32,7 @@ launch() {
 # herdr and tmux both go through pwsh, so a missing pwsh takes all three
 # PowerShell-backed rows with it and bash is the only thing left to offer.
 if command -v pwsh >/dev/null 2>&1; then
-  options=$'herdr\ntmux\nbash\npowershell'
+  options=$'tmux\nherdr\nbash\npowershell'
 else
   options="bash"
 fi
