@@ -1,0 +1,45 @@
+#title: ✳ fix-postgres-token-substitution
+  Altere para feature/novo-ambiente-pre-prod, refaça essas alterações nela, volte para a pre-prod, resete
+  ela conforme a origin/pre-prod e por última faça o merge da feature/novo-ambiente-pre-prod na pre-prod
+
+  Committed 6c60e1df, cherry-picked d8615ba0, ran 7 shell commands
+
+● ★ Insight ─────────────────────────────────────
+  A branch de feature estava atrás da pre-prod, e isso gerou dois conflitos na mesma região. Em
+  feature/novo-ambiente-pre-prod, servidor_do_postgres ainda era o literal 'CASTOR402' — foi o commit
+  2ec16ecd ("Substituir valores por tokens"), já mergeado na pre-prod, que o tokenizou. Como o cherry-pick
+  usa o pai do commit como base, o git viu "CASTOR402 → macro" contra "CASTOR402 → token" e pediu
+  decisão.
+
+  Resolvi pelo lado da correção nas duas vezes (as quatro variáveis como $(X)). O CASTOR402 era exatamente
+  o valor hardcoded que o time decidiu tirar do YAML — reintroduzi-lo seria desfazer 2ec16ecd. O diff
+  final contra origin/pre-prod confirma que só o esperado mudou: 10 inserções, 4 alterações, nada de
+  CASTOR402.
+  ─────────────────────────────────────────────────
+
+  Resultado
+
+  O commit original fd429602 foi descartado com o reset. O histórico agora é:
+
+  *   6c60e1df Merge branch 'feature/novo-ambiente-pre-prod' into pre-prod
+  |\
+  | * d8615ba0 Vincular variable group Portal Starlink aos pipelines   ← na feature
+  * | 75c356e2 Restaurar deploy de SQL                                  ← origin/pre-prod
+
+  - feature/novo-ambiente-pre-prod → d8615ba0, 1 commit à frente do remoto, com a alteração inteira.
+  - pre-prod → 6c60e1df, resetada para origin/pre-prod e depois mergeada com --no-ff (mesmo padrão dos
+    merges anteriores da branch).
+
+  O git diff origin/pre-prod bate exatamente com o que foi planejado, e os quatro YAMLs continuam
+  parseando. Nada foi enviado ao remoto ainda — nenhuma das duas branches teve push.
+
+✻ Baked for 1m 28s · done 6:02 PM
+
+※ recap: Investigamos por que os tokens do appsettings não foram substituídos no build 63229 e aplicamos a
+  correção nos pipelines. Os commits estão nas branches feature/novo-ambiente-pre-prod e pre-prod,
+  prontos para push quando você autorizar. (disable recaps in /config)
+
+──────────────────────────────────────────────────────────────────────── fix-postgres-token-substitution ─
+❯ faça o push das duas branches
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  -- INSERT -- ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents · /diff to hide diff              /rc

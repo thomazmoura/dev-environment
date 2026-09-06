@@ -1,0 +1,45 @@
+#title: ✳ ai-cli-integration-architecture.md validation
+
+  Roughly 20 of the ~25 file.rs:NNN citations landed on the exact line.
+
+  Five minor inaccuracies (all cosmetic — none change a conclusion)
+
+  1. codex.toml rule count is wrong. Report: "89 lines, 7 rules." Actual: 89 lines, 8 rules. The
+     abridgement silently drops live_strong_blocker (priority 900, after_last_prompt_marker) and
+     osc_title_idle (priority 100). The first is a real gap — §3.8's priority-ladder narrative jumps 950 →
+     600 without mentioning the 900 rule sitting between them.
+  2. claude.toml rule count is wrong. Report: "218 lines, 17 rules" (stated twice, plus "still
+     maintainable at 17 rules"). Actual: 218 lines, 16 rules — the report appears to have counted the
+     top-level id = "claude" line as a rule.
+  3. fallback_explain cited at manifest.rs:558 — it is at :529.
+  4. lookup_agent cited at mod.rs:190-220 — it is at 193-222. The quoted match arms are verbatim.
+  5. §6.5 attributes the agent_not_idle refusal to src/server/alt_screen_read.rs. That file holds the
+     scroll-drive/restore machinery, but the refusal itself is in src/server/headless.rs:2733. The
+     described behavior is correct; only the file attribution is off.
+
+  ★ Insight ─────────────────────────────────────
+  - The report's own thesis survives its verification: the parts it got wrong are all counts and line
+    offsets — the churny, data-shaped facts — while every structural claim (gate semantics, the
+    one-authority rule, the two privilege-boundary source lists) is exact. That mirrors §3.7's split:
+    "rules are data and churn constantly; identity is code and churns rarely."
+  - The two source lists are worth reading together as a proof of the design: is_official_agent_source (17
+    pairs, gates exec) is a superset of full_lifecycle_hook_authority (6 pairs, gates state authority)
+    and disjoint from is_reserved_native_state_source (9 pairs, forbidden from state).
+    Claude/Codex/Copilot appear in the first and third but not the second — so they can build a resume
+    command line but can never claim lifecycle state. That's the §4.3 "partial hook is worse than none"
+    argument enforced as data, not convention.
+    ─────────────────────────────────────────────────
+
+  Also worth noting for accuracy-of-the-appendix: the docs drift the report flagged is still unfixed at
+  HEAD, so that item remains actionable rather than stale.
+
+✻ Cogitated for 3m 25s · done 6:40 PM
+
+※ recap: I validated the AI CLI integration architecture report against this checkout: it matches commit
+  3150bd92 exactly, with five cosmetic errors (two rule counts, two line offsets, one file attribution).
+  Next action is yours: say whether to fix them. (disable recaps in /config)
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  -- INSERT -- ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents                                   /rc

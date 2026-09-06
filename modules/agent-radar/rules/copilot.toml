@@ -1,0 +1,55 @@
+# GitHub Copilot CLI detection rules.
+#
+# See claude.toml for gate semantics and regions. From
+# ai-cli-integration-architecture.md S3.8, which presents this as the minimal
+# viable shape for a new tool -- three rules, and the template to start from.
+#
+# Every matcher here targets a FOOTER KEY HINT rather than any prose. Those
+# strings are invariant because they describe the keyboard contract; a dialog's
+# title changes with every feature. This is the most transferable authoring rule
+# there is.
+
+[[rules]]
+id = "selection_blocker"
+state = "blocked"
+priority = 300
+region = "whole"
+detail = "waiting on a choice"
+# The AND-of-ORs shape, and the reason both halves are needed: "esc to cancel"
+# appears while Copilot is merely working (that is working_cancel_hint below).
+# It is the COMBINATION of a cancel hint and a selection hint that means a dialog
+# is open, and priority 300 vs 100 resolves the overlap -- both rules match a
+# blocked screen and the blocker wins.
+all = [
+  { any = [
+    { contains = ["esc to cancel"] },
+    { contains = ["esc cancel"] },
+  ] },
+  { any = [
+    { contains = ["enter to select"] },
+    { contains = ["enter to confirm"] },
+    { contains = ["enter to submit"] },
+    { contains = ["enter accept"] },
+  ] },
+]
+
+[[rules]]
+id = "background_agents_working"
+state = "working"
+priority = 110
+region = "bottom(6)"
+detail = "waiting for background agents"
+line_regex = ['^\s*◎\s+Waiting for background agents(?:\s|·|$)']
+
+[[rules]]
+id = "working_cancel_hint"
+state = "working"
+priority = 100
+region = "whole"
+detail = "working"
+any = [
+  { contains = ["esc to cancel"] },
+  { contains = ["esc cancel"] },
+  { contains = ["esc again to cancel"] },
+  { contains = ["esc interrupt"] },
+]

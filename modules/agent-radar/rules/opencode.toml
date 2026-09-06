@@ -1,0 +1,51 @@
+# OpenCode detection rules.
+#
+# See claude.toml for gate semantics and regions. From
+# ai-cli-integration-architecture.md S3.8, where this manifest is thin on
+# purpose -- upstream OpenCode ships a real lifecycle plugin, so herdr's copy
+# only has to cover the un-plugged case. agent-radar has no plugin channel at
+# all, so this file is the whole story here and will need widening as you meet
+# states it does not cover. Show-AgentSnapshot.sh + Test-AgentRules.py is the
+# loop for that.
+
+[[rules]]
+id = "permission_banner"
+state = "blocked"
+priority = 310
+region = "whole"
+detail = "permission required"
+# The cheap, precise signal: OpenCode's explicit banner.
+contains = ["\u25b3 permission required"]
+
+[[rules]]
+id = "selection_dialog"
+state = "blocked"
+priority = 300
+region = "whole"
+detail = "waiting on a choice"
+# The structural fallback, for dialogs that do not draw the banner: a dismiss
+# hint AND one of three confirm hints AND one of two navigation hints. Gating on
+# the footer key hints rather than the dialog's wording is deliberate -- those
+# strings describe the keyboard contract and do not churn.
+#
+# Kept as a separate rule from the banner above rather than as one nested `any`,
+# partly because TOML inline tables have to fit on a single line, and mostly
+# because a narrow extra rule is easier to reason about than a broad one with
+# branches (S3.8: prefer a new narrow rule over widening a broad one).
+contains = ["esc dismiss"]
+all = [
+  { any = [{ contains = ["enter confirm"] }, { contains = ["enter submit"] }, { contains = ["enter toggle"] }] },
+  { any = [{ contains = ["\u2191\u2193 select"] }, { contains = ["\u21c6 tab"] }] },
+]
+
+[[rules]]
+id = "working_interrupt_hint"
+state = "working"
+priority = 100
+region = "bottom(6)"
+detail = "working"
+any = [
+  { contains = ["esc interrupt"] },
+  { contains = ["esc to interrupt"] },
+]
+not = [{ contains = ["\u25b3 permission required"] }]

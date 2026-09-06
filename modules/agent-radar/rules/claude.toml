@@ -1,0 +1,122 @@
+# Claude Code detection rules.
+#
+# GATE SEMANTICS -- read once, then never be surprised:
+#   contains  = ["a", "b"]   requires BOTH (case-insensitive substring). AND.
+#   any       = [{...}, {...}]  at least one branch matches. This is OR.
+#   not       = [{...}]      none may match.
+#   regex     = [...]        each must match the region text (use (?m)/(?s)).
+#   line_regex= [...]        each must match at least one LINE, case-SENSITIVE.
+#
+# `contains` looking like a list of alternatives while meaning AND is the single
+# most common authoring mistake. Everything defensive below is nested any/not.
+#
+# Regions:  title | whole | bottom(N) | top(N) | above_prompt_box
+#   N counts NON-EMPTY lines, so bottom(10) is "the last ten lines with content"
+#   regardless of how much blank padding the layout inserted.
+#
+# TOML detail: an inline table { ... } must fit on ONE line, so a deeply nested
+# gate does not wrap. When one gets long, split it into two narrow rules at
+# adjacent priorities rather than fighting the syntax -- that is the better shape
+# anyway (S3.8: prefer a new narrow rule over widening a broad one).
+#
+# Patterns use \uXXXX rather than the literal glyph: Claude Code's spinner and
+# cursor characters change between releases and a named codepoint stays greppable
+# when they do. Rules live in TOML literal strings ('...') so the escapes reach
+# the regex engine rather than being consumed by the TOML parser.
+#
+# NOTE ON THE TITLE REGION: unlike Codex, Claude Code's OSC title carries no
+# state -- it is the branch or task name behind a constant sparkle glyph, and
+# reads the same whether the agent is working or idle. Verified across three live
+# panes in different states. So Claude gets no title rules, and every signal here
+# comes off the screen.
+
+# --- Blocked -----------------------------------------------------------------
+# The state that justifies the whole tool. Both rules gate on the numbered
+# SELECTION cursor -- `> 1. Yes` -- rather than on the dialog's wording, because
+# the wording changes every release while the keyboard contract does not.
+#
+# They also read `above_prompt_box`, which is what stops you being reported as
+# blocked on your own draft: every phrase here is one you could type into the
+# prompt yourself, and the box's opening rule is the line that separates the
+# agent's render from your text.
+
+[[rules]]
+id = "permission_dialog"
+state = "blocked"
+priority = 300
+region = "above_prompt_box"
+detail = "permission prompt"
+all = [
+  { any = [
+      { contains = ["do you want to"] },
+      { contains = ["would you like to"] },
+      { contains = ["do you trust"] },
+      { contains = ["waiting for permission"] },
+      { contains = ["do you want to allow this connection"] },
+  ] },
+  # The numbered selection cursor, optionally inside the dialog's box border.
+  { line_regex = ['^\s*(│\s*)?❯\s+\d+\.\s'] },
+]
+
+[[rules]]
+id = "selection_dialog"
+state = "blocked"
+priority = 250
+region = "above_prompt_box"
+detail = "waiting on a choice"
+# The cursor on its own. Weaker than the pair above -- a model picker or a
+# /command menu lands here too -- but all of those genuinely need a keystroke
+# from you, which is what `blocked` means.
+line_regex = ['^\s*(│\s*)?❯\s+\d+\.\s']
+
+# --- Working -----------------------------------------------------------------
+
+[[rules]]
+id = "spinner_status"
+state = "working"
+priority = 200
+region = "bottom(10)"
+detail = "working"
+# The live status line, e.g.
+#   * Tinkering... (8m 5s . 33.7k tokens)
+# Three things have to line up: a status glyph at column zero, an ellipsis, and
+# an opening parenthesis for the elapsed time. All three matter, because the
+# FINISHED line has the same glyph at the same column --
+#   * Baked for 1m 28s . done 6:02 PM
+# -- and differs only by having neither the ellipsis nor the parenthesis. A rule
+# gating on the glyph alone reports a finished agent as working forever.
+#
+# Column zero is load-bearing on its own: Claude renders status lines flush left
+# and indents wrapped continuations, so pasted text cannot take this shape.
+#
+# The character class is deliberately wide -- braille (<= 2.1.227), half-circles
+# (2.1.228+) and the sparkle variants. Widening a class is a smaller, safer edit
+# than adding a rule when the next release changes glyph again.
+any = [
+  { line_regex = ['^[⠀-⣿◐-◓*·✢-✽●]\s+\S[^\n]*…\s*\('] },
+  { contains = ["esc to interrupt"] },
+]
+# Every working rule needs these. A permission dialog often renders OVER a
+# still-visible working indicator; without the guard this rule wins on priority
+# and the pane silently never reports blocked -- the worst failure the system can
+# produce, because you sit waiting for an agent that is waiting for you.
+not = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["waiting for permission"] },
+  { contains = ["do you want to allow this connection?"] },
+]
+
+# --- Idle --------------------------------------------------------------------
+
+[[rules]]
+id = "ready_prompt"
+state = "idle"
+priority = 100
+region = "bottom(4)"
+detail = "ready"
+# The INPUT cursor: a bare `>` with no number after it, inside the prompt box at
+# the bottom of the screen. The `not` is what keeps it from claiming a SELECTION
+# cursor -- `> 1. Yes` also starts with the same glyph, and mistaking a menu for
+# a ready prompt would hide exactly the state you opened the list to find.
+line_regex = ['^\s*❯(\s|$)']
+not = [{ line_regex = ['^\s*(│\s*)?❯\s+\d+\.\s'] }]

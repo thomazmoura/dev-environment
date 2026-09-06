@@ -1,0 +1,82 @@
+# Codex detection rules.
+#
+# See claude.toml for the gate semantics (contains is AND, any is OR) and the
+# region vocabulary. Adapted from the manifest documented in
+# ai-cli-integration-architecture.md S3.8, whose region names map onto this
+# engine's as: whole_recent -> whole, bottom_non_empty_lines(N) -> bottom(N),
+# top_non_empty_lines(N) -> top(N), osc_title -> title.
+#
+# Codex is the best illustration of layered evidence quality: the priority ladder
+# below literally ranks how much each signal is trusted. Copy that habit -- rank
+# rules by evidence quality, not by state.
+
+# --- Title: deliberate signalling, trusted most ------------------------------
+# Codex sets its own terminal title, which tmux hands over as #{pane_title}. This
+# is the closest thing to a structured API an unmodified TUI offers: a short
+# string the tool sets on purpose, which does not move when the layout reflows
+# and survives a resize. Always look for title evidence before writing screen
+# rules.
+
+[[rules]]
+id = "title_blocked"
+state = "blocked"
+priority = 1100
+region = "title"
+detail = "action required"
+contains = ["action required"]
+
+[[rules]]
+id = "title_working"
+state = "working"
+priority = 1050
+region = "title"
+detail = "working"
+# The braille spinner, in the title rather than on screen.
+regex = ['(?:^| )[⠀-⣿](?: |$)']
+
+# --- Screen ------------------------------------------------------------------
+
+[[rules]]
+id = "trust_directory"
+state = "blocked"
+priority = 950
+region = "top(20)"
+detail = "trust this directory?"
+# The first-run dialog, matched at the TOP of the screen because that is where a
+# fresh session renders it. Both halves are required and the header is anchored
+# to the very start with \A, so a chat message quoting the question cannot fire
+# it.
+all = [
+  { regex = ['\A> You are in [^\r\n]+(?:\r?\n|$)'] },
+  { regex = ['(?s)Do\s+you\s+trust\s+the\s+contents\s+of\s+this\s+directory\?'] },
+]
+
+[[rules]]
+id = "weak_blocker"
+state = "blocked"
+priority = 600
+region = "above_prompt_box"
+detail = "waiting on you"
+# Named for what it is: generic yes/no phrasing that could come from anywhere,
+# including your own half-typed message. The region is the defence -- everything
+# below the prompt box's opening rule is yours, so this structurally cannot fire
+# on what you are typing.
+any = [
+  { contains = ["[y/n]"] },
+  { contains = ["yes (y)"] },
+  { contains = ["do you want to"], any = [{ contains = ["yes"] }, { contains = ["❯"] }] },
+  { contains = ["would you like to"], any = [{ contains = ["yes"] }, { contains = ["❯"] }] },
+]
+
+[[rules]]
+id = "working_status_line"
+state = "working"
+priority = 500
+region = "bottom(3)"
+detail = "working"
+# Fully line-anchored against the exact status line, in the bottom three
+# non-empty lines only.
+line_regex = ['^[•◦]\s+Working \([^)]*esc to interrupt\)(?: · .*)?$']
+# The interrupted frame still contains the phrase, so guard against it or an
+# interrupted agent reports as working indefinitely.
+not = [{ contains = ["■ conversation interrupted"] }]

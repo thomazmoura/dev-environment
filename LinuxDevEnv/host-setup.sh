@@ -124,6 +124,12 @@ pwsh -NoProfile -File $HOME/.modules/demux/Install-Demux.ps1
 # installs the agent state hooks and the Claude Code agent skill)
 pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 
+# agent-radar (reads each coding agent's screen to say which one is waiting on
+# you; bound to prefix + t then a/A, and summarised in the status bar). No
+# installer: the scripts run in place out of $HOME/.modules, so only the
+# executable bit has to be guaranteed.
+chmod +x $HOME/.modules/agent-radar/scripts/*
+
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh

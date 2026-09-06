@@ -1,0 +1,55 @@
+#title: ✳ agent-radar-replacement
+     2. Show-AgentSnapshot.sh + capture a fixture for each agent in each state.
+     3. Rule engine + Test-AgentRules.py, driven by those fixtures.                                                         5 files changed                                                                        ✕
+     4. rules/*.toml, seeded from §3.8.
+     5. Select-Agent.sh — the deliverable that makes it useful.                                                             ai-cli-integration-architecture.md
+     6. Get-AgentSummary.sh, then Watch-Agents.sh.                                                                          modules/agent-radar/scripts/agent_radar.py
+                                                                                                                            modules/agent-radar/scripts/Get-AgentState.py
+     ---                                                                                                                    modules/agent-radar/scripts/Show-AgentSnapshot.sh
+                                                                                                                            1 test/generated (show)
+     Verification
+                                                                                                                            ────────────────────────────────────────────────────────────────────────────────────────
+     Identification — with a Claude pane open, Get-AgentState.py must name claude for a                                     ai-cli-integration-architecture.md (untracked)
+     pane whose #{pane_current_command} is pwsh. Cross-check against                                                        ────────────────────────────────────────────────────────────────────────────────────────
+     ps -t $(tmux display -p -t %N '#{pane_tty}') -o stat=,comm=.                                                           New file not yet staged.
+                                                                                                                            Run `git add :/ai-cli-integration-architecture.md` to see line counts.
+     Snapshot anchoring — the property that makes this usable: scroll a running agent's pane
+     into copy-mode with prefix + [, page up, and confirm Show-AgentSnapshot.sh still returns                               ────────────────────────────────────────────────────────────────────────────────────────
+     the live bottom of the screen and the reported state does not change. herdr names this                                 modules/agent-radar/scripts/agent_radar.py (untracked)
+     invariant explicitly (§3.1), and if capture-pane turns out to follow the copy-mode                                     ────────────────────────────────────────────────────────────────────────────────────────
+     viewport, pin the range with -S -<rows> -E -0 instead.                                                                 New file not yet staged.
+                                                                                                                            Run `git add :/modules/agent-radar/scripts/agent_radar.py` to see line counts.
+     States, per agent — drive each of claude, codex, copilot and opencode through: fresh
+     prompt (idle), a long task (working), a permission prompt (blocked), Esc-interrupt                                     ────────────────────────────────────────────────────────────────────────────────────────
+     mid-task (must return to idle, not stick on working). The Esc case is the one demux's                                  modules/agent-radar/scripts/Get-AgentState.py (untracked)
+     hooks cannot see and is the clearest proof the replacement is better.                                                  ────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                            New file not yet staged.
+     No false blocked — type do you want to proceed? into an idle agent's prompt box                                        Run `git add :/modules/agent-radar/scripts/Get-AgentState.py` to see line counts.
+     without submitting. It must stay idle. If it flips, the rule needs a region that excludes
+     the current prompt line (herdr's whole_recent_without_current_prompt_marker, §3.5) or a                                ────────────────────────────────────────────────────────────────────────────────────────
+     column-zero anchor (§3.8, Claude).                                                                                     modules/agent-radar/scripts/Show-AgentSnapshot.sh (untracked)
+                                                                                                                            ────────────────────────────────────────────────────────────────────────────────────────
+     Jump — from a pane in session A, pick an agent in session B; the client must land on the                               New file not yet staged.
+     right pane of the right window. Verify with tmux display -p '#{session_name} #{pane_id}'.                              Run `git add :/modules/agent-radar/scripts/Show-AgentSnapshot.sh` to see line counts.
+
+     Cost — the detector runs on every status refresh. Time it: time Get-AgentState.py with
+     all panes open should be well under 100ms, and Get-AgentSummary.sh must serve from cache
+     between refreshes (check the cache file's mtime advances at the configured interval, not on
+     every call).
+
+     Coexistence — demux's sidebar (prefix + e) and status segment must still work, and
+     both segments must survive a prefix + I TPM reload.
+
+● Starting with the module skeleton and the detector library.
+
+● Reading 1 file, running 5 shell commands · 2s…
+  ⎿  $ cd modules/agent-radar && scripts/Show-AgentSnapshot.sh %23 > fixtures/claude-idle.txt &&
+     scripts/Show-AgentSnapshot.sh %12 > fixtures/claude-working.txt && scripts/Show-AgentSnapshot.sh %22 >
+     fixtures/claude-idle-2.txt && echo "=== WORKING (%12) ===" && tail -14 fixtures/claude-working.txt && ec…
+
+✽ Tinkering… (8m 5s · ↓ 33.7k tokens)
+                                                                                                                                                                             ✔ Update installed · Restart to update
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── agent-radar-replacement ─
+❯ 
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  -- INSERT -- ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents · /diff to hide diff                                                                                                                         /rc
