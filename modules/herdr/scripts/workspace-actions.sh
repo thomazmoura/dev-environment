@@ -79,8 +79,8 @@ new_tab() { # <workspace_id> <cwd> <label> <--focus|--no-focus>
 # of these is one bash-valid command line, passed as a single argument.
 #
 # They are copies of what the tmux setup already runs, not new inventions:
-#   NVIM_COMMAND / TERMINAL_COMMAND  vtmux's $Command / $SecondCommand,
-#                                    modules/powershell-config/linux-profile.ps1
+#   NVIM_COMMAND / TERMINAL_COMMAND  the two panes Set-NeovimLayout.sh builds,
+#                                    modules/tmux/scripts/Set-NeovimLayout.sh
 #   TESTS_COMMAND                    bind T,  modules/wsl2/tmux.conf
 #   FRONTEND_COMMAND                 bind a,  modules/wsl2/tmux.conf
 #   WINSERVICE_COMMAND               bind W,  modules/wsl2/tmux.conf

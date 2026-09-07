@@ -107,10 +107,24 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 	Write-Information "Cancelled by user"
 }
 
-function New-VerticalTmuxSession  (
-  $Command = "pwsh -NoExit -Command '$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim' && exit",
-  $SecondCommand = "pwsh -NoExit -Command 'psgit && psfzf && Build-DotnetProjectIfNeeded' && exit"
-) {
+function New-VerticalTmuxSession {
+  <#
+    .SYNOPSIS
+      Opens the first tmux session of the day on a project picked with fzf.
+
+    .DESCRIPTION
+      The layout itself is not built here: the session is created detached and
+      handed to modules/tmux/scripts/Set-NeovimLayout.sh, which is the same
+      script behind prefix+v and behind prefix+C-n's New-CodeSession.sh. That
+      is deliberate -- this function used to spell the panes out inline and
+      drifted from the bindings every time the layout changed.
+
+      Detached matters twice over: `tmux attach-session` below only gets a
+      terminal once the layout is in place, and the explicit -x/-y give the
+      window the real terminal's size, so Set-NeovimLayout's percentage splits
+      land where they will still be after attaching rather than being scaled up
+      from tmux's default 80x24.
+  #>
   if(tmux ls 2> $null) {
     Get-TmuxSession
     return
@@ -119,21 +133,13 @@ function New-VerticalTmuxSession  (
   $location = FuzzySearch-Location
 	if($location) {
 		Set-Location $location
+		# tmux session names cannot contain dots -- they separate session:window.pane.
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
-		tmux new-session `; `
-			rename-session $currentDirectory `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			split-window -v -l 20% `; `
-			select-pane -t 1 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			send-keys "$SecondCommand" C-m `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			send-keys "$Command" C-m `;
+		$size = $Host.UI.RawUI.WindowSize
+		tmux new-session -d -s $currentDirectory -c $location -x $size.Width -y $size.Height
+		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" "${currentDirectory}:"
+		tmux attach-session -t $currentDirectory
+		return
 	}
 	Write-Information "Cancelled by user"
 }

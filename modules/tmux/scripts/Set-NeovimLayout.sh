@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Applies the standard project layout to a tmux target: NeoVim in the main pane
-# and a terminal running the project's setup command next to it.
+# Applies the standard project layout to a tmux target: NeoVim in the main pane,
+# a terminal running the project's setup command below it, and the agent feed
+# beside that terminal.
 #
 # Usage: Set-NeovimLayout.sh [-s] [target]
-#   -s       terminals in a 20% column on the right, split in two (prefix+V)
-#            instead of a single 20% row below (prefix+v)
+#   -s       terminals in a 20% column on the right, split in two and without
+#            the agent feed (prefix+V), instead of the default row below
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
@@ -34,13 +35,22 @@ top="$(current_pane "${1:-}")"
 # helpers and build the project if it needs it, then leave the shell open.
 terminal="$(pwsh_command 'psgit && psfzf && Build-DotnetProjectIfNeeded' no-exit)"
 
+# The live agent feed, the same one prefix+t, r opens. No no-exit: quitting the
+# feed should close its pane, not drop you on a shell in a third of a row.
+feed="& $HOME/.modules/agent-radar/scripts/Watch-AgentFeed.py"
+
 if [ -n "$side" ]; then
   # A 20% column on the right, halved: a bare terminal on top and the setup
   # terminal below it.
   column="$(new_pane "$top" "Terminal" "$(pwsh_command '')" -h -l 20%)"
   new_pane "$column" "Terminal" "$terminal" -v -l 50% >/dev/null
 else
-  new_pane "$top" "Terminal" "$terminal" -v -l 20% >/dev/null
+  # A 20% row below NeoVim, with the agent feed taking the right third of it.
+  # The feed is part of the default layout rather than something prefix+t, r
+  # has to open every time: it is the one pane whose whole job is to be read
+  # without being asked for.
+  bottom="$(new_pane "$top" "Terminal" "$terminal" -v -l 20%)"
+  new_pane "$bottom" "Agents" "$(pwsh_command "$feed")" -h -l 35% >/dev/null
 fi
 
 label_pane "$top" "NeoVim"
