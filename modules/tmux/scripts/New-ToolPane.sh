@@ -11,6 +11,9 @@
 #   -k            keep pwsh interactive after the command (pwsh -NoExit)
 #   -P            print the new pane's id, so a binding that opens two panes can
 #                 split the second one off the first (see prefix+A in common.conf)
+#   -d <glob>     only run the command if the pane's current path contains a
+#                 directory matching <glob>; otherwise the pane just explains
+#                 what is missing and closes on the next keypress
 #
 # Example, as used by the binding for prefix+t then C:
 #   New-ToolPane.sh -t "#{pane_id}" "Claude Code" "claude --resume"
@@ -27,14 +30,16 @@ direction="-h"
 size=()
 no_exit=""
 print_id=""
+requires=""
 
-while getopts ":t:vl:kP" option; do
+while getopts ":t:vl:kPd:" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     v) direction="-v" ;;
     l) size=(-l "$OPTARG") ;;
     k) no_exit="yes" ;;
     P) print_id="yes" ;;
+    d) requires="$OPTARG" ;;
     *) die "New-ToolPane.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -46,7 +51,19 @@ label=$1
 command=$2
 
 origin="$(current_pane "$target")"
-pane="$(new_pane "$origin" "$label" "$(pwsh_command "$command" "$no_exit")" "$direction" "${size[@]}")"
+
+# The runners cd into a sibling directory by glob, and the pane inherits its
+# path from the pane the binding fired in (see new_pane's split-window -c), so
+# the guard has to be checked against that same path -- not against the cwd of
+# this script, which run-shell leaves wherever the server was started.
+pane_command="$(pwsh_command "$command" "$no_exit")"
+if [ -n "$requires" ]; then
+  path="$(tmux display-message -p -t "$origin" '#{pane_current_path}')"
+  directory_matches "$path" "$requires" ||
+    pane_command="$(notice_command "There is no $requires folder in $path")"
+fi
+
+pane="$(new_pane "$origin" "$label" "$pane_command" "$direction" "${size[@]}")"
 
 if [ -n "$print_id" ]; then
   printf '%s\n' "$pane"

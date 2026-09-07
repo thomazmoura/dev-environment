@@ -32,6 +32,48 @@ require_tools() {
   done
 }
 
+# --- Directory guards --------------------------------------------------------
+# The runner bindings all start with `cd <glob>` against the pane's current
+# path, so pointing one at the wrong directory used to open a pane whose only
+# content was pwsh's "Cannot find path" spew. directory_matches lets the caller
+# check the glob first and say something useful instead.
+
+# directory_matches <path> <glob>
+# True when <path> contains at least one *directory* matching <glob>. The
+# trailing slash on the pattern is what restricts the match to directories, and
+# nullglob is what makes a miss expand to nothing rather than to the pattern
+# itself. Both live inside the subshell so the caller's shell options and
+# positional parameters are left alone.
+directory_matches() {
+  local path=$1 glob=$2
+  (
+    cd "$path" 2>/dev/null || exit 1
+    shopt -s nullglob
+    set -- $glob/
+    [ "$#" -gt 0 ]
+  )
+}
+
+# shell_quote <string>
+# Quotes a string as a shell literal. Needed because the pane commands are
+# *typed into* a shell by send-keys, so any path or message that reaches one has
+# to survive a round of shell parsing -- an apostrophe in "There's no ..." is
+# enough to break the line otherwise. %q is bash's own quoting, and the panes
+# run bash, so its $'...' form for odd characters is understood at the far end.
+shell_quote() {
+  printf '%q' "$1"
+}
+
+# notice_command <message>
+# A pane command that shows <message>, waits for a single keypress and then
+# closes the pane by exiting its shell. Used in place of the real tool command
+# when a directory guard fails: the message needs to stay on screen (a status
+# line one is gone in seconds), but the pane has no reason to outlive it.
+notice_command() {
+  printf 'clear; echo; echo %s; echo; read -rsn1 -p %s _; exit' \
+    "$(shell_quote "$1")" "$(shell_quote 'Press any key to close...')"
+}
+
 # --- Panes -------------------------------------------------------------------
 # Titles a pane twice over: `select-pane -T` is what the pane border shows, and
 # @pane_label is what Select-Pane.sh reads. Both are needed -- the border title
