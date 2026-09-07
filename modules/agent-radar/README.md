@@ -65,6 +65,47 @@ regardless of copy-mode. Verified: with a pane scrolled 150 lines back,
 `capture-pane -p` still returns the bottom. So you can page through an agent's
 history without changing what it reports.
 
+## One sampler, many readers
+
+Every consumer used to detect for itself, which broke twice over as soon as you
+left more than one open:
+
+- **Cost multiplied by consumers, not by agents.** Detection is a `ps` plus a
+  `capture-pane` per agent pane. A feed pane in each of five sessions, plus the
+  status bar in each attached client, is that whole cost several times a second.
+- **The debounce stopped working, silently.** The `working -> idle` smoothing
+  compares each sample against the previous one through a shared cache file.
+  Two pollers on different timers each read the *other's* sample as their own
+  previous one, so the confirmation counter never accumulated -- and the only
+  symptom was the flicker it was meant to remove.
+
+So one process samples and everyone else reads what it publishes:
+
+```
+Start-AgentRadar.py ── detect + debounce, once a second ──> ~/.cache/agent-radar/
+                                                              state.json
+                                                              status.txt
+                                        ┌──────────────────────────┘
+      status bar ── Get-AgentSummary.sh ┤ cat status.txt
+      prefix t a ── Select-Agent.sh     ┤ Get-AgentState.py --cached
+      prefix t A ── Watch-Agents.sh     ┤
+      prefix t r ── Watch-AgentFeed.py  ┘ agent_feed.sample_cached()
+```
+
+Nobody starts the sampler. The first consumer that finds the lock free spawns it
+(`agent_feed.ensure_daemon`), and it exits on its own once tmux is gone or
+nothing has read from it for 90 seconds -- so it never outlives what it watches.
+The lock **is** the liveness check: the kernel releases it however the process
+dies, which a pidfile cannot promise.
+
+A reader that finds no snapshot, or one older than five seconds, samples live
+instead and starts a sampler for next time. That fallback is what makes the
+daemon an optimisation rather than a dependency: kill it mid-refresh and every
+consumer keeps working, at the old cost, until it comes back.
+
+Consequently the watchers refresh **once a second**, and opening one in every
+session costs one file read per second each.
+
 ## The four states
 
 `blocked` · `working` · `idle` · `unknown`. There is no fifth. "Waiting for
@@ -147,11 +188,13 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | Path | |
 | --- | --- |
 | `scripts/agent_radar.py` | the engine: identification, regions, gates, classification |
-| `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status` |
+| `scripts/agent_feed.py` | the shared backend: debounce, publish, read, spawn-if-missing |
+| `scripts/Start-AgentRadar.py` | the one sampler; started by whichever consumer notices it is missing |
+| `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status`; `--cached` reads the shared snapshot |
 | `scripts/Select-Agent.sh` | the popup picker (`prefix + t`, `a`) |
 | `scripts/Watch-Agents.sh` | the live pane, fzf (`prefix + t`, `A`) |
 | `scripts/Watch-AgentFeed.py` | the live pane, curses (`prefix + t`, `r`) |
-| `scripts/Get-AgentSummary.sh` | the cached status-bar segment |
+| `scripts/Get-AgentSummary.sh` | the status-bar segment; a `cat` on the hot path |
 | `scripts/Show-AgentSnapshot.sh` | what the matcher sees |
 | `scripts/Test-AgentRules.py` | why each rule did or did not fire |
 | `scripts/Test-Fixtures.sh` | regression check over `fixtures/` |

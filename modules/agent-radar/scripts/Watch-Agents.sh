@@ -20,7 +20,7 @@
 # race in theory; in practice the port is still free a few milliseconds later,
 # and losing it costs a refusal to start, not a wrong answer.
 #
-# Usage: Watch-Agents.sh [refresh-seconds]   (default 2)
+# Usage: Watch-Agents.sh [refresh-seconds]   (default 1)
 set -uo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../tmux/scripts/tmux-helpers.sh"
@@ -29,11 +29,14 @@ require_tools tmux fzf
 
 here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 detector="$here/Get-AgentState.py"
-interval="${1:-2}"
+interval="${1:-1}"
 
-# --debounce: this polls every couple of seconds, so without smoothing every
-# agent would blink to idle in the frames between its tool calls.
-list_command="$detector --format=fzf --debounce"
+# --cached: read the snapshot Start-AgentRadar.py publishes rather than sampling
+# here. That is what lets this refresh once a second and be left open in every
+# session at the same time -- the detector runs once per second for the whole
+# machine no matter how many of these are up. It also carries the working->idle
+# smoothing, which a poller needs and which is only correct with one sampler.
+list_command="$detector --format=fzf --cached"
 
 jump() {
   local pane=${1:-}

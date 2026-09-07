@@ -25,17 +25,20 @@ require_tools tmux fzf
 here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 detector="$here/Get-AgentState.py"
 
-rows="$("$detector" --format=fzf)"
-[ -n "$rows" ] || die "No coding agents running in any session"
+# --cached: read the snapshot Start-AgentRadar.py publishes for the whole
+# machine rather than sampling here. It also makes the popup open faster -- a
+# live sample is a `ps` plus a `capture-pane` per agent pane, which is a visible
+# pause on a busy machine, and the answer is already sitting in a file.
+list_command="$detector --format=fzf --cached"
 
-# No --debounce: this is a one-shot list, so there is no previous sample to
-# smooth against and nothing to flicker. The polling consumers ask for it.
+rows="$($list_command)"
+[ -n "$rows" ] || die "No coding agents running in any session"
 selection="$(
   printf '%s\n' "$rows" \
     | fzf --ansi --reverse --delimiter=$'\t' --with-nth=2.. \
           --prompt='agent> ' \
           --header=$'Switch to agent   (ctrl-r refresh)' \
-          --bind="ctrl-r:reload($detector --format=fzf)"
+          --bind="ctrl-r:reload($list_command)"
 )" || exit 0
 [ -n "$selection" ] || exit 0
 

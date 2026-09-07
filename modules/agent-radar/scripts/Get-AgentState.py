@@ -14,11 +14,18 @@ detector already holds the data.
   fzf     pane_id TAB <padded, ANSI-coloured row>   for the picker and watcher
   status  #[fg=...] counts                          for the tmux status bar
 
+Where the data comes from is a separate axis from how it is formatted. By
+default this samples live, which is what the rule-authoring and one-shot uses
+want. `--cached` reads the shared snapshot published by Start-AgentRadar.py
+instead, so a consumer costs a file read no matter how many consumers there are;
+see agent_feed.py. Every binding uses --cached.
+
 Usage:
-  Get-AgentState.py                 # raw states, no smoothing -- for the picker
-  Get-AgentState.py --debounce      # smoothed states -- for polling consumers
-  Get-AgentState.py --format=fzf --debounce
-  Get-AgentState.py --format=status --debounce
+  Get-AgentState.py                 # raw states, no smoothing -- sampled live
+  Get-AgentState.py --debounce      # smoothed states, still sampled live
+  Get-AgentState.py --cached        # the shared snapshot; already smoothed
+  Get-AgentState.py --format=fzf --cached
+  Get-AgentState.py --format=status --cached
 """
 
 from __future__ import annotations
@@ -27,80 +34,18 @@ import argparse
 import json
 import os
 import sys
-import time
-from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import agent_feed as feed  # noqa: E402
 import agent_radar as radar  # noqa: E402
 
-# Agents blink through an idle-looking frame between tool calls, so a consumer
-# polling once a second sees a working agent flicker to idle and back. Hold a
-# working -> idle transition until it has been confirmed, which is where the
-# smoothing belongs -- not in the UI, and not in the rules.
-#
-# Constants from herdr S3.6, which arrived at them the same way anyone will.
-PENDING_IDLE_CONFIRMATIONS = 3
-PENDING_IDLE_CAP_SECONDS = 0.7
-
-
-def cache_path() -> Path:
-    root = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
-    return Path(root) / "agent-radar" / "debounce.json"
-
-
-def debounce(panes: list[radar.Pane]) -> None:
-    """Smooth working -> idle transitions, in place.
-
-    Only that one transition is held. Positive evidence needs no confirmation:
-    a matched blocked rule publishes immediately, because the entire point of
-    the tool is to tell you about it now.
-    """
-    path = cache_path()
-    try:
-        previous = json.loads(path.read_text())
-    except (OSError, ValueError):
-        previous = {}
-
-    now = time.time()
-    current = {}
-    for pane in panes:
-        entry = previous.get(pane.pane_id, {})
-        published = entry.get("published")
-        raw = pane.state
-
-        if published == radar.WORKING and raw == radar.IDLE:
-            count = entry.get("count", 0) + 1
-            first = entry.get("first", now)
-            if count >= PENDING_IDLE_CONFIRMATIONS or now - first >= PENDING_IDLE_CAP_SECONDS:
-                published = raw
-                count, first = 0, now
-            else:
-                # Keep reporting working, and keep the detail that came with it
-                # so the row does not half-update.
-                pane.state = radar.WORKING
-                pane.detail = entry.get("detail", pane.detail)
-        else:
-            published = raw
-            count, first = 0, now
-
-        current[pane.pane_id] = {
-            "published": published,
-            "count": count,
-            "first": first,
-            "detail": pane.detail,
-        }
-
-    # Panes that vanished drop out of the file rather than accumulating.
-    # Temp-file-then-rename so a concurrent reader never sees a half-written
-    # file; two writers racing is harmless, the loser's sample is simply lost.
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp = path.with_suffix(f".{os.getpid()}.tmp")
-        temp.write_text(json.dumps(current))
-        temp.replace(path)
-    except OSError:
-        pass
+# The working->idle debounce moved to agent_feed.debounce, and the move is not
+# cosmetic: it compares each sample against the previous one, so it is only
+# correct while a single process is taking the samples. That process is now
+# Start-AgentRadar.py. Calling it from here still works for a live one-shot,
+# but a second live poller would corrupt the shared counters -- which is the bug
+# --cached exists to remove.
 
 
 # Presentation. A coloured dot plus the word: the dot is what you scan for
@@ -193,13 +138,24 @@ def main() -> int:
         help="smooth working->idle flicker; for consumers that poll",
     )
     parser.add_argument(
+        "--cached",
+        action="store_true",
+        help="read the shared snapshot instead of sampling; implies --debounce",
+    )
+    parser.add_argument(
         "--format", choices=("tsv", "json", "fzf", "status"), default="tsv"
     )
     args = parser.parse_args()
 
-    panes = radar.detect()
-    if args.debounce:
-        debounce(panes)
+    if args.cached:
+        # Already smoothed by the sampler that published it, so --debounce is
+        # implied rather than refused -- a consumer asking for both is asking
+        # for the same thing twice.
+        panes = feed.sample_cached()
+    else:
+        panes = radar.detect()
+        if args.debounce:
+            feed.debounce(panes)
 
     if args.format == "fzf":
         for row in render_fzf(panes):

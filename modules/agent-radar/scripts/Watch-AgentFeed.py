@@ -17,7 +17,12 @@ The state column comes first here, too. It is the column you are watching; a
 `waiting` row should land in the same place every time rather than sliding
 horizontally as session names change width.
 
-Usage: Watch-AgentFeed.py [refresh-seconds]   (default 2)
+Refreshing once a second, in every session at once, is affordable because this
+does not sample: Start-AgentRadar.py samples for the whole machine and this
+reads what it published (agent_feed.py). Opening a second feed pane costs a file
+read per second, not another `ps` and a `capture-pane` per agent.
+
+Usage: Watch-AgentFeed.py [refresh-seconds]   (default 1)
 """
 
 from __future__ import annotations
@@ -32,11 +37,13 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import agent_feed as feed  # noqa: E402
 import agent_radar as radar  # noqa: E402
 
-# Get-AgentState.py owns the working->idle debounce and the state vocabulary, and
-# both belong in exactly one place. Its name has a hyphen, so it cannot be
-# imported by name -- load it from the sibling path instead.
+# Get-AgentState.py owns the state vocabulary and the glyph, and both belong in
+# exactly one place. Its name has a hyphen, so it cannot be imported by name --
+# load it from the sibling path instead. (The debounce moved out of it and into
+# agent_feed, where the sampling is.)
 _spec = importlib.util.spec_from_file_location(
     "get_agent_state", os.path.join(HERE, "Get-AgentState.py")
 )
@@ -81,10 +88,13 @@ EMPTY_MESSAGE = "no coding agents running"
 
 
 def sample() -> list:
-    """One reading of the world, smoothed the way polling consumers need."""
-    panes = radar.detect()
-    state_cli.debounce(panes)
-    return panes
+    """The shared snapshot, smoothed the way polling consumers need.
+
+    Falls back to sampling live if the sampler is not up yet or has just died,
+    so the feed is never blank waiting for a daemon -- and starts one for next
+    time. See agent_feed.sample_cached.
+    """
+    return feed.sample_cached()
 
 
 def jump(pane_id: str) -> None:
@@ -293,7 +303,7 @@ def run(stdscr, interval: float) -> None:
 
 def main() -> int:
     try:
-        interval = float(sys.argv[1]) if len(sys.argv) > 1 else 2.0
+        interval = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
     except ValueError:
         print(f"usage: {os.path.basename(sys.argv[0])} [refresh-seconds]", file=sys.stderr)
         return 2
