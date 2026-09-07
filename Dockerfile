@@ -39,7 +39,7 @@ RUN pwsh -NoProfile -File /home/developer/.modules/herdr/Install-Herdr.ps1
 # you; bound to prefix + t then a/A, and summarised in the status bar). Nothing
 # to install -- it is bash plus python3, both already present.
 COPY --chown=developer:developer modules/agent-radar /home/developer/.modules/agent-radar
-RUN chmod +x /home/developer/.modules/agent-radar/scripts/*
+RUN chmod +x /home/developer/.modules/agent-radar/scripts/* /home/developer/.modules/agent-radar/hooks/*
 
 # Tmux plugins installation
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux

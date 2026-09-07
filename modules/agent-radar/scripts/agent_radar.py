@@ -19,6 +19,7 @@ Identification picks the ruleset and nothing else; it never decides state.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -282,6 +283,80 @@ def capture(pane_id: str) -> str:
     return _run(["tmux", "capture-pane", "-p", "-t", pane_id]).rstrip("\n")
 
 
+# --- Layer 2b: hook markers --------------------------------------------------
+# The screen is the universal signal and stays the primary one. This is the
+# narrow second channel for agents that will tell us directly: Claude Code runs
+# hooks/Set-AgentRadarState.sh at the moments its state changes, and that script
+# leaves a marker file per tmux pane.
+#
+# It only ever ADDS a blocked verdict, and only over idle. A pane the rules can
+# see is working overrides its own marker (and clears it), so a marker orphaned
+# by a crashed agent heals itself instead of pinning a row red forever -- the
+# failure mode that would make the whole display stop being believed.
+
+
+def cache_dir() -> Path:
+    """Where the runtime state lives. agent_feed.cache_dir() delegates here.
+
+    Defined in this module rather than in agent_feed because agent_feed imports
+    this one, and detection cannot depend on the sampler.
+    """
+    root = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    return Path(root) / "agent-radar"
+
+
+def markers_dir() -> Path:
+    return cache_dir() / "panes"
+
+
+def _marker_path(pane_id: str) -> Path:
+    # `%7` -> `7.json`; the hook drops the same `%` with ${TMUX_PANE#%}.
+    return markers_dir() / f"{pane_id.lstrip('%')}.json"
+
+
+def read_marker(pane_id: str) -> dict | None:
+    """The pane's hook marker, or None. Never raises."""
+    try:
+        payload = json.loads(_marker_path(pane_id).read_text())
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def clear_marker(pane_id: str) -> None:
+    try:
+        _marker_path(pane_id).unlink()
+    except OSError:
+        pass
+
+
+def sweep_markers(live: set[str]) -> None:
+    """Drop markers whose pane is gone.
+
+    A pane can close while its agent is blocked -- that is in fact the normal
+    way a blocked agent ends -- and nothing would ever run the clearing hook for
+    it. Without this the directory grows forever and a recycled pane id
+    inherits a stranger's marker.
+    """
+    if not live:
+        # No panes at all means tmux failed to answer, not that every pane
+        # closed -- _run() fails open and returns "". Sweeping on that would
+        # delete a blocked agent's marker every time tmux hiccups.
+        return
+    try:
+        entries = list(markers_dir().iterdir())
+    except OSError:
+        return
+    for entry in entries:
+        if entry.suffix != ".json":
+            continue
+        if f"%{entry.stem}" not in live:
+            try:
+                entry.unlink()
+            except OSError:
+                pass
+
+
 # --- Regions -----------------------------------------------------------------
 # Narrow the haystack before matching. Both a precision tool and a performance
 # one: `bottom(3)` on a status footer cannot be fooled by a phrase scrolled by
@@ -298,13 +373,45 @@ _REGION_RE = re.compile(r"^(bottom|top)\((\d+)\)$")
 #   ────────────────────────────────────────────────────────────
 _RULE_RE = re.compile(r"^\s*─{3,}(\s.*)?$")
 
+# The INPUT cursor -- a bare `❯` with nothing numbered after it -- and the
+# SELECTION cursor -- `❯ 1. Yes` -- which start with the same glyph and mean
+# opposite things. Both live here rather than only in rules/claude.toml because
+# the region below has to tell them apart to find the input box at all.
+_PROMPT_CURSOR_RE = re.compile(r"^\s*❯(\s|$)")
+_SELECTION_CURSOR_RE = re.compile(r"^\s*(│\s*)?❯\s+\d+\.\s")
+
+
+def _input_box_open(lines: list[str]) -> int | None:
+    """Index of the rule line that opens the agent's input box, or None.
+
+    Found by what follows it, never by where it sits. The box is a rule line
+    whose next non-empty line is the input cursor:
+
+        ─────────────────────────────── agent-radar-replacement ─
+        ❯ faca o push das duas branches
+        ─────────────────────────────────────────────────────────
+
+    Searched bottom-up so the live box wins over anything the transcript has
+    scrolled past.
+    """
+    for index in range(len(lines) - 1, -1, -1):
+        if not _RULE_RE.match(lines[index]):
+            continue
+        for line in lines[index + 1:]:
+            if not line.strip():
+                continue
+            if _PROMPT_CURSOR_RE.match(line) and not _SELECTION_CURSOR_RE.match(line):
+                return index
+            break
+    return None
+
 
 def _above_prompt_box(snapshot: str) -> str:
     """Everything above the agent's input box.
 
     The defence against the agent's own UI being impersonated by its user. Every
     blocked-state phrase worth matching -- "do you want to proceed?", a numbered
-    "> 1. Yes" selection cursor -- is something you could equally type into the
+    "❯ 1. Yes" selection cursor -- is something you could equally type into the
     prompt yourself, and a rule that cannot tell the difference will report you
     as blocked on your own draft message.
 
@@ -313,16 +420,26 @@ def _above_prompt_box(snapshot: str) -> str:
     Herdr solves the same problem with `whole_recent_without_current_prompt_marker`
     (S3.5); this is the box-drawing form of it.
 
-    Falls back to the whole snapshot when no box is drawn -- an agent that never
-    draws one has nothing to exclude.
+    The box is located by its cursor, NOT by being the last pair of rule lines,
+    and that distinction is the whole bug this function once had. Counting from
+    the bottom assumes the input box owns the last two rules; it does not. Plan
+    mode draws a banner box above it, and a dialog draws rules of its own, so on
+    a real blocked screen `rules[-2]` landed *above the dialog* and cut the
+    evidence out of the region -- every blocked rule then failed to match and the
+    pane reported idle while it sat waiting for a keystroke. Do not reintroduce
+    positional detection here; fixtures/claude-blocked-question-plan-mode.txt is
+    that exact screen.
+
+    Falls back to the whole snapshot when no input box is on screen. That is not
+    a degraded case but the important one: Claude replaces the input box with the
+    dialog while it is blocked, so a screen with no box has nothing of yours on
+    it to exclude.
     """
     lines = snapshot.split("\n")
-    rules = [index for index, line in enumerate(lines) if _RULE_RE.match(line)]
-    if len(rules) < 2:
+    open_index = _input_box_open(lines)
+    if open_index is None:
         return snapshot
-    # The box is the *last* pair of rules; anything above its opening one is the
-    # transcript, which is what we want.
-    return "\n".join(lines[: rules[-2]])
+    return "\n".join(lines[:open_index])
 
 
 class RuleError(ValueError):
@@ -550,6 +667,7 @@ def detect() -> list[Pane]:
     panes = list_panes()
     by_tty = list_processes()
     cache: dict[str, list[Rule]] = {}
+    sweep_markers({pane.pane_id for pane in panes})
 
     found = []
     for pane in panes:
@@ -563,6 +681,20 @@ def detect() -> list[Pane]:
         if agent not in cache:
             cache[agent] = load_rules(agent)
         verdict = classify(agent, pane.snapshot, pane.title, cache[agent])
+
+        marker = read_marker(pane.pane_id)
+        if marker is not None:
+            if verdict.state == WORKING:
+                # The screen wins, and proves the marker is stale: an agent that
+                # is running a tool is not sitting on a dialog.
+                clear_marker(pane.pane_id)
+            elif verdict.state in (IDLE, UNKNOWN):
+                # The case this channel exists for -- a dialog whose shape no
+                # rule recognises. The agent told us itself.
+                verdict = Verdict(
+                    BLOCKED, str(marker.get("detail") or "waiting"), "hook_marker"
+                )
+
         pane.state, pane.detail, pane.rule_id = (
             verdict.state,
             verdict.detail,

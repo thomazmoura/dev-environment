@@ -1,0 +1,45 @@
+#title: ✳ Agent radar waiting for input state
+  ▝▝ ▝▝    ~/code/dev-environment
+
+
+❯ The agent radar is working nicely in terms of showing all the agents and whether they're working or
+  idle. But the most important thing I needed is to know when they are waiting for input (when they ask a
+  question or ask for permission or plan approval). That part does not seem to be working - when waiting
+  for input it just shows as idle. I'm currently testing this for Claude Code. I really need to know
+  when it's waiting for input so I can prioritize this
+
+● I'll start by exploring how agent-radar detects agent state.
+
+● Explore(Explore agent-radar implementation)
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)
+
+  Read 2 files, ran 18 shell commands
+
+● Agent "Explore agent-radar implementation" finished · 2m 22s
+
+● Ground truth time — I'll capture my own pane while a selection dialog is on screen, since that's the
+  exact state that's misreporting.
+
+  Ran 1 shell command
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+Planning: /home/thomaz.moura/.claude/plans/the-agent-radar-is-snazzy-engelbart.md
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+←  ☐ Signal  ☐ Hooks file  ✔ Submit  →
+
+│ For detecting "waiting for input", which signal should agent-radar trust for Claude Code? (Take a few
+│ seconds before answering — I'm capturing this very dialog to get ground truth on how it renders.)
+
+❯ 1. Fix screen rules only
+     Keep the pure screen-scraping design (no per-agent installation), and fix the region/pattern bug that
+     makes dialogs invisible. Works for codex/copilot/opencode too.
+  2. Screen rules + Claude hook (Recommended)
+     Fix the screen rules AND add a Claude Code Notification/PermissionRequest hook that writes a per-pane
+     marker file, used as an authoritative override. Most reliable for Claude, still degrades to scraping
+     for other agents.
+  3. Hook only for Claude
+     Skip screen-rule work for blocked; rely entirely on Claude Code hooks writing state per tmux pane.
+  4. Type something.
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  5. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel

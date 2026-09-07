@@ -1,0 +1,45 @@
+#title: ✳ Agent radar waiting for input state
+      361 +    it to exclude.
+      362      """
+      363      lines = snapshot.split("\n")
+      320 -    rules = [index for index, line in enumerate(lines) if _RULE_RE.match(line)]
+      321 -    if len(rules) < 2:
+      364 +    open_index = _input_box_open(lines)
+      365 +    if open_index is None:
+      366          return snapshot
+      323 -    # The box is the *last* pair of rules; anything above its opening one is the
+      324 -    # transcript, which is what we want.
+      325 -    return "\n".join(lines[: rules[-2]])
+      367 +    return "\n".join(lines[:open_index])
+      368
+      369
+      370  class RuleError(ValueError):
+
+  Ran 1 shell command
+
+● ★ Insight ─────────────────────────────────────
+  The region fix alone flips the verdict to blocked — and critically, claude-idle-adversarial and
+  claude-idle-typed-text still classify as idle. That's the pair that matters: those fixtures contain
+  dialog-looking text the user typed, so they're the proof that widening the region didn't buy sensitivity
+  by trading away the impersonation defence.
+  ─────────────────────────────────────────────────
+
+  Ran 2 shell commands
+
+● Now the hook layer:
+
+  Ran 10 shell commands
+
+● Now let me capture a real permission dialog — the highest-value missing fixture.
+
+● Running 3 shell commands…
+  ⎿  $ S=/tmp/claude-583235453/-home-thomaz-moura-code-dev-environment/a4ef844f-6595-4a40-bacf-105a2ce5324
+     8/scratchpad/perm; grep -l 'Do you want' $S/*.txt 2>/dev/null | head; echo "hits: $(grep -l 'Do you
+     want' $S/*.txt 2>/dev/null | wc -l)"
+
+* Misting… (11m 37s · ↓ 43.0k tokens · thought for 4s)
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ l
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  -- INSERT -- ⏵⏵ auto mode on · 1 shell                                                             /rc

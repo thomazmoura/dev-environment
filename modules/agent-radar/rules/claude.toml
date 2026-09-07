@@ -69,6 +69,24 @@ detail = "waiting on a choice"
 # from you, which is what `blocked` means.
 line_regex = ['^\s*(│\s*)?❯\s+\d+\.\s']
 
+[[rules]]
+id = "dialog_footer"
+state = "blocked"
+priority = 260
+region = "above_prompt_box"
+detail = "waiting on a choice"
+# The dialog's KEYBOARD FOOTER, e.g.
+#   Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+# Wording of the question changes every release; the footer is the contract with
+# your fingers and does not. It is also the only signal that survives a dialog
+# rendered without numbers -- Claude Code has a `hideIndexes` path, and on those
+# screens there is no `❯ 1.` line for the two rules above to find.
+any = [
+  { contains = ["enter to select"] },
+  { contains = ["tab/arrow keys to navigate"] },
+  { contains = ["enter to confirm"] },
+]
+
 # --- Working -----------------------------------------------------------------
 
 [[rules]]
@@ -112,8 +130,11 @@ not = [
 id = "ready_prompt"
 state = "idle"
 priority = 100
-region = "bottom(4)"
+region = "bottom(8)"
 detail = "ready"
+# bottom(8), not bottom(4): Claude prints backgrounded-agent rows BELOW the
+# mode footer, so on a pane with a couple of subagents running the prompt line
+# is already the fifth-from-last filled line and a 4-line window misses it.
 # The INPUT cursor: a bare `>` with no number after it, inside the prompt box at
 # the bottom of the screen. The `not` is what keeps it from claiming a SELECTION
 # cursor -- `> 1. Yes` also starts with the same glyph, and mistaking a menu for

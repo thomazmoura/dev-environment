@@ -93,8 +93,12 @@ PENDING_IDLE_CAP_SECONDS = 0.7
 
 
 def cache_dir() -> Path:
-    root = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
-    return Path(root) / "agent-radar"
+    """Kept as an alias so every caller here still reads naturally.
+
+    The definition moved to agent_radar: the detector needs the same directory
+    to find the hook markers, and it cannot import this module without a cycle.
+    """
+    return radar.cache_dir()
 
 
 def state_path() -> Path:

@@ -128,7 +128,7 @@ pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 # you; bound to prefix + t then a/A, and summarised in the status bar). No
 # installer: the scripts run in place out of $HOME/.modules, so only the
 # executable bit has to be guaranteed.
-chmod +x $HOME/.modules/agent-radar/scripts/*
+chmod +x $HOME/.modules/agent-radar/scripts/* $HOME/.modules/agent-radar/hooks/*
 
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"

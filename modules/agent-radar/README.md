@@ -32,6 +32,14 @@ agent-radar reads the agent's screen instead. The consequences:
 The cost is that rules are hand-written and agent UIs change on their own
 release cadence. Everything below exists to make that cheap.
 
+There is now one optional hook, and it does not walk this back. demux's problem
+is not that hooks exist, it is that a pushed state is the *only* state and
+therefore outlives whatever it described. Here the screen is still the
+authority: the marker a hook leaves can only ever add `blocked` to a pane the
+rules see as idle, and a pane the rules see as working deletes it. A stale
+marker survives exactly until the agent does anything. See
+[The Claude Code hook](#the-claude-code-hook-optional-second-witness).
+
 ## How it works
 
 Three layers, deliberately independent, adapted from the herdr design reference
@@ -45,6 +53,10 @@ source comments point there).
 | classification | what does that screen mean? | `rules/<agent>.toml` |
 
 Identification picks the ruleset and nothing more; it never decides state.
+
+A fourth, optional and agent-specific input sits beside these -- the hook marker
+described below -- which can add `blocked` but never overrules what the screen
+shows.
 
 **Why not `#{pane_current_command}`.** The tmux bindings launch agents as
 `pwsh -Command claude`, so the pane's foreground process *group leader* is pwsh
@@ -105,6 +117,80 @@ consumer keeps working, at the old cost, until it comes back.
 
 Consequently the watchers refresh **once a second**, and opening one in every
 session costs one file read per second each.
+
+## The Claude Code hook (optional second witness)
+
+Screen reading is the primary signal and needs no installation. For Claude Code
+there is one optional extra, because it is the agent that will tell us directly:
+`hooks/Set-AgentRadarState.sh` writes a marker file per tmux pane when Claude
+raises a dialog, and removes it when the dialog is answered.
+
+```
+~/.cache/agent-radar/panes/7.json      <- pane %7 is blocked
+```
+
+It is strictly additive, and the precedence is what keeps it honest:
+
+| Screen says | Marker says | Published |
+| --- | --- | --- |
+| blocked | anything | **blocked**, with the rule's own detail |
+| working | blocked | **working** -- and the marker is deleted as stale |
+| idle / unknown | blocked | **blocked**, `rule_id = hook_marker` |
+
+So a marker orphaned by a crashed agent heals on the pane's next tool call
+rather than pinning a row red forever, and a dialog whose shape no rule
+recognises still turns the pane red. `detect()` also sweeps markers whose pane
+no longer exists -- closing a pane while its agent is blocked is the normal way
+a blocked agent ends, and nothing would ever run the clearing hook for it.
+
+Verified live against Claude Code 2.1.263: a question dialog raises
+`Notification` with `notification_type: permission_prompt`, and answering it
+clears the marker through `PostToolUse` -- both without restarting the session.
+
+**Which notification types count.** `permission_prompt`,
+`worker_permission_prompt`, `agent_needs_input` and `elicitation_*` mean a
+keystroke from you is the blocker. `idle_prompt` deliberately does **not**: it
+fires when an agent has simply been sitting at a ready prompt for a while, and
+mapping it to blocked would paint every idle pane red, destroying the one
+distinction this tool exists to draw. An unrecognised type is ignored rather
+than guessed, so a renamed type degrades to screen reading.
+
+Install it with:
+
+```bash
+scripts/Install-AgentRadarHooks.sh              # idempotent; --uninstall reverses it
+```
+
+It backs `~/.claude/settings.json` up to `settings.json.bak-agent-radar`, only
+touches entries whose command names `Set-AgentRadarState.sh`, and leaves other
+tools' hooks on the same events alone -- Claude runs every hook registered for
+an event, so demux and herdr keep working. To paste it by hand instead:
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      { "hooks": [ { "type": "command", "command": "\"$HOME/.modules/agent-radar/hooks/Set-AgentRadarState.sh\" notification" } ] }
+    ],
+    "PostToolUse": [
+      { "hooks": [ { "type": "command", "command": "\"$HOME/.modules/agent-radar/hooks/Set-AgentRadarState.sh\" clear" } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "\"$HOME/.modules/agent-radar/hooks/Set-AgentRadarState.sh\" clear" } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "\"$HOME/.modules/agent-radar/hooks/Set-AgentRadarState.sh\" clear" } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "\"$HOME/.modules/agent-radar/hooks/Set-AgentRadarState.sh\" clear" } ] }
+    ]
+  }
+}
+```
+
+`clear` is spread over four events rather than trusting one, because a marker
+that outlives its dialog is the failure users would never forgive. `PreToolUse`
+is *not* among them: it fires **before** the permission prompt it would clear.
 
 ## The four states
 
@@ -198,6 +284,8 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `scripts/Show-AgentSnapshot.sh` | what the matcher sees |
 | `scripts/Test-AgentRules.py` | why each rule did or did not fire |
 | `scripts/Test-Fixtures.sh` | regression check over `fixtures/` |
+| `scripts/Install-AgentRadarHooks.sh` | registers the Claude hooks in `~/.claude/settings.json` |
+| `hooks/Set-AgentRadarState.sh` | what Claude Code runs; writes/removes one marker per pane |
 | `rules/*.toml` | one file per agent |
 
 Two presentation formats live in `Get-AgentState.py` rather than in the shell
@@ -210,8 +298,17 @@ under-pads every row.
 - Only `rules/claude.toml` has been validated against real screens. The codex,
   copilot and opencode files are transcribed from the herdr reference and need a
   pass with `Show-AgentSnapshot.sh` against live sessions.
-- No `blocked` fixture yet for any agent -- capture one the next time a
-  permission prompt appears.
+- `blocked` fixtures exist only for Claude, and only for question dialogs
+  (`claude-blocked-question`, and the same with plan mode's extra banner box --
+  the pair that pins down the rule-line counting this once got wrong). A real
+  tool-permission prompt and a plan approval are still uncaptured, because auto
+  mode approves them before they render. With auto mode off:
+  `Show-AgentSnapshot.sh %23 > fixtures/claude-blocked-permission.txt`.
+- A pane that *prints* a dialog's text -- `cat` a fixture, or scroll a
+  transcript that quotes one -- can read as blocked for as long as it is on
+  screen. Inherent to screen reading; the input-box region only defends against
+  text **you typed**, not against text an agent printed. The hook marker is
+  unaffected.
 - Claude Code's OSC title carries no state at the current version (it is the
   branch name behind a constant glyph), so all Claude signals come off the
   screen. Codex does set a stateful title, and its rules use it.

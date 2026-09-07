@@ -1,0 +1,45 @@
+#title: ✳ Agent radar waiting for input state
+  Verified end-to-end through the running daemon: a marker makes the pane sort first, render red ● waiting
+   permission prompt, and the status bar go ●1 pink.
+
+  Two things left for you:
+
+  1. The hook isn't installed — you chose manual, so I didn't touch ~/.claude/settings.json. Run
+     modules/agent-radar/scripts/Install-AgentRadarHooks.sh (or paste the block from the README), then
+     restart a Claude session. The screen path works without it.
+  2. I couldn't capture a real permission dialog fixture: auto mode approved everything I tried. Next time
+     you hit one with auto mode off, Show-AgentSnapshot.sh %N > fixtures/claude-blocked-permission.txt —
+     it's noted in Known gaps.
+
+  Nothing is committed yet.
+
+✻ Brewed for 14m 47s · done 11:56 PM · 1 shell still running
+
+❯ Edit the ~/.claude/settings.json now
+
+  Listed 1 directory, ran 4 shell commands
+
+● The clear hook just fired for real — the probe marker I planted vanished on the next tool call, with no
+  session restart. That proves registration, path, and $TMUX_PANE resolution. Now the notification half,
+  which needs a live dialog — and I have a real question to ask anyway:
+
+  Ran 1 shell command
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ☐ Commit
+
+│ The agent-radar changes are working but uncommitted. Want me to commit them? (Answering also proves the
+│ notification hook fires — I'm watching for the marker file while this dialog is up.)
+
+❯ 1. Yes, one commit
+     Commit everything as a single change: the region fix, the new rule, the hook layer, installer,
+     fixtures and docs.
+  2. Two commits
+     Split it: (1) fix the blocked detection bug + fixtures, (2) add the optional Claude hook layer +
+     installer. Cleaner history, since the first stands alone.
+  3. Leave it uncommitted
+     I'll stop here and you review the diff yourself first.
+  4. Type something.
+──────────────────────────────────────────────────────────────────────────────────────────────────────────
+  5. Chat about this
+
+Enter to select · ↑/↓ to navigate · Esc to cancel
