@@ -4,6 +4,7 @@ Answers one question: **which coding agent is waiting for me right now?**
 
     prefix + t  then  a     popup picker -- pick an agent, jump to its pane
     prefix + t  then  A     the same list, live, in a normal pane
+    prefix + t  then  r     the same live pane, chrome-free (curses, not fzf)
     status bar              ●2●1  -- two waiting, one working
 
 ```
@@ -148,7 +149,8 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `scripts/agent_radar.py` | the engine: identification, regions, gates, classification |
 | `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status` |
 | `scripts/Select-Agent.sh` | the popup picker (`prefix + t`, `a`) |
-| `scripts/Watch-Agents.sh` | the live pane (`prefix + t`, `A`) |
+| `scripts/Watch-Agents.sh` | the live pane, fzf (`prefix + t`, `A`) |
+| `scripts/Watch-AgentFeed.py` | the live pane, curses (`prefix + t`, `r`) |
 | `scripts/Get-AgentSummary.sh` | the cached status-bar segment |
 | `scripts/Show-AgentSnapshot.sh` | what the matcher sees |
 | `scripts/Test-AgentRules.py` | why each rule did or did not fire |
