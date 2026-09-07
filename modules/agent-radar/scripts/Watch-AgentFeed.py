@@ -232,6 +232,19 @@ def index_of(panes: list, pane_id: str, fallback: int) -> int:
 
 def run(stdscr, interval: float) -> None:
     curses.curs_set(0)
+
+    # Ctrl-C has to close the pane the same way q does, and catching
+    # KeyboardInterrupt cannot achieve that -- by the time Python sees it the
+    # damage is done elsewhere. The pane is `pwsh -Command "& this" && exit`
+    # typed into a shell (tmux-helpers.sh:pwsh_command), so it closes on a clean
+    # exit status; SIGINT goes to the whole foreground process group, so pwsh
+    # takes it too, dies on the spot and the `&& exit` never runs. That is the
+    # shell prompt you are left looking at.
+    #
+    # raw() turns off ISIG, so the interrupt, quit and suspend characters stop
+    # being signals and arrive as ordinary bytes -- Ctrl-C is just key 3 below.
+    # Nothing in the pipeline is ever signalled, so the exit status stays ours.
+    curses.raw()
     use_colour = curses.has_colors()
     use_band = False
     if use_colour:
@@ -263,42 +276,49 @@ def run(stdscr, interval: float) -> None:
     last_sample = time.monotonic()
     draw(stdscr, panes, selected, use_colour, use_band)
 
-    while True:
-        key = stdscr.getch()
-        redraw = False
+    try:
+        while True:
+            key = stdscr.getch()
+            redraw = False
 
-        if key in (ord("q"), 27):
-            return
-        elif key in (ord("j"), curses.KEY_DOWN):
-            selected = min(selected + 1, max(0, len(panes) - 1))
-            redraw = True
-        elif key in (ord("k"), curses.KEY_UP):
-            selected = max(selected - 1, 0)
-            redraw = True
-        elif key == ord("g"):
-            selected = 0
-            redraw = True
-        elif key == ord("G"):
-            selected = max(0, len(panes) - 1)
-            redraw = True
-        elif key in (curses.KEY_ENTER, 10, 13):
-            if panes:
-                jump(panes[selected].pane_id)
-        elif key == curses.KEY_RESIZE:
-            redraw = True
-        elif key == ord("r"):
-            last_sample = 0
+            if key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
+                return
+            elif key in (ord("j"), curses.KEY_DOWN):
+                selected = min(selected + 1, max(0, len(panes) - 1))
+                redraw = True
+            elif key in (ord("k"), curses.KEY_UP):
+                selected = max(selected - 1, 0)
+                redraw = True
+            elif key == ord("g"):
+                selected = 0
+                redraw = True
+            elif key == ord("G"):
+                selected = max(0, len(panes) - 1)
+                redraw = True
+            elif key in (curses.KEY_ENTER, 10, 13):
+                if panes:
+                    jump(panes[selected].pane_id)
+            elif key == curses.KEY_RESIZE:
+                redraw = True
+            elif key == ord("r"):
+                last_sample = 0
 
-        now = time.monotonic()
-        if now - last_sample >= interval:
-            anchor = panes[selected].pane_id if panes else ""
-            panes = sample()
-            selected = index_of(panes, anchor, selected)
-            last_sample = now
-            redraw = True
+            now = time.monotonic()
+            if now - last_sample >= interval:
+                anchor = panes[selected].pane_id if panes else ""
+                panes = sample()
+                selected = index_of(panes, anchor, selected)
+                last_sample = now
+                redraw = True
 
-        if redraw:
-            draw(stdscr, panes, selected, use_colour, use_band)
+            if redraw:
+                draw(stdscr, panes, selected, use_colour, use_band)
+    finally:
+        # curses.wrapper restores cooked mode on the way out, but through
+        # nocbreak(), whose interaction with raw() ncurses does not promise.
+        # Undo raw() with its own opposite: leaving a terminal unable to
+        # interrupt anything is a bad way to lose a bet.
+        curses.noraw()
 
 
 def main() -> int:
