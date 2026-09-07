@@ -51,6 +51,10 @@ else
   # without being asked for.
   bottom="$(new_pane "$top" "Terminal" "$terminal" -v -l 20%)"
   new_pane "$bottom" "Agents" "$(pwsh_command "$feed")" -h -l 35% >/dev/null
+  # C-j from NeoVim is `select-pane -D`, which breaks the tie between the two
+  # panes below by most-recently-active. Touching the terminal after the feed
+  # makes that C-j land on the terminal instead of on the feed.
+  tmux select-pane -t "$bottom"
 fi
 
 label_pane "$top" "NeoVim"
