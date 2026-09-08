@@ -9,7 +9,7 @@
 # Wired into status-right from modules/tmux/tmux.conf and modules/wsl2/tmux.conf.
 # It must be prepended AFTER TPM runs, because tmux-power assigns status-right
 # wholesale when it loads and would drop anything the config set earlier -- the
-# same ordering trap that makes modules/demux/Initialize-Demux.sh necessary.
+# same ordering trap that any other status-right consumer has to work around.
 #
 # This no longer detects anything. Start-AgentRadar.py samples once a second for
 # the whole machine and publishes the rendered string; this reads it. That is

@@ -65,7 +65,6 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `azure-cli-extensions/` | Azure CLI extension installer |
 | `bin-tools/` | CLI utilities (`yank`/`clip`) made available system-wide |
 | `debugging/` | Installs `netcoredbg` (.NET debugger) |
-| `demux/` | demux installer and config (tmux session dashboard, `prefix + e` sticky sidebar) |
 | `dotnet/` | .NET SDK installers for Ubuntu 22.04, 24.04 and Debian |
 | `dotnet-tools/` | .NET global tools setup (runs at session start) |
 | `entrypoint-config/` | Docker container startup script (`Start-DevSession.ps1`) |
@@ -123,7 +122,7 @@ Same two-stage pattern but layered on `:base` instead of `:latest`. Adds QMK bui
 3. Installs `fzf` from GitHub releases (newer than the apt version)
 4. Creates `fd` as an alias for `fdfind`
 5. Creates a symlink from `~/.modules` to this repo's `modules/` directory
-6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, vim-plug, Azure CLI, delta, demux, agent-radar, tmux TPM, LSP)
+6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, vim-plug, Azure CLI, delta, agent-radar, tmux TPM, LSP)
 7. Creates all config symlinks (`~/.vim`, `~/.config/nvim`, `~/.config/powershell`, `~/.shell`, etc.)
 8. Writes PowerShell environment variables to `~/.profile.ps1`
 9. Creates a symlink to `win32yank.exe` if running under WSL2
