@@ -62,6 +62,11 @@ else
   radar="$(new_pane "$top" "Git" "$(pwsh_command "$git_feed")" -h -b -l 12%)"
   new_pane "$radar" "Agents" "$(pwsh_command "$agent_feed")" -v -l 40% >/dev/null
   new_pane "$top" "Terminal" "$terminal" -v -l 16% >/dev/null
+
+  # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
+  # panes of the radar column by most-recently-active. Touching the git feed
+  # after the splits makes that C-h land on Git instead of on the agent feed.
+  tmux select-pane -t "$radar"
 fi
 
 label_pane "$top" "NeoVim"

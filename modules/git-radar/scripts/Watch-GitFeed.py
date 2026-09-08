@@ -31,11 +31,18 @@ doubles as your session list, and a row that jumps while you are reaching for
 Enter is worse than one you have to scan for -- attention is carried by colour.
 
 Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
-the selected repository, Ctrl-C closes the pane.
+the selected repository, q kills the selected session after asking, Ctrl-C
+closes the pane.
 
-Ctrl-C and nothing else, deliberately: this is a pane you leave open and type
-past, so closing it should take a gesture you cannot make by accident. q and Esc
-used to do it and no longer do.
+Ctrl-C closes the pane and nothing else does, deliberately: this is a pane you
+leave open and type past, so closing it should take a gesture you cannot make by
+accident. q and Esc used to close it and no longer do -- q now kills the selected
+*session*, and Esc is ignored.
+
+Killing asks first, in the pane, and the question is modal: y kills, and every
+other key -- n, Esc, Ctrl-C, a fumbled letter -- is a no. So while a question is
+up Ctrl-C answers it rather than closing the pane; with no question up it closes
+the pane as always.
 
 Usage: Watch-GitFeed.py [refresh-seconds]   (default 2)
 """
@@ -224,6 +231,108 @@ def jump(session: str) -> None:
     )
 
 
+def session_id(session: str) -> str:
+    """A session's `$N` id, or "" if it is gone.
+
+    Worth the extra call: an id is what `kill-session` should be pointed at.
+    A name has to be matched with `=` to stop tmux reading it as an fnmatch
+    pattern, and a stale name can in principle come back as a *different*
+    session; an id cannot. Failing here means the row is stale and there is
+    nothing left to kill.
+
+    Read out of `list-sessions` and matched here rather than asked for directly.
+    The obvious `display-message -p -t '={session}' '#{session_id}'` looks right
+    and is not: on tmux 3.4 it prints an empty line and still exits 0, because
+    the format wants a client to resolve against and a session target does not
+    give it one. An empty id reported as success is the worst possible answer --
+    it would make q silently do nothing -- so this asks a question with no
+    client in it at all.
+    """
+    try:
+        result = subprocess.run(
+            ["tmux", "list-sessions", "-F", "#{session_id}\t#{session_name}"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if result.returncode != 0:
+        return ""
+    for line in result.stdout.splitlines():
+        # Session names cannot contain a tab, so one split is enough -- and the
+        # name is compared whole, never matched as a pattern.
+        ident, _, name = line.partition("\t")
+        if name == session:
+            return ident
+    return ""
+
+
+def kill(session: str) -> None:
+    """Kill a session. The caller has already asked; this just does it.
+
+    tmux's own `confirm-before` would seem to be the way to ask, and it is not:
+    it is built to run from a key binding, where tmux knows which client pressed
+    the key. Run as a command from inside a pane it blocks its caller forever
+    and draws its prompt on no client at all -- even given `-t`. The question is
+    drawn in the pane instead (see `draw_confirm`), which is also the only place
+    that already has the keyboard in raw mode.
+
+    Nothing special is done about killing the session this pane is in: it is a
+    legitimate thing to want, and tmux already does the right thing -- the
+    client moves to another session, or exits when that was the last one.
+    """
+    target = session_id(session)
+    if not target:
+        return
+    subprocess.run(
+        ["tmux", "kill-session", "-t", target],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+# The question q asks before kill() runs. Short words on their own lines: the
+# feed's column is 12% of the window in the default layout, so anything phrased
+# as a sentence would be truncated into nonsense.
+CONFIRM_TITLE = "kill session"
+CONFIRM_YES = "y  kill"
+CONFIRM_NO = "n  cancel"
+
+
+def draw_confirm(stdscr, session: str, use_colour: bool, palette) -> None:
+    """Take the whole pane for the question, rather than banner it over a row.
+
+    Killing a session is the one thing here that cannot be undone, so it gets
+    the one presentation that cannot be misread as part of the list. In a column
+    this narrow a banner would sit inside the rows it is asking about and read
+    as one of them.
+    """
+    stdscr.erase()
+    height, width = stdscr.getmaxyx()
+
+    def colour(value: int, extra: int = 0) -> int:
+        return (palette.attr(value) if use_colour else curses.A_NORMAL) | extra
+
+    lines = [
+        (CONFIRM_TITLE, curses.A_DIM),
+        # Red is what the state marker already uses for "this one needs you",
+        # and the name is the single fact worth reading twice before pressing y.
+        (ui.truncate(session, width - 1), colour(curses.COLOR_RED, curses.A_BOLD)),
+        ("", curses.A_NORMAL),
+        (CONFIRM_YES, colour(curses.COLOR_RED, curses.A_BOLD)),
+        (CONFIRM_NO, curses.A_NORMAL),
+    ]
+    for row, (text, attr) in enumerate(lines):
+        if row >= height:
+            break
+        ui.add(stdscr, row, 0, ui.truncate(text, width - 1), attr)
+
+    stdscr.refresh()
+
+
 def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band,
                   current: str):
     """The two lines of one entry, as (text, attribute) segments.
@@ -298,7 +407,11 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
 
 def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
-         focused: bool, current: str) -> None:
+         focused: bool, current: str, pending: str = "") -> None:
+    if pending:
+        draw_confirm(stdscr, pending, use_colour, palette)
+        return
+
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
@@ -382,11 +495,14 @@ def run(stdscr, interval: float) -> None:
 
     repos = sample()
     selected = 0
+    # The session q has asked about and is waiting on an answer for, or "".
+    pending = ""
     last_sample = time.monotonic()
     # Fetch threads change the detail column between samples, and at a three
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
-    draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current)
+    draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current,
+         pending)
 
     try:
         while True:
@@ -397,12 +513,31 @@ def run(stdscr, interval: float) -> None:
             # input; consume() reports which ones they were.
             if key != -1 and focus.consume(stdscr, key):
                 redraw = True
-            # Ctrl-C, and deliberately nothing else. A feed is a pane you
-            # leave open and type past, so a single stray keystroke should not
-            # be able to close it -- q is one fumbled pane away and Esc is
-            # muscle memory from vim. Esc still arrives here and is ignored;
-            # ui.Focus has already swallowed the escape *sequences* by now, so
-            # what is left is only a real Esc press.
+                # A question left standing in a pane you have walked away from
+                # is one you will answer by accident on the way back. Leaving
+                # cancels it.
+                if pending and not focus.focused:
+                    pending = ""
+            # Ctrl-C, and deliberately nothing else, closes the pane. A feed
+            # is a pane you leave open and type past, so a single stray
+            # keystroke should not be able to close it -- q is one fumbled pane
+            # away and Esc is muscle memory from vim. Esc still arrives here and
+            # is ignored; ui.Focus has already swallowed the escape *sequences*
+            # by now, so what is left is only a real Esc press.
+            elif pending:
+                # Modal on purpose: while the question is up every key belongs
+                # to it, so there is no way to be moving the cursor and
+                # confirming a kill in the same keystroke. Only y kills;
+                # everything else -- n, Esc, Ctrl-C, a fumbled letter -- is a
+                # no, which is the answer a stray keypress should get.
+                if key != -1:
+                    if key == ord("y"):
+                        kill(pending)
+                        # The row is gone as of now; do not wait out the tick
+                        # still showing it.
+                        last_sample = 0
+                    pending = ""
+                    redraw = True
             elif key == 3:  # Ctrl-C
                 return
             elif key in (ord("j"), curses.KEY_DOWN):
@@ -427,6 +562,12 @@ def run(stdscr, interval: float) -> None:
             elif key == ord("f"):
                 if repos:
                     start_fetch(repos[selected])
+            elif key == ord("q"):
+                # Reads as "quit" and used to mean it, which is exactly why it
+                # asks before doing anything -- see draw_confirm.
+                if repos:
+                    pending = repos[selected].session
+                    redraw = True
 
             if notes != seen_notes:
                 seen_notes = dict(notes)
@@ -436,7 +577,10 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             now = time.monotonic()
-            if now - last_sample >= interval:
+            # Not while a question is up: re-sampling can reorder the rows, and
+            # the selection would move out from under an answer already being
+            # typed. The question names its own session anyway.
+            if not pending and now - last_sample >= interval:
                 anchor = repos[selected].session if repos else ""
                 repos = sample()
                 selected = index_of(repos, anchor, selected)
@@ -444,7 +588,8 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current)
+                draw(stdscr, repos, selected, use_colour, palette, band,
+                     focus.focused, current, pending)
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read
