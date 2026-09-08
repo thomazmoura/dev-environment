@@ -69,7 +69,12 @@ fully in sync -- the one case where an absent arrow means the opposite of what i
 usually does.
 
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
-`f` fetches the selected repository, `q` quits.
+`f` fetches the selected repository, `Ctrl-C` closes the pane.
+
+`Ctrl-C` and nothing else, deliberately. A feed is a pane you leave open and
+type past, so closing it should take a gesture you cannot make by accident: `q`
+is one fumbled pane away and `Esc` is muscle memory from vim. Both used to close
+it and no longer do.
 
 **The highlight follows the focus.** A feed is something you glance at from
 another pane, so a selection band sitting there permanently is a cursor you

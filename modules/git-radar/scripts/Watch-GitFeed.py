@@ -31,7 +31,11 @@ doubles as your session list, and a row that jumps while you are reaching for
 Enter is worse than one you have to scan for -- attention is carried by colour.
 
 Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
-the selected repository, q quits.
+the selected repository, Ctrl-C closes the pane.
+
+Ctrl-C and nothing else, deliberately: this is a pane you leave open and type
+past, so closing it should take a gesture you cannot make by accident. q and Esc
+used to do it and no longer do.
 
 Usage: Watch-GitFeed.py [refresh-seconds]   (default 2)
 """
@@ -339,7 +343,7 @@ def index_of(repos: list, session: str, fallback: int) -> int:
 def run(stdscr, interval: float) -> None:
     curses.curs_set(0)
 
-    # Ctrl-C has to close the pane the same way q does, and catching
+    # Ctrl-C is the only way out, and it has to close the *pane*. Catching
     # KeyboardInterrupt cannot achieve that -- by the time Python sees it the
     # damage is done elsewhere. The pane is `pwsh -Command "& this" && exit`
     # typed into a shell (tmux-helpers.sh:pwsh_command), so it closes on a clean
@@ -349,6 +353,8 @@ def run(stdscr, interval: float) -> None:
     #
     # raw() turns off ISIG, so the interrupt, quit and suspend characters stop
     # being signals and arrive as ordinary bytes -- Ctrl-C is just key 3 below.
+    # Now that it is the only key that closes the feed, this is load-bearing
+    # rather than a convenience: without raw() there is no way out at all.
     curses.raw()
     use_colour = curses.has_colors()
     palette, band, grey = ui.start_colour()
@@ -391,7 +397,13 @@ def run(stdscr, interval: float) -> None:
             # input; consume() reports which ones they were.
             if key != -1 and focus.consume(stdscr, key):
                 redraw = True
-            elif key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
+            # Ctrl-C, and deliberately nothing else. A feed is a pane you
+            # leave open and type past, so a single stray keystroke should not
+            # be able to close it -- q is one fumbled pane away and Esc is
+            # muscle memory from vim. Esc still arrives here and is ignored;
+            # ui.Focus has already swallowed the escape *sequences* by now, so
+            # what is left is only a real Esc press.
+            elif key == 3:  # Ctrl-C
                 return
             elif key in (ord("j"), curses.KEY_DOWN):
                 selected = min(selected + 1, max(0, len(repos) - 1))
