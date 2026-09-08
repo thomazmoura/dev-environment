@@ -124,7 +124,20 @@ function New-VerticalTmuxSession {
       window the real terminal's size, so Set-NeovimLayout's percentage splits
       land where they will still be after attaching rather than being scaled up
       from tmux's default 80x24.
+
+    .PARAMETER ExitOnCancel
+      Exit the whole pwsh process with 130 -- fzf's own code for Esc/ctrl-c --
+      when the project picker is aborted, instead of just returning.
+
+      For callers that run this as the process's only job and need to tell "the
+      user did not want tmux" apart from "the tmux session ended", which a plain
+      return cannot express. modules/ghostty/scripts/Select-Shell.sh uses it to
+      fall back to its shell picker. Off by default: exiting is the wrong answer
+      when vtmux is typed at an interactive prompt, since it would take the
+      session down with it.
   #>
+  param([Switch]$ExitOnCancel)
+
   if(tmux ls 2> $null) {
     Get-TmuxSession
     return
@@ -142,6 +155,7 @@ function New-VerticalTmuxSession {
 		return
 	}
 	Write-Information "Cancelled by user"
+	if($ExitOnCancel) { exit 130 }
 }
 
 function Start-Frontend() {
