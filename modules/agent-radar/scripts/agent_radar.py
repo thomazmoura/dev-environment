@@ -23,12 +23,23 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 MODULE_ROOT = Path(__file__).resolve().parent.parent
 RULES_DIR = MODULE_ROOT / "rules"
+
+# The generic radar machinery lives with the other tmux helpers, because it is
+# shared with git-radar and belongs to neither. Reached by relative path, the
+# same way Select-Agent.sh reaches tmux-helpers.sh: the layout under modules/ is
+# preserved by both deployments -- a ~/.modules symlink on the host, a COPY per
+# module in Docker.
+SHARED_SCRIPTS = MODULE_ROOT.parent / "tmux" / "scripts"
+sys.path.insert(0, str(SHARED_SCRIPTS))
+
+import radar_cache  # noqa: E402
 
 # --- States ------------------------------------------------------------------
 # Four, and resist adding a fifth (herdr S3.6). "Waiting for input" is BLOCKED;
@@ -299,10 +310,10 @@ def cache_dir() -> Path:
     """Where the runtime state lives. agent_feed.cache_dir() delegates here.
 
     Defined in this module rather than in agent_feed because agent_feed imports
-    this one, and detection cannot depend on the sampler.
+    this one, and detection cannot depend on the sampler -- the hook markers
+    below live in the same directory as the published snapshot.
     """
-    root = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
-    return Path(root) / "agent-radar"
+    return radar_cache.cache_root("agent-radar")
 
 
 def markers_dir() -> Path:

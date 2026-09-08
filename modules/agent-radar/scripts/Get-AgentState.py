@@ -82,6 +82,29 @@ WAITING_LABEL = {
 }
 
 
+def agent_line(pane: radar.Pane) -> str:
+    """What a row says about *which* agent this is.
+
+    The pane label is the readable name -- "Claude Code", set by
+    tmux-helpers.sh:label_pane for every pane the bindings open -- and the agent
+    id is what the rules matched. Showing both is usually saying the same thing
+    twice, so the id is appended only when the label does not already contain
+    it: an agent someone started by hand has no @pane_label and falls back to
+    the window name, where "pwsh  claude" is exactly the pair you want to see.
+    """
+    if pane.agent and pane.agent.lower() not in pane.label.lower().replace(" ", ""):
+        return f"{pane.label}  {pane.agent}"
+    return pane.label
+
+
+def extra_detail(pane: radar.Pane) -> str:
+    """The detail, minus the case where it only repeats the state word.
+
+    "working  working" is noise in a row whose first line already says it.
+    """
+    return "" if pane.detail == WAITING_LABEL[pane.state] else pane.detail
+
+
 def render_fzf(panes: list[radar.Pane]) -> list[str]:
     """One line per pane: the pane id, a tab, then the visible row.
 
@@ -100,9 +123,7 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
     for p in panes:
         state = WAITING_LABEL[p.state]
         cell = f"{ANSI[p.state]}{GLYPH} {state:<{state_width}}{RESET}"
-        # A detail that only repeats the state word is noise in a column that
-        # already says it -- "working  working".
-        extra = "" if p.detail == state else p.detail
+        extra = extra_detail(p)
         detail = f"  {DIM}{extra}{RESET}" if extra else ""
         rows.append(
             f"{p.pane_id}\t{p.session:<{session_width}}  {p.label:<{label_width}}"

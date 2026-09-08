@@ -13,9 +13,18 @@ pane that is three lines of chrome and a permanent flicker at the edge of vision
 -- which is the opposite of what something you glance at should do. curses draws
 only what it is asked to, repaints in place, and still gives j/k and Enter.
 
-The state column comes first here, too. It is the column you are watching; a
-`waiting` row should land in the same place every time rather than sliding
-horizontally as session names change width.
+Two lines per agent: the state and the session on top -- the two things you
+scan for -- with what kind of agent it is and whatever it is waiting on indented
+underneath. One line per agent was the first shape, and in a 35%-wide pane it
+padded every column to the width of the widest row, which turned the list into a
+block of grey text. Two lines let each row be exactly as wide as it needs to be.
+Watch-GitFeed.py has the same shape for the same reason, and both draw with the
+primitives in modules/tmux/scripts/radar_ui.py.
+
+The state word stays padded, unlike anything on the second line: the vocabulary
+is four fixed words, so that column cannot grow to swallow the row, and keeping
+it aligned is what lets the session names start in the same place down the pane.
+A `waiting` row therefore lands where you last saw one.
 
 Refreshing once a second, in every session at once, is affordable because this
 does not sample: Start-AgentRadar.py samples for the whole machine and this
@@ -40,6 +49,10 @@ sys.path.insert(0, HERE)
 import agent_feed as feed  # noqa: E402
 import agent_radar as radar  # noqa: E402
 
+sys.path.insert(0, str(radar.SHARED_SCRIPTS))
+
+import radar_ui as ui  # noqa: E402
+
 # Get-AgentState.py owns the state vocabulary and the glyph, and both belong in
 # exactly one place. Its name has a hyphen, so it cannot be imported by name --
 # load it from the sibling path instead. (The debounce moved out of it and into
@@ -50,21 +63,7 @@ _spec = importlib.util.spec_from_file_location(
 state_cli = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(state_cli)
 
-# Same four colours as the ANSI map in Get-AgentState.py, in curses terms. Each
-# state needs two pairs, because the selected row keeps its state colour and
-# changes only its background -- see SELECT_BG.
-PAIR = {
-    radar.BLOCKED: 1,
-    radar.WORKING: 2,
-    radar.IDLE: 3,
-    radar.UNKNOWN: 4,
-}
-SELECTED_PAIR = {state: pair + 4 for state, pair in PAIR.items()}
-
-# The row's uncoloured text (session, label, agent, detail) while selected:
-# terminal default foreground on the selection background.
-BODY_SELECTED_PAIR = 9
-
+# The same four colours as the ANSI map in Get-AgentState.py, in curses terms.
 COLOUR = {
     radar.BLOCKED: curses.COLOR_RED,
     radar.WORKING: curses.COLOR_YELLOW,
@@ -85,6 +84,10 @@ STATE_EMPHASIS = {
 }
 
 EMPTY_MESSAGE = "no coding agents running"
+
+# The narrowest the agent name is allowed to be squeezed before the detail beside
+# it starts giving way instead. Enough to tell "Claude C…" from "Codex".
+MIN_AGENT = 8
 
 
 def sample() -> list:
@@ -110,109 +113,106 @@ def jump(pane_id: str) -> None:
         )
 
 
-def columns(panes: list) -> tuple[int, int, int, int]:
-    """Widths for the padded columns, measured in characters.
+def state_width(panes: list) -> int:
+    """How wide the state word column has to be.
 
-    Characters, not bytes: the glyph is multi-byte, and a byte-counting padder
-    silently under-pads every row (the same reason Get-AgentState.py formats in
-    Python rather than awk).
+    Padded, unlike anything on the second line: the vocabulary is four fixed
+    words, so the column can never grow to swallow the row the way a padded
+    session or branch column does. Keeping it aligned is what lets the session
+    names start at the same place down the pane.
     """
-    return (
-        max(len(state_cli.WAITING_LABEL[p.state]) for p in panes),
-        max(len(p.session) for p in panes),
-        max(len(p.label) for p in panes),
-        max(len(p.agent) for p in panes),
-    )
+    return max(len(state_cli.WAITING_LABEL[pane.state]) for pane in panes)
 
 
-def draw(stdscr, panes: list, selected: int, use_colour: bool, use_band: bool) -> None:
+def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, band,
+                  state_w: int):
+    """The two lines of one entry, as (text, attribute) segments.
+
+    State and session on top -- the two things you are scanning for -- with what
+    kind of agent it is and whatever it is waiting on indented underneath.
+    """
+    body = band if chosen else curses.A_NORMAL
+    # Bold only where it distinguishes: bolding every name spends the emphasis
+    # that makes the selected row findable.
+    name_attr = body | (curses.A_BOLD if chosen else curses.A_NORMAL)
+
+    def coloured(colour: int) -> int:
+        if not use_colour:
+            return body
+        return palette.attr(colour, chosen) | (body & curses.A_REVERSE)
+
+    state = state_cli.WAITING_LABEL[pane.state]
+    state_attr = coloured(COLOUR[pane.state]) | STATE_EMPHASIS[pane.state]
+    if chosen:
+        state_attr |= curses.A_BOLD
+
+    # Budgets subtract the same trailing column draw_line refuses to write into.
+    # Getting this off by one does not overflow -- draw_line clips -- it eats the
+    # ellipsis, so a truncated name silently reads as a shorter real one.
+    marker = f"{state_cli.GLYPH} {state:<{state_w}}  "
+    first = [
+        (marker, state_attr),
+        (ui.truncate(pane.session, width - len(marker) - 1), name_attr),
+    ]
+
+    # The detail is the one thing on the second line worth colouring: it is why
+    # a blocked agent is blocked. It takes the state's own colour so the row
+    # reads as one thing rather than two.
+    detail = state_cli.extra_detail(pane)
+    agent = state_cli.agent_line(pane)
+    budget = width - len(ui.INDENT) - 1
+
+    # The detail is the more actionable half, so it is measured first and the
+    # agent name gets what is left -- but never less than MIN_AGENT, because an
+    # agent name squeezed to nothing leaves the line starting with stray indent
+    # and reads as a rendering fault rather than as a narrow pane.
+    room = max(MIN_AGENT, budget - len(detail) - 2) if detail else budget
+    agent_text = ui.truncate(agent, min(room, budget))
+    detail_room = budget - len(agent_text) - 2
+    detail_text = ui.truncate(detail, detail_room) if detail and detail_room >= 3 else ""
+
+    second = [
+        (ui.INDENT, body),
+        (agent_text, body | (0 if chosen else curses.A_DIM)),
+    ]
+    if detail_text:
+        second.append(
+            (
+                f"  {detail_text}",
+                state_attr
+                if pane.state == radar.BLOCKED
+                else body | (0 if chosen else curses.A_DIM),
+            )
+        )
+
+    return first, second
+
+
+def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band) -> None:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
     if not panes:
-        _add(stdscr, 0, 0, EMPTY_MESSAGE, curses.A_DIM)
+        ui.add(stdscr, 0, 0, EMPTY_MESSAGE, curses.A_DIM)
         stdscr.refresh()
         return
 
-    state_w, session_w, label_w, agent_w = columns(panes)
+    state_w = state_width(panes)
+    visible = ui.visible_rows(height)
+    first_row = ui.window_start(selected, len(panes), visible)
 
-    # More agents than lines is rare but must not hide the cursor, so scroll the
-    # window rather than the list: keep the selected row on screen and show the
-    # top of the list (where blocked agents sort) whenever it fits.
-    first = max(0, min(selected - height + 1, len(panes) - height)) if len(panes) > height else 0
-
-    for row, pane in enumerate(panes[first : first + height]):
-        state = state_cli.WAITING_LABEL[pane.state]
-        chosen = first + row == selected
-
-        # fzf's selected row is a grey band with the text's own colours intact
-        # and bolded -- not an inversion. A_REVERSE would swap foreground and
-        # background, which throws the state colour away on the one row you are
-        # looking hardest at, so the highlight is a background instead. Only
-        # where the terminal cannot express one does it fall back to inverting.
-        if chosen and use_band:
-            body_attr = curses.color_pair(BODY_SELECTED_PAIR) | curses.A_BOLD
-        elif chosen:
-            body_attr = curses.A_REVERSE
-        else:
-            body_attr = curses.A_NORMAL
-
-        state_attr = body_attr
-        if use_colour:
-            pairs = SELECTED_PAIR if chosen and use_band else PAIR
-            # color_pair() replaces the attribute rather than adding to it, so
-            # the inverting fallback has to be carried over by hand.
-            state_attr = curses.color_pair(pairs[pane.state]) | (body_attr & curses.A_REVERSE)
-        state_attr |= STATE_EMPHASIS[pane.state] | (curses.A_BOLD if chosen else 0)
-
-        column = 0
-        cell = f"{state_cli.GLYPH} {state:<{state_w}}"
-        column = _add(stdscr, row, column, cell[: width - column - 1], state_attr)
-
-        body = (
-            f"  {pane.session:<{session_w}}  {pane.label:<{label_w}}"
-            f"  {pane.agent:<{agent_w}}"
+    for offset, pane in enumerate(panes[first_row : first_row + visible]):
+        chosen = first_row + offset == selected
+        line = offset * ui.ROW_LINES
+        top, bottom = _row_segments(
+            pane, chosen, width, palette, use_colour, band, state_w
         )
-        column = _add(stdscr, row, column, body[: width - column - 1], body_attr)
-
-        # A detail that only repeats the state word is noise in a column that
-        # already says it -- "working  working".
-        extra = "" if pane.detail == state else pane.detail
-        if extra and column < width - 3:
-            column = _add(
-                stdscr,
-                row,
-                column,
-                f"  {extra}"[: width - column - 1],
-                # Dim is how the detail stays secondary in a resting row; on the
-                # selected one the band already separates it, and dim over grey
-                # is just hard to read.
-                body_attr if chosen else body_attr | curses.A_DIM,
-            )
-
-        # The band has to reach the edge of the pane, or the highlight stops
-        # wherever the longest column happened to end and reads as a smudge
-        # rather than a selected row.
-        if chosen and column < width:
-            _add(stdscr, row, column, " " * (width - column - 1), body_attr)
+        fill = band if chosen else None
+        ui.draw_line(stdscr, line, width, top, fill)
+        if line + 1 < height:
+            ui.draw_line(stdscr, line + 1, width, bottom, fill)
 
     stdscr.refresh()
-
-
-def _add(stdscr, row: int, column: int, text: str, attr: int) -> int:
-    """Write text and return where the next column starts.
-
-    curses raises when a write reaches the last cell of the last line, which is
-    a normal thing to happen in a pane too narrow for the row. Nothing useful
-    can be drawn past the edge, so swallow it.
-    """
-    if not text:
-        return column
-    try:
-        stdscr.addstr(row, column, text, attr)
-    except curses.error:
-        pass
-    return column + len(text)
 
 
 def index_of(panes: list, pane_id: str, fallback: int) -> int:
@@ -246,26 +246,10 @@ def run(stdscr, interval: float) -> None:
     # Nothing in the pipeline is ever signalled, so the exit status stays ours.
     curses.raw()
     use_colour = curses.has_colors()
-    use_band = False
-    if use_colour:
-        curses.use_default_colors()
-        # Two greys, both resolved against the palette the terminal actually
-        # has. 8 is "bright black", which exists only from 16 colours up;
-        # COLOR_BLACK is not a substitute, as on a dark background it is
-        # invisible. 237 is a 256-colour dark grey, close to fzf's own bg+ and
-        # dark enough to sit under coloured text.
-        grey = 8 if curses.COLORS >= 16 else COLOUR[radar.UNKNOWN]
-        select_bg = 237 if curses.COLORS >= 256 else (8 if curses.COLORS >= 16 else -1)
-        # An 8-colour terminal still gets coloured state words; it just has no
-        # grey to make a band out of, so only the highlight degrades.
-        use_band = select_bg != -1
-        for state, pair in PAIR.items():
-            colour = grey if state == radar.UNKNOWN else COLOUR[state]
-            curses.init_pair(pair, colour, -1)
-            if use_band:
-                curses.init_pair(SELECTED_PAIR[state], colour, select_bg)
-        if use_band:
-            curses.init_pair(BODY_SELECTED_PAIR, -1, select_bg)
+    palette, band, grey = ui.start_colour()
+    if grey is not None:
+        # The state you are explicitly not being asked to look at.
+        COLOUR[radar.UNKNOWN] = grey
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
@@ -274,7 +258,7 @@ def run(stdscr, interval: float) -> None:
     panes = sample()
     selected = 0
     last_sample = time.monotonic()
-    draw(stdscr, panes, selected, use_colour, use_band)
+    draw(stdscr, panes, selected, use_colour, palette, band)
 
     try:
         while True:
@@ -312,7 +296,7 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, panes, selected, use_colour, use_band)
+                draw(stdscr, panes, selected, use_colour, palette, band)
     finally:
         # curses.wrapper restores cooked mode on the way out, but through
         # nocbreak(), whose interaction with raw() ncurses does not promise.

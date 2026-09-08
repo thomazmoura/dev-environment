@@ -130,6 +130,12 @@ pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 # executable bit has to be guaranteed.
 chmod +x $HOME/.modules/agent-radar/scripts/* $HOME/.modules/agent-radar/hooks/*
 
+# git-radar (one row per tmux session: branch, commits to push/pull and
+# working-tree counts; bound to prefix + t then R). Same story -- no installer,
+# it runs in place out of $HOME/.modules and shares the sampling machinery in
+# modules/tmux/scripts/radar_cache.py.
+chmod +x $HOME/.modules/git-radar/scripts/*
+
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh

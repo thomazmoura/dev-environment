@@ -41,6 +41,13 @@ RUN pwsh -NoProfile -File /home/developer/.modules/herdr/Install-Herdr.ps1
 COPY --chown=developer:developer modules/agent-radar /home/developer/.modules/agent-radar
 RUN chmod +x /home/developer/.modules/agent-radar/scripts/* /home/developer/.modules/agent-radar/hooks/*
 
+# git-radar (one row per tmux session: branch, commits to push/pull and
+# working-tree counts; bound to prefix + t then R). Same story -- bash plus
+# python3, nothing to install. It shares the sampling machinery in
+# modules/tmux/scripts/radar_cache.py, which the tmux COPY below brings in.
+COPY --chown=developer:developer modules/git-radar /home/developer/.modules/git-radar
+RUN chmod +x /home/developer/.modules/git-radar/scripts/*
+
 # Tmux plugins installation
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf

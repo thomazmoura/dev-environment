@@ -7,11 +7,39 @@ Answers one question: **which coding agent is waiting for me right now?**
     prefix + t  then  r     the same live pane, chrome-free (curses, not fzf)
     status bar              ●2●1  -- two waiting, one working
 
+The picker and the fzf watcher list one agent per line:
+
 ```
 Autotrac_Starlink_Portal  Claude Code  claude  ● waiting  permission prompt
 dev-environment           Claude Code  claude  ● working
 herdr                     Claude Code  claude  ● idle     ready
 ```
+
+The curses feed on `r` gives each agent two lines instead -- state and session
+on top, what kind of agent it is and whatever it is waiting on underneath:
+
+```
+● waiting  Autotrac_Starlink_Portal
+  Claude Code  permission prompt
+● working  dev-environment
+  Claude Code
+● idle     herdr
+  Claude Code  ready
+```
+
+One line per agent was the original shape, and in a 35%-wide pane it padded
+every column to the width of the widest row, which turned the list into a block
+of grey text. Two lines let each row be exactly as wide as it needs to be; when
+the pane is narrower than a row, the session and the agent name are truncated
+with an ellipsis before the detail is, because the detail is why you looked.
+
+The state word stays padded -- the vocabulary is four fixed words, so that column
+cannot grow to swallow the row, and keeping it aligned is what makes a `waiting`
+row land where you last saw one.
+
+[git-radar](../git-radar/README.md) has the same shape for the same reasons, and
+both feeds draw with the primitives in
+[`modules/tmux/scripts/radar_ui.py`](../tmux/scripts/radar_ui.py).
 
 ## Why it is not demux
 
@@ -274,7 +302,9 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | Path | |
 | --- | --- |
 | `scripts/agent_radar.py` | the engine: identification, regions, gates, classification |
-| `scripts/agent_feed.py` | the shared backend: debounce, publish, read, spawn-if-missing |
+| `scripts/agent_feed.py` | agent-specific backend: which fields get published, and the debounce |
+| `../tmux/scripts/radar_cache.py` | shared with git-radar: publish, read, flock liveness, spawn-if-missing |
+| `../tmux/scripts/radar_ui.py` | shared with git-radar: curses palette, banding, truncation |
 | `scripts/Start-AgentRadar.py` | the one sampler; started by whichever consumer notices it is missing |
 | `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status`; `--cached` reads the shared snapshot |
 | `scripts/Select-Agent.sh` | the popup picker (`prefix + t`, `a`) |
@@ -291,7 +321,9 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 Two presentation formats live in `Get-AgentState.py` rather than in the shell
 consumers, for one concrete reason: both pad columns around a multi-byte state
 glyph, and `awk`'s `printf %-*s` counts bytes, so a shell formatter silently
-under-pads every row.
+under-pads every row. `Watch-AgentFeed.py` imports the same module, so the
+vocabulary -- the state words, the glyph, the colours, and the rule that hides a
+detail which only repeats the state word -- has exactly one definition.
 
 ## Known gaps
 
