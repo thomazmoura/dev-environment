@@ -5,15 +5,37 @@ Answers one question: **where did I leave each of my repositories?**
     prefix + t  then  R     one row per tmux session, live, in a normal pane
 
 ```
-● dev-environment
-  main ⇡4 ~6 ?2
-● Portal
-  feature/relatorios ⇣1
-● scratch
-  no-upstream-branch local +1
-· notes
-  not a repo
+ ● dev-environment
+   main ⇡4 ~6 ?2
+▎● Portal
+▎  feature/relatorios ⇣1
+ ● scratch
+   no-upstream-branch local +1
+ · notes
+   not a repo
 ```
+
+The blue rail down the left marks **the session you are in**, drawn along both
+lines of the entry so the whole row reads as the one you are standing in.
+
+It needs a channel of its own because every other one is taken: the marker's
+colour is the state, bold is the selected row, and the background is the
+selection band. Blue is the one hue neither a state nor a counter claims, so it
+cannot be misread as either.
+
+It is not the same thing as the selection, and the difference matters: the band
+says where your *cursor* is, the rail says where you *are*. Since the band only
+appears while the pane has focus, a feed you are merely glancing at from another
+pane has no band on screen at all -- and the rail is then the only thing
+answering "which of these am I in?".
+
+Which session that is comes from `$TMUX_PANE`, the pane the feed was started in,
+not from the attached client. The two agree whenever you can see the pane, and
+they disagree exactly when you have switched the client elsewhere -- at which
+point the row worth marking is still the one this pane lives in. It is resolved
+once at startup, so it costs nothing per refresh, and it is a consumer's
+question rather than a published field: the sampler is detached and belongs to
+no session.
 
     ⇡  commits to push (cyan)      +  added (green)       ?  untracked (grey)
     ⇣  commits to pull (magenta)   ~  modified (yellow)   !  conflicted (red)

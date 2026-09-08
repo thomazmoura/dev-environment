@@ -99,6 +99,16 @@ COUNTER_COLOUR = {
     "conflicted": curses.COLOR_RED,
 }
 
+# The rail marking the session you are in. Blue is the one hue neither a state
+# nor a counter claims, so it cannot be misread as either -- see CURRENT_RAIL in
+# Get-GitState.py for why this needs a channel of its own at all.
+#
+# It matters more than it looks: the selection band now comes and goes with the
+# pane's focus (ui.Focus), so in a feed you are only glancing at there is no
+# highlight on screen at all, and the rail is the only thing saying where you
+# are.
+RAIL_COLOUR = curses.COLOR_BLUE
+
 # Counters drawn in grey rather than their own hue: untracked files are the one
 # count that is usually noise, so it recedes.
 GREY_COUNTERS = ("untracked",)
@@ -210,7 +220,8 @@ def jump(session: str) -> None:
     )
 
 
-def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band):
+def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band,
+                  current: str):
     """The two lines of one entry, as (text, attribute) segments.
 
     Widths are decided per row rather than per column: the counters are measured
@@ -230,9 +241,18 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     marker_attr = coloured(STATE_COLOUR[repo.state]) if use_colour else body
     marker_attr |= STATE_EMPHASIS[repo.state]
 
+    # Drawn down both lines, so the whole entry -- not just its first line --
+    # reads as the one you are in.
+    railed = repo.session == current
+    gutter = state_cli.CURRENT_RAIL if railed else " "
+    rail_attr = (
+        (coloured(RAIL_COLOUR) | curses.A_BOLD) if (use_colour and railed) else body
+    )
+
     first = [
+        (gutter, rail_attr),
         (f"{state_cli.marker(repo)} ", marker_attr),
-        (ui.truncate(repo.session, width - 3), name_attr),
+        (ui.truncate(repo.session, width - state_cli.RAIL_WIDTH - 3), name_attr),
     ]
 
     cells = state_cli.counters(repo)
@@ -240,7 +260,7 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     note = state_cli.upstream_note(repo)
     detail = notes.get(note_key(repo), repo.detail)
 
-    room = width - len(ui.INDENT) - measured - 1
+    room = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - measured - 1
     if note:
         room -= len(note) + 1
     # A row with no repository has no branch, so the state label takes the slot
@@ -252,7 +272,11 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     # definition, and un-dimming it on selection made the highlight shout twice
     # -- once with the band, once by brightening text -- in a pane that is
     # usually not even focused.
-    second = [(ui.INDENT, body), (branch, body | curses.A_DIM)]
+    second = [
+        (gutter, rail_attr),
+        (ui.INDENT, body),
+        (branch, body | curses.A_DIM),
+    ]
     if note:
         second.append((f" {note}", body | curses.A_DIM))
     for cell in cells:
@@ -270,7 +294,7 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
 
 def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
-         focused: bool) -> None:
+         focused: bool, current: str) -> None:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
@@ -286,7 +310,9 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
         # No highlight at all in a pane that cannot act on it: see ui.Focus.
         chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
-        top, bottom = _row_segments(repo, chosen, width, palette, use_colour, band)
+        top, bottom = _row_segments(
+            repo, chosen, width, palette, use_colour, band, current
+        )
         fill = band if chosen else None
         ui.draw_line(stdscr, line, width, top, fill)
         if line + 1 < height:
@@ -344,13 +370,17 @@ def run(stdscr, interval: float) -> None:
     focus = ui.Focus(ui.pane_is_focused(), timeout_ms=100)
     focus.start()
 
+    # Resolved once: a pane does not change session, and this must not become a
+    # tmux call on the draw path.
+    current = gitr.current_session()
+
     repos = sample()
     selected = 0
     last_sample = time.monotonic()
     # Fetch threads change the detail column between samples, and at a three
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
-    draw(stdscr, repos, selected, use_colour, palette, band, focus.focused)
+    draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current)
 
     try:
         while True:
@@ -402,7 +432,7 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, repos, selected, use_colour, palette, band, focus.focused)
+                draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current)
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read

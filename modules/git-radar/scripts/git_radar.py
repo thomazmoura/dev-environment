@@ -147,6 +147,28 @@ def list_sessions() -> list[tuple[str, str]]:
     return sessions
 
 
+def current_session() -> str:
+    """The session the caller is running in, or "" outside tmux.
+
+    Resolved from $TMUX_PANE -- the pane this process was started in -- rather
+    than from the attached client's session. The two agree whenever you can see
+    the pane, and they disagree exactly when you have switched the client
+    somewhere else, at which point the row worth marking is still the one this
+    pane lives in, not wherever the client wandered off to.
+
+    Deliberately a consumer's question, not the sampler's: the daemon is
+    detached and belongs to no session, so this cannot be a published field. Each
+    consumer resolves it once at startup -- a pane does not change session.
+    """
+    pane = os.environ.get("TMUX_PANE")
+    if not pane:
+        return ""
+    code, out = _run(["tmux", "display-message", "-p", "-t", pane, "#{session_name}"])
+    if code != 0:
+        return ""
+    return out.strip()
+
+
 def repo_root(path: str) -> str:
     """The work tree containing `path`, or "" if there is not one.
 

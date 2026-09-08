@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Prints one row per tmux session: where its repository stands.
 
-    ● session  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
+    ▎● session  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
+
+The rail in the first column marks the session this is running in.
 
 A counter appears only when it is non-zero, and each has its own colour -- green
 added, yellow modified, red deleted, grey untracked -- so a row can be answered
@@ -112,6 +114,20 @@ STATE_LABEL = {
     gitr.NOREPO: "not a repo",
 }
 
+# The session you are in right now, marked in a gutter column of its own.
+#
+# It needs a channel no other signal is using, and the row has none left: the
+# marker's colour is the state, bold is the selected row, and the background is
+# the selection band. So it gets its own column, and blue -- the one hue neither
+# a state nor a counter claims. In the feed the rail is drawn down both lines of
+# the entry, which is what makes it findable without being read.
+#
+# It is emphatically not the same thing as the selection. The band says where
+# your cursor is; the rail says where you are.
+CURRENT_RAIL = "\u258e"
+RAIL_ANSI = "\033[94m"
+RAIL_WIDTH = 1
+
 # One glyph per row, coloured by state. It is the only thing on the row that is
 # always in the same place, so it is what the eye lands on first -- a red dot
 # three rows down is seen before any of the text is.
@@ -193,7 +209,21 @@ def counter_text(repo: gitr.Repo, coloured: bool = True) -> str:
     return " ".join(parts)
 
 
-def render_rows(repos: list[gitr.Repo], coloured: bool = True) -> list[str]:
+def rail(repo: gitr.Repo, current: str, coloured: bool = True) -> str:
+    """The gutter cell: a bar for the session you are in, a space for the rest.
+
+    A space, not nothing -- every row has to occupy the same columns or the
+    marker below a railed row sits one place to the left and the list looks
+    ragged.
+    """
+    if repo.session != current:
+        return " "
+    return f"{RAIL_ANSI}{CURRENT_RAIL}{RESET}" if coloured else CURRENT_RAIL
+
+
+def render_rows(
+    repos: list[gitr.Repo], coloured: bool = True, current: str = ""
+) -> list[str]:
     """One padded line per session, for the CLI and for fzf.
 
     Deliberately one line where the curses feed uses two: a line here is a
@@ -211,6 +241,7 @@ def render_rows(repos: list[gitr.Repo], coloured: bool = True) -> list[str]:
 
     rows = []
     for repo in repos:
+        gutter = rail(repo, current, coloured)
         glyph = marker(repo)
         note = upstream_note(repo)
         branch = branch_label(repo) + (f" {note}" if note else "")
@@ -232,20 +263,23 @@ def render_rows(repos: list[gitr.Repo], coloured: bool = True) -> list[str]:
             detail = f"  {DIM}{repo.detail}{RESET}" if coloured else f"  {repo.detail}"
 
         rows.append(
-            f"{glyph} {repo.session:<{session_width}}  {branch}{pad_branch}"
+            f"{gutter}{glyph} {repo.session:<{session_width}}  {branch}{pad_branch}"
             f"  {label}  {cells}{detail}".rstrip()
         )
     return rows
 
 
-def render_fzf(repos: list[gitr.Repo]) -> list[str]:
+def render_fzf(repos: list[gitr.Repo], current: str = "") -> list[str]:
     """One line per session: the session name, a tab, then the visible row.
 
     fzf is given --with-nth=2.. so the name is carried along invisibly and comes
     back on the selected line -- the same trick Select-Agent.sh uses to avoid
     parsing a display string back into a target.
     """
-    return [f"{repo.session}\t{row}" for repo, row in zip(repos, render_rows(repos))]
+    return [
+        f"{repo.session}\t{row}"
+        for repo, row in zip(repos, render_rows(repos, current=current))
+    ]
 
 
 def render_status(repos: list[gitr.Repo]) -> str:
@@ -282,9 +316,10 @@ def main() -> int:
     args = parser.parse_args()
 
     repos = feed.sample_cached() if args.cached else gitr.detect()
+    current = gitr.current_session()
 
     if args.format == "fzf":
-        for row in render_fzf(repos):
+        for row in render_fzf(repos, current):
             print(row)
         return 0
 
@@ -304,7 +339,7 @@ def main() -> int:
         return 0
 
     if args.format == "table":
-        for row in render_rows(repos, coloured=sys.stdout.isatty()):
+        for row in render_rows(repos, coloured=sys.stdout.isatty(), current=current):
             print(row)
         return 0
 
