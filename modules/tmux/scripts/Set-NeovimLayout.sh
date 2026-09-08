@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Applies the standard project layout to a tmux target: NeoVim in the main pane,
-# a terminal running the project's setup command below it, and the agent feed
-# beside that terminal.
+# Applies the standard project layout to a tmux target: a narrow radar column
+# on the left (the git feed above, the agent feed below) and, filling the rest
+# of the window, NeoVim with a terminal running the project's setup command
+# below it.
 #
 # Usage: Set-NeovimLayout.sh [-s] [target]
 #   -s       terminals in a 20% column on the right, split in two and without
-#            the agent feed (prefix+V), instead of the default row below
+#            the radar column (prefix+V), instead of the default layout
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
@@ -35,9 +36,11 @@ top="$(current_pane "${1:-}")"
 # helpers and build the project if it needs it, then leave the shell open.
 terminal="$(pwsh_command 'psgit && psfzf && Build-DotnetProjectIfNeeded' no-exit)"
 
-# The live agent feed, the same one prefix+t, r opens. No no-exit: quitting the
-# feed should close its pane, not drop you on a shell in a third of a row.
-feed="& $HOME/.modules/agent-radar/scripts/Watch-AgentFeed.py"
+# The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
+# no-exit on either: closing a feed should close its pane, not leave a shell
+# sitting in a sliver of the radar column.
+agent_feed="& $HOME/.modules/agent-radar/scripts/Watch-AgentFeed.py"
+git_feed="& $HOME/.modules/git-radar/scripts/Watch-GitFeed.py"
 
 if [ -n "$side" ]; then
   # A 20% column on the right, halved: a bare terminal on top and the setup
@@ -45,16 +48,20 @@ if [ -n "$side" ]; then
   column="$(new_pane "$top" "Terminal" "$(pwsh_command '')" -h -l 20%)"
   new_pane "$column" "Terminal" "$terminal" -v -l 50% >/dev/null
 else
-  # A 20% row below NeoVim, with the agent feed taking the right third of it.
-  # The feed is part of the default layout rather than something prefix+t, r
-  # has to open every time: it is the one pane whose whole job is to be read
-  # without being asked for.
-  bottom="$(new_pane "$top" "Terminal" "$terminal" -v -l 20%)"
-  new_pane "$bottom" "Agents" "$(pwsh_command "$feed")" -h -l 35% >/dev/null
-  # C-j from NeoVim is `select-pane -D`, which breaks the tie between the two
-  # panes below by most-recently-active. Touching the terminal after the feed
-  # makes that C-j land on the terminal instead of on the feed.
-  tmux select-pane -t "$bottom"
+  # A 12% radar column down the left edge -- git feed on top, agent feed under
+  # it -- and NeoVim over a 16% terminal row in what is left. The feeds are
+  # part of the default layout rather than something prefix+t, r/R has to open
+  # every time: they are the panes whose whole job is to be read without being
+  # asked for, so they get a column of their own that NeoVim never covers.
+  #
+  # `-b` puts the split *before* the pane being split, which is what makes the
+  # column land on the left of NeoVim instead of the right. The percentages are
+  # each relative to the pane being split, so 12% of the window goes to the
+  # column, 40% of that column to the agent feed, and 16% of the remaining 88%
+  # to the terminal.
+  radar="$(new_pane "$top" "Git" "$(pwsh_command "$git_feed")" -h -b -l 12%)"
+  new_pane "$radar" "Agents" "$(pwsh_command "$agent_feed")" -v -l 40% >/dev/null
+  new_pane "$top" "Terminal" "$terminal" -v -l 16% >/dev/null
 fi
 
 label_pane "$top" "NeoVim"
