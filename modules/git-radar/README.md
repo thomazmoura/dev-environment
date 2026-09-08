@@ -49,6 +49,17 @@ usually does.
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
 `f` fetches the selected repository, `q` quits.
 
+**The highlight follows the focus.** A feed is something you glance at from
+another pane, so a selection band sitting there permanently is a cursor you
+cannot move competing with the rows for attention. It appears when the pane has
+the focus and disappears when it loses it, using the terminal's own focus
+reporting (`CSI ?1004h`) which `focus-events on` in `modules/tmux/common.conf`
+makes tmux forward. Polling tmux instead would have cost about 14ms per ask --
+more per feed pane than sampling the whole machine does.
+
+The second line is dim whether or not its row is selected. It is secondary by
+definition, and brightening it on selection made the highlight shout twice.
+
 ## The two constraints that shape it
 
 **It never fetches on its own.** Ahead/behind comes from the origin refs already

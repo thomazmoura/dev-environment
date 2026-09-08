@@ -248,7 +248,11 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     text = state_cli.branch_label(repo) or state_cli.STATE_LABEL[repo.state]
     branch = ui.truncate(text, max(0, room))
 
-    second = [(ui.INDENT, body), (branch, body | (0 if chosen else curses.A_DIM))]
+    # Dim whether or not the row is selected. The second line is secondary by
+    # definition, and un-dimming it on selection made the highlight shout twice
+    # -- once with the band, once by brightening text -- in a pane that is
+    # usually not even focused.
+    second = [(ui.INDENT, body), (branch, body | curses.A_DIM)]
     if note:
         second.append((f" {note}", body | curses.A_DIM))
     for cell in cells:
@@ -260,12 +264,13 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
             attr |= curses.A_BOLD
         second.append((f" {cell.text}", attr))
     if detail:
-        second.append((f"  {detail}", body | (0 if chosen else curses.A_DIM)))
+        second.append((f"  {detail}", body | curses.A_DIM))
 
     return first, second
 
 
-def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band) -> None:
+def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
+         focused: bool) -> None:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
@@ -278,7 +283,8 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band) ->
     first_row = ui.window_start(selected, len(repos), visible)
 
     for offset, repo in enumerate(repos[first_row : first_row + visible]):
-        chosen = first_row + offset == selected
+        # No highlight at all in a pane that cannot act on it: see ui.Focus.
+        chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(repo, chosen, width, palette, use_colour, band)
         fill = band if chosen else None
@@ -331,20 +337,31 @@ def run(stdscr, interval: float) -> None:
     # the keyboard without a second thread.
     stdscr.timeout(100)
 
+    # The selection band only appears while this pane has the user's attention.
+    # A feed is usually something you glance at from another pane, and a
+    # permanent highlight there is a cursor that cannot be moved competing with
+    # the rows for attention. See ui.Focus.
+    focus = ui.Focus(ui.pane_is_focused(), timeout_ms=100)
+    focus.start()
+
     repos = sample()
     selected = 0
     last_sample = time.monotonic()
     # Fetch threads change the detail column between samples, and at a three
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
-    draw(stdscr, repos, selected, use_colour, palette, band)
+    draw(stdscr, repos, selected, use_colour, palette, band, focus.focused)
 
     try:
         while True:
             key = stdscr.getch()
             redraw = False
 
-            if key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
+            # Focus events arrive as ordinary keys and must not be read as
+            # input; consume() reports which ones they were.
+            if key != -1 and focus.consume(stdscr, key):
+                redraw = True
+            elif key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
                 return
             elif key in (ord("j"), curses.KEY_DOWN):
                 selected = min(selected + 1, max(0, len(repos) - 1))
@@ -385,8 +402,12 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, repos, selected, use_colour, palette, band)
+                draw(stdscr, repos, selected, use_colour, palette, band, focus.focused)
     finally:
+        # Stop asking for focus events before handing the terminal back: the
+        # next thing to run in this pane did not ask for them and would read
+        # them as keystrokes.
+        focus.stop()
         # curses.wrapper restores cooked mode on the way out, but through
         # nocbreak(), whose interaction with raw() ncurses does not promise.
         # Undo raw() with its own opposite: leaving a terminal unable to

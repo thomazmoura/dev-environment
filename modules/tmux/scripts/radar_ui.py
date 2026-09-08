@@ -17,6 +17,9 @@ belongs to neither radar, and both already reach into this directory.
 from __future__ import annotations
 
 import curses
+import os
+import subprocess
+import sys
 
 ELLIPSIS = "…"
 
@@ -146,3 +149,161 @@ def window_start(selected: int, count: int, visible: int) -> int:
 
 def visible_rows(height: int) -> int:
     return max(1, height // ROW_LINES)
+
+
+# --- Focus -------------------------------------------------------------------
+# A feed pane is usually *not* the pane you are typing in -- that is the point of
+# it -- so a selection band sitting there permanently is a highlight that means
+# nothing, competing for attention with the rows it is drawn among. The cursor
+# is only worth showing while the pane can act on it, so the highlight goes away
+# with the focus and comes back with it.
+#
+# The mechanism is the terminal's own: an application asks for focus reporting
+# with CSI ?1004h, and the terminal sends CSI I when it gains focus and CSI O
+# when it loses it. tmux forwards those to the pane, and modules/tmux/common.conf
+# already sets `focus-events on`, which is what makes it do so.
+#
+# The alternative was polling tmux, and it is worth saying why not: one
+# `tmux display-message` costs about 14ms, so asking often enough for the band to
+# fade promptly would cost more per feed pane than sampling the whole machine
+# does. Events cost nothing and arrive immediately.
+
+# ncurses 6.3 and later decode the two sequences itself and hands them over as
+# named keys, so the usual escape-sequence disambiguation is not needed. The
+# numbers it assigns are allocated at runtime, hence matching on the name.
+FOCUS_IN_NAME = b"kxIN"
+FOCUS_OUT_NAME = b"kxOUT"
+
+# How long to wait for the rest of a sequence after a bare ESC, on a terminal
+# whose ncurses did not decode it. Long enough that the bytes of a real sequence
+# have arrived (they come in one write), short enough that a real Esc keypress
+# still feels instant.
+ESC_PEEK_MS = 10
+
+# A CSI sequence ends at the first byte in 0x40-0x7e. The cap is only so that a
+# terminal emitting nonsense cannot hold the loop.
+MAX_SEQUENCE = 16
+
+
+def _write_raw(sequence: str) -> None:
+    """Send a terminal mode sequence out of band of curses' own output.
+
+    Safe to do while curses is up: mode sequences neither draw nor move the
+    cursor, so they cannot desynchronise its idea of the screen.
+    """
+    try:
+        sys.stdout.write(sequence)
+        sys.stdout.flush()
+    except (OSError, ValueError):
+        pass
+
+
+def _key_name(key: int) -> bytes:
+    if key < 0:
+        return b""
+    try:
+        return curses.keyname(key)
+    except (ValueError, OverflowError):
+        return b""
+
+
+def pane_is_focused() -> bool:
+    """Whether this pane is the one being looked at. Asked once, at startup.
+
+    Focus events report transitions, not state, so something has to establish
+    the starting point. A feed opened by New-ToolPane.sh is the freshly split
+    and therefore active pane, but Set-NeovimLayout.sh moves focus away right
+    afterwards, and that can happen before this process has asked for focus
+    reporting at all -- so the transition would be missed.
+
+    Fails open: if tmux cannot be asked, assume focused, because a highlight
+    that is wrongly present is a much smaller problem than a cursor that can
+    never be seen.
+    """
+    pane = os.environ.get("TMUX_PANE")
+    if not pane:
+        return True
+    try:
+        result = subprocess.run(
+            [
+                "tmux",
+                "display-message",
+                "-p",
+                "-t",
+                pane,
+                "#{pane_active}\t#{window_active}\t#{session_attached}",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if result.returncode != 0:
+        return True
+    fields = result.stdout.strip().split("\t")
+    if len(fields) != 3:
+        return True
+    pane_active, window_active, attached = fields
+    return pane_active == "1" and window_active == "1" and attached not in ("", "0")
+
+
+class Focus:
+    """Tracks whether the pane has the user's attention.
+
+    Consumers call `consume` with every key they read; it returns True for the
+    keys that were focus events and should not be treated as input.
+    """
+
+    def __init__(self, focused: bool = True, timeout_ms: int = 100) -> None:
+        self.focused = focused
+        self.timeout_ms = timeout_ms
+
+    def start(self) -> None:
+        _write_raw("\033[?1004h")
+
+    def stop(self) -> None:
+        _write_raw("\033[?1004l")
+
+    def consume(self, stdscr, key: int) -> bool:
+        name = _key_name(key)
+        if name == FOCUS_IN_NAME:
+            self.focused = True
+            return True
+        if name == FOCUS_OUT_NAME:
+            self.focused = False
+            return True
+        if key == 27:
+            return self._consume_escape(stdscr)
+        return False
+
+    def _consume_escape(self, stdscr) -> bool:
+        """Handle a bare ESC on a terminal whose ncurses did not decode focus.
+
+        Returns True when the ESC began a sequence -- which is then swallowed
+        whole, so no stray bytes reach the key handler -- and False when it was
+        a real Esc keypress for the caller to act on.
+        """
+        stdscr.timeout(ESC_PEEK_MS)
+        try:
+            following = stdscr.getch()
+            if following != ord("["):
+                if following != -1:
+                    curses.ungetch(following)
+                return False
+            final = -1
+            for _ in range(MAX_SEQUENCE):
+                byte = stdscr.getch()
+                if byte == -1:
+                    break
+                final = byte
+                if 0x40 <= byte <= 0x7E:
+                    break
+            if final == ord("I"):
+                self.focused = True
+            elif final == ord("O"):
+                self.focused = False
+            return True
+        finally:
+            stdscr.timeout(self.timeout_ms)

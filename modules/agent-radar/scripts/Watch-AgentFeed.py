@@ -171,9 +171,13 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     detail_room = budget - len(agent_text) - 2
     detail_text = ui.truncate(detail, detail_room) if detail and detail_room >= 3 else ""
 
+    # Dim whether or not the row is selected. The second line is secondary by
+    # definition, and un-dimming it on selection made the highlight shout twice
+    # -- once with the band, once by brightening text -- in a pane that is
+    # usually not even focused.
     second = [
         (ui.INDENT, body),
-        (agent_text, body | (0 if chosen else curses.A_DIM)),
+        (agent_text, body | curses.A_DIM),
     ]
     if detail_text:
         second.append(
@@ -181,14 +185,15 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
                 f"  {detail_text}",
                 state_attr
                 if pane.state == radar.BLOCKED
-                else body | (0 if chosen else curses.A_DIM),
+                else body | curses.A_DIM,
             )
         )
 
     return first, second
 
 
-def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band) -> None:
+def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band,
+         focused: bool) -> None:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
@@ -202,7 +207,8 @@ def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band) ->
     first_row = ui.window_start(selected, len(panes), visible)
 
     for offset, pane in enumerate(panes[first_row : first_row + visible]):
-        chosen = first_row + offset == selected
+        # No highlight at all in a pane that cannot act on it: see ui.Focus.
+        chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(
             pane, chosen, width, palette, use_colour, band, state_w
@@ -255,17 +261,28 @@ def run(stdscr, interval: float) -> None:
     # the keyboard without a second thread.
     stdscr.timeout(100)
 
+    # The selection band only appears while this pane has the user's attention.
+    # A feed is usually something you glance at from another pane, and a
+    # permanent highlight there is a cursor that cannot be moved competing with
+    # the rows for attention. See ui.Focus.
+    focus = ui.Focus(ui.pane_is_focused(), timeout_ms=100)
+    focus.start()
+
     panes = sample()
     selected = 0
     last_sample = time.monotonic()
-    draw(stdscr, panes, selected, use_colour, palette, band)
+    draw(stdscr, panes, selected, use_colour, palette, band, focus.focused)
 
     try:
         while True:
             key = stdscr.getch()
             redraw = False
 
-            if key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
+            # Focus events arrive as ordinary keys and must not be read as
+            # input; consume() reports which ones they were.
+            if key != -1 and focus.consume(stdscr, key):
+                redraw = True
+            elif key in (ord("q"), 27, 3):  # q, Esc, Ctrl-C
                 return
             elif key in (ord("j"), curses.KEY_DOWN):
                 selected = min(selected + 1, max(0, len(panes) - 1))
@@ -296,8 +313,12 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, panes, selected, use_colour, palette, band)
+                draw(stdscr, panes, selected, use_colour, palette, band, focus.focused)
     finally:
+        # Stop asking for focus events before handing the terminal back: the
+        # next thing to run in this pane did not ask for them and would read
+        # them as keystrokes.
+        focus.stop()
         # curses.wrapper restores cooked mode on the way out, but through
         # nocbreak(), whose interaction with raw() ncurses does not promise.
         # Undo raw() with its own opposite: leaving a terminal unable to

@@ -41,6 +41,17 @@ row land where you last saw one.
 both feeds draw with the primitives in
 [`modules/tmux/scripts/radar_ui.py`](../tmux/scripts/radar_ui.py).
 
+**The highlight follows the focus.** A feed is something you glance at from
+another pane, so a selection band sitting there permanently is a cursor you
+cannot move competing with the rows for attention. It appears when the pane has
+the focus and disappears when it loses it, using the terminal's own focus
+reporting (`CSI ?1004h`) which `focus-events on` in `modules/tmux/common.conf`
+makes tmux forward. Polling tmux instead would have cost about 14ms per ask --
+more per feed pane than sampling the whole machine does.
+
+The second line is dim whether or not its row is selected. It is secondary by
+definition, and brightening it on selection made the highlight shout twice.
+
 ## Why it is not demux
 
 demux is a state *display*. It never discovers anything on its own -- every
