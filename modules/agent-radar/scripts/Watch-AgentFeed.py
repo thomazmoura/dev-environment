@@ -15,8 +15,9 @@ only what it is asked to, repaints in place, and still gives j/k and Enter.
 
 Two lines per agent: the state and the session on top -- the two things you
 scan for -- with what kind of agent it is and whatever it is waiting on indented
-underneath. One line per agent was the first shape, and in a 35%-wide pane it
-padded every column to the width of the widest row, which turned the list into a
+underneath, and a rail down the left of the agent you are currently focused on.
+One line per agent was the first shape, and in a 35%-wide pane it padded every
+column to the width of the widest row, which turned the list into a
 block of grey text. Two lines let each row be exactly as wide as it needs to be.
 Watch-GitFeed.py has the same shape for the same reason, and both draw with the
 primitives in modules/tmux/scripts/radar_ui.py.
@@ -81,6 +82,12 @@ COLOUR = {
     radar.UNKNOWN: curses.COLOR_WHITE,
 }
 
+# The rail marking the agent you are focused on. Blue is the one hue none of the
+# four states claims, so it cannot be misread as one -- see CURRENT_RAIL in
+# Get-AgentState.py for why this needs a channel of its own at all, and
+# focused_pane below for how the row is chosen.
+RAIL_COLOUR = curses.COLOR_BLUE
+
 # The state word carries the colour, so it is emphasised; unknown is the one
 # state you are explicitly not being asked to look at.
 STATE_EMPHASIS = {
@@ -131,8 +138,35 @@ def state_width(panes: list) -> int:
     return max(len(state_cli.WAITING_LABEL[pane.state]) for pane in panes)
 
 
+def focused_pane(panes: list, current: str) -> str:
+    """The pane id of the agent you are focused on, or "" if that is not an agent.
+
+    Two halves, and they come from different places. `pane.active` is the
+    sampler's: the pane its session would show, published with the snapshot
+    because `tmux list-panes -a` already carried it (agent_feed.FIELDS). Whether
+    that session is *yours* is the consumer's, from $TMUX_PANE, and cannot be
+    published at all -- the sampler is detached and belongs to no session.
+
+    Empty is the common answer and the useful one: focus a Neovim pane, or this
+    feed itself, and no row is railed, which is exactly the report "you are not
+    in an agent right now". Only the panes list is consulted, so a session with
+    no agent in it can never produce a match either.
+
+    Asked per draw rather than per row: it is a scan of a list already in hand,
+    not a tmux call. What it must never become is the latter -- one
+    `display-message` is ~14ms, and a feed asking on every tick would cost more
+    per pane than sampling the whole machine does (see radar_ui.Focus).
+    """
+    if not current:
+        return ""
+    for pane in panes:
+        if pane.active and pane.session == current:
+            return pane.pane_id
+    return ""
+
+
 def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, band,
-                  state_w: int):
+                  state_w: int, focused_id: str):
     """The two lines of one entry, as (text, attribute) segments.
 
     State and session on top -- the two things you are scanning for -- with what
@@ -153,13 +187,28 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     if chosen:
         state_attr |= curses.A_BOLD
 
-    # Budgets subtract the same trailing column draw_line refuses to write into.
-    # Getting this off by one does not overflow -- draw_line clips -- it eats the
-    # ellipsis, so a truncated name silently reads as a shorter real one.
+    # Drawn down both lines, so the whole entry -- not just its first line --
+    # reads as the one you are in.
+    railed = pane.pane_id == focused_id
+    gutter = state_cli.CURRENT_RAIL if railed else " "
+    rail_attr = (
+        (coloured(RAIL_COLOUR) | curses.A_BOLD) if (use_colour and railed) else body
+    )
+
+    # Budgets subtract the rail's column and the same trailing column draw_line
+    # refuses to write into. Getting this off by one does not overflow --
+    # draw_line clips -- it eats the ellipsis, so a truncated name silently
+    # reads as a shorter real one.
     marker = f"{state_cli.GLYPH} {state:<{state_w}}  "
     first = [
+        (gutter, rail_attr),
         (marker, state_attr),
-        (ui.truncate(pane.session, width - len(marker) - 1), name_attr),
+        (
+            ui.truncate(
+                pane.session, width - state_cli.RAIL_WIDTH - len(marker) - 1
+            ),
+            name_attr,
+        ),
     ]
 
     # The detail is the one thing on the second line worth colouring: it is why
@@ -167,7 +216,7 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     # reads as one thing rather than two.
     detail = state_cli.extra_detail(pane)
     agent = state_cli.agent_line(pane)
-    budget = width - len(ui.INDENT) - 1
+    budget = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - 1
 
     # The detail is the more actionable half, so it is measured first and the
     # agent name gets what is left -- but never less than MIN_AGENT, because an
@@ -183,6 +232,7 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     # -- once with the band, once by brightening text -- in a pane that is
     # usually not even focused.
     second = [
+        (gutter, rail_attr),
         (ui.INDENT, body),
         (agent_text, body | curses.A_DIM),
     ]
@@ -200,7 +250,7 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
 
 
 def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band,
-         focused: bool) -> None:
+         focused: bool, current: str) -> None:
     stdscr.erase()
     height, width = stdscr.getmaxyx()
 
@@ -210,6 +260,7 @@ def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band,
         return
 
     state_w = state_width(panes)
+    focused_id = focused_pane(panes, current)
     visible = ui.visible_rows(height)
     first_row = ui.window_start(selected, len(panes), visible)
 
@@ -218,7 +269,7 @@ def draw(stdscr, panes: list, selected: int, use_colour: bool, palette, band,
         chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(
-            pane, chosen, width, palette, use_colour, band, state_w
+            pane, chosen, width, palette, use_colour, band, state_w, focused_id
         )
         fill = band if chosen else None
         ui.draw_line(stdscr, line, width, top, fill)
@@ -277,10 +328,16 @@ def run(stdscr, interval: float) -> None:
     focus = ui.Focus(ui.pane_is_focused(), timeout_ms=100)
     focus.start()
 
+    # Resolved once: a pane does not change session, and this must not become a
+    # tmux call on the draw path. Which agent within that session has the focus
+    # does change, constantly, and comes off each sample instead -- so the rail
+    # follows you at the sampling rate, without asking tmux anything.
+    current = radar.current_session()
+
     panes = sample()
     selected = 0
     last_sample = time.monotonic()
-    draw(stdscr, panes, selected, use_colour, palette, band, focus.focused)
+    draw(stdscr, panes, selected, use_colour, palette, band, focus.focused, current)
 
     try:
         while True:
@@ -328,7 +385,10 @@ def run(stdscr, interval: float) -> None:
                 redraw = True
 
             if redraw:
-                draw(stdscr, panes, selected, use_colour, palette, band, focus.focused)
+                draw(
+                    stdscr, panes, selected, use_colour, palette, band,
+                    focus.focused, current,
+                )
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read

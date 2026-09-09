@@ -19,12 +19,12 @@ The curses feed on `r` gives each agent two lines instead -- state and session
 on top, what kind of agent it is and whatever it is waiting on underneath:
 
 ```
-● waiting  Autotrac_Starlink_Portal
-  Claude Code  permission prompt
-● working  dev-environment
-  Claude Code
-● idle     herdr
-  Claude Code  ready
+ ● waiting  Autotrac_Starlink_Portal
+   Claude Code  permission prompt
+▎● working  dev-environment
+▎  Claude Code
+ ● idle     herdr
+   Claude Code  ready
 ```
 
 One line per agent was the original shape, and in a 35%-wide pane it padded
@@ -40,6 +40,39 @@ row land where you last saw one.
 [git-radar](../git-radar/README.md) has the same shape for the same reasons, and
 both feeds draw with the primitives in
 [`modules/tmux/scripts/radar_ui.py`](../tmux/scripts/radar_ui.py).
+
+The blue rail down the left marks **the agent you are focused on**, drawn along
+both lines of the entry so the whole row reads as the one you are typing in. It
+appears the moment you focus that agent's pane and is gone the moment you focus
+anything else -- a Neovim pane, another agent, or this feed itself. No rail is
+the normal state and a real answer: *you are not in an agent right now*.
+
+It needs a channel of its own because every other one is taken: the state word's
+colour is the state, bold is the selected row, and the background is the
+selection band. Blue is the one hue none of the four states claims, so it cannot
+be misread as one. It is the same mark, in the same colour, as
+[git-radar](../git-radar/README.md)'s "you are here" rail.
+
+It is not the same thing as the selection, and the difference is the whole
+point: the band says where your *cursor* is, the rail says where you *are*, and
+here the two can never be about the same row -- focusing an agent's pane is
+exactly what takes the focus away from the feed, so the band has already gone by
+the time the rail arrives.
+
+Which agent that is comes from two places that cannot be one. The sampler
+publishes the machine-wide half with the snapshot -- which pane each session
+would show -- for free, since its `tmux list-panes -a` already carried it.
+Whether that session is *yours* is the feed's own half, resolved once at startup
+from `$TMUX_PANE` rather than from the attached client, so a client switched
+elsewhere does not move the answer off the pane that asked. The sampler cannot
+answer it at all: it is detached and belongs to no session.
+
+Asking tmux directly on every tick was the obvious alternative and is the wrong
+one, for the same reason the focus handling below does not poll: one
+`display-message` costs about 14ms, so a feed asking once a second would cost
+more per pane than sampling the whole machine does -- times every feed pane
+open. The rail therefore follows you at the sampling rate, without a single
+extra tmux call anywhere.
 
 **The highlight follows the focus.** A feed is something you glance at from
 another pane, so a selection band sitting there permanently is a cursor you

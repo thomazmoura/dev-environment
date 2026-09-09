@@ -78,6 +78,11 @@ FIELDS = (
     "tty",
     "title",
     "current_command",
+    # Which pane its session would show. Published rather than asked for by
+    # each consumer: the sampler's `tmux list-panes -a` already carries it, so
+    # it costs nothing here, where a `display-message` per feed per tick is the
+    # exact per-consumer cost this file exists to remove.
+    "active",
     "agent",
     "state",
     "detail",
@@ -94,12 +99,34 @@ PENDING_IDLE_CONFIRMATIONS = 3
 PENDING_IDLE_CAP_SECONDS = 0.7
 
 
+# Fields a snapshot is allowed to lack, and what they mean when it does.
+#
+# radar_cache reads rows strictly on purpose, and for everything a row's meaning
+# depends on that is right: a payload from an older radar is unusable, and
+# sampling live is merely slower. `active` is the exception, because being
+# strict about it costs more than it can ever save. The daemon holds the lock
+# for as long as it lives, so an older one keeps publishing rows this cannot
+# decode; every consumer then falls back to sampling live -- and every one of
+# those reads touches the heartbeat, so the daemon never idle-exits and never
+# gets replaced. The machine would sample per consumer forever over a field
+# whose absence costs nothing: no `active` means no rail, which is what the feed
+# already shows whenever you are not focused on an agent.
+OPTIONAL_FIELDS = {"active": False}
+
+
 def _encode(pane: radar.Pane) -> dict:
     return {field: getattr(pane, field) for field in FIELDS}
 
 
 def _decode(entry: dict) -> radar.Pane:
-    return radar.Pane(**{field: entry[field] for field in FIELDS})
+    return radar.Pane(
+        **{
+            field: entry.get(field, OPTIONAL_FIELDS[field])
+            if field in OPTIONAL_FIELDS
+            else entry[field]
+            for field in FIELDS
+        }
+    )
 
 
 CACHE = radar_cache.RadarCache(

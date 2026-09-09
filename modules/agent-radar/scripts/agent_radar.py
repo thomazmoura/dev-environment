@@ -111,6 +111,10 @@ class Pane:
     tty: str
     title: str
     current_command: str
+    # The pane its session would show: active in its window, in the session's
+    # current window. Not "focused" -- that needs a session to be focused *in*,
+    # which is the consumer's half of the question. See list_panes.
+    active: bool = False
     agent: str | None = None
     snapshot: str = ""
     state: str = UNKNOWN
@@ -153,16 +157,46 @@ def list_panes() -> list[Pane]:
             "#{pane_tty}",
             "#{pane_title}",
             "#{pane_current_command}",
+            # Two flags rather than one `#{&&:...}` expression: the combination
+            # is a Python-side detail, and a format string that fails on an
+            # older tmux would take the whole row with it.
+            "#{pane_active}",
+            "#{window_active}",
         ]
     )
     out = _run(["tmux", "list-panes", "-a", "-F", fmt])
     panes = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 7:
+        if len(fields) != 9:
             continue
-        panes.append(Pane(*fields))
+        panes.append(
+            Pane(*fields[:7], active=(fields[7] == "1" and fields[8] == "1"))
+        )
     return panes
+
+
+def current_session() -> str:
+    """The session the caller is running in, or "" outside tmux.
+
+    Resolved from $TMUX_PANE -- the pane this process was started in -- rather
+    than from the attached client's session, so a client that has been switched
+    elsewhere does not move the answer off the pane that asked.
+
+    The consumer's half of "which agent am I focused on". `Pane.active` is the
+    machine-wide half and is published with the snapshot; this cannot be,
+    because the sampler is detached and belongs to no session. Each consumer
+    asks once at startup -- a pane does not change session.
+
+    The same function, for the same reasons, as git_radar.current_session. The
+    two detectors are deliberately independent engines, so it is duplicated
+    rather than shared.
+    """
+    pane = os.environ.get("TMUX_PANE")
+    if not pane:
+        return ""
+    out = _run(["tmux", "display-message", "-p", "-t", pane, "#{session_name}"])
+    return out.strip()
 
 
 def list_processes() -> dict[str, list[Process]]:

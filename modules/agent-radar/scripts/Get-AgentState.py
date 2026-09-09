@@ -54,6 +54,26 @@ import agent_radar as radar  # noqa: E402
 # scheme that does not carry a wcwidth table.
 GLYPH = "\u25cf"
 
+# The agent you are focused on right now, marked in a gutter column of its own.
+#
+# It needs a channel no other signal is using, and the row has none left: the
+# state word's colour is the state, bold is the selected row, and the background
+# is the selection band. So it gets its own column, and blue -- the one hue the
+# four states do not claim. The feed draws it down both lines of the entry,
+# which is what makes it findable without being read.
+#
+# It is emphatically not the same thing as the selection. The band says where
+# your cursor is; the rail says where you are. The two are never both about the
+# same row here, which is the whole point: focusing an agent's pane is what
+# takes the focus *away* from the feed, so the band is gone by the time the rail
+# appears.
+#
+# Deliberately the same glyph, width and colour as CURRENT_RAIL in
+# git-radar's Get-GitState.py: the two feeds sit side by side in the layout, and
+# a mark that means "you are here" in one has to mean it in the other.
+CURRENT_RAIL = "\u258e"
+RAIL_WIDTH = 1
+
 ANSI = {
     radar.BLOCKED: "\033[91m",   # bright red -- the row you opened the list for
     radar.WORKING: "\033[33m",
