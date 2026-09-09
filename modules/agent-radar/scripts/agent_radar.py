@@ -42,20 +42,38 @@ sys.path.insert(0, str(SHARED_SCRIPTS))
 import radar_cache  # noqa: E402
 
 # --- States ------------------------------------------------------------------
-# Four, and resist adding a fifth (herdr S3.6). "Waiting for input" is BLOCKED;
-# the difference between "waiting for approval" and "waiting for a prompt" is
-# already carried by BLOCKED vs IDLE, and every consumer would have to learn a
-# new value to gain nothing.
+# Four things a *screen* can say, and resist adding a fifth (herdr S3.6).
+# "Waiting for input" is BLOCKED; the difference between "waiting for approval"
+# and "waiting for a prompt" is already carried by BLOCKED vs IDLE, and every
+# consumer would have to learn a new value to gain nothing.
 BLOCKED = "blocked"
 WORKING = "working"
 IDLE = "idle"
 UNKNOWN = "unknown"
 
+# What a rule may declare, and therefore everything classify() can return.
 STATES = (BLOCKED, WORKING, IDLE, UNKNOWN)
 
+# The fifth published value -- and the reason it does not walk the rule above
+# back. No screen can show DONE. It is IDLE plus a fact no snapshot contains:
+# this pane was working a moment ago and nothing has displayed it since. So it
+# is not classified but *remembered*, by the one process that keeps state across
+# samples (agent_feed.debounce), and a rule that tries to declare it is a load
+# error like any other unknown state.
+#
+# What it buys is the distinction the four could not draw: an idle pane is
+# either an agent that has never been asked anything, or one whose answer you
+# already read, or one that finished while you were elsewhere -- and only the
+# last of those wants you. Green now means exactly that, and IDLE goes grey.
+DONE = "done"
+
+# Everything a consumer may be handed, as opposed to everything a rule may say.
+PUBLISHED_STATES = STATES + (DONE,)
+
 # Presentation lives with the consumers, but the ordering is a detection fact:
-# a blocked agent is the reason you opened the list, so it sorts first.
-STATE_ORDER = {BLOCKED: 0, WORKING: 1, UNKNOWN: 2, IDLE: 3}
+# the two states that mean "your turn" sort above the three that do not, blocked
+# first because it is the reason you opened the list.
+STATE_ORDER = {BLOCKED: 0, DONE: 1, WORKING: 2, UNKNOWN: 3, IDLE: 4}
 
 # --- Layer 1: identification -------------------------------------------------
 # Executable basename -> canonical agent label. Reverse of herdr's agent table
@@ -115,6 +133,12 @@ class Pane:
     # current window. Not "focused" -- that needs a session to be focused *in*,
     # which is the consumer's half of the question. See list_panes.
     active: bool = False
+    # Whether any client is attached to this pane's session. On its own it says
+    # nothing; `active and attached` is "some client is displaying this pane
+    # right now", which is what retires DONE (agent_feed.debounce). Deliberately
+    # not published: only the sampler ever reads it, at the moment it decides
+    # the state, so no consumer has to learn a second field to get the answer.
+    attached: bool = False
     agent: str | None = None
     snapshot: str = ""
     state: str = UNKNOWN
@@ -162,16 +186,24 @@ def list_panes() -> list[Pane]:
             # older tmux would take the whole row with it.
             "#{pane_active}",
             "#{window_active}",
+            # Free here, and the difference between "finished" and "finished
+            # while you were watching": a client count for the pane's session.
+            "#{session_attached}",
         ]
     )
     out = _run(["tmux", "list-panes", "-a", "-F", fmt])
     panes = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 9:
+        if len(fields) != 10:
             continue
         panes.append(
-            Pane(*fields[:7], active=(fields[7] == "1" and fields[8] == "1"))
+            Pane(
+                *fields[:7],
+                active=(fields[7] == "1" and fields[8] == "1"),
+                # A count, not a flag: several clients can share a session.
+                attached=(fields[9] not in ("", "0")),
+            )
         )
     return panes
 

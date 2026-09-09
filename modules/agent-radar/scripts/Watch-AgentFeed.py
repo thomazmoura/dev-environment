@@ -23,7 +23,7 @@ Watch-GitFeed.py has the same shape for the same reason, and both draw with the
 primitives in modules/tmux/scripts/radar_ui.py.
 
 The state word stays padded, unlike anything on the second line: the vocabulary
-is four fixed words, so that column cannot grow to swallow the row, and keeping
+is five fixed words, so that column cannot grow to swallow the row, and keeping
 it aligned is what lets the session names start in the same place down the pane.
 A `waiting` row therefore lands where you last saw one.
 
@@ -71,11 +71,14 @@ _spec = importlib.util.spec_from_file_location(
 state_cli = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(state_cli)
 
-# The same four colours as the ANSI map in Get-AgentState.py, in curses terms.
+# The same colours as the ANSI map in Get-AgentState.py, in curses terms. Green
+# belongs to DONE alone -- an agent that finished while you were elsewhere --
+# and idle drops to plain white, because "nothing to collect here" is not news.
 COLOUR = {
     radar.BLOCKED: curses.COLOR_RED,
     radar.WORKING: curses.COLOR_YELLOW,
-    radar.IDLE: curses.COLOR_GREEN,
+    radar.DONE: curses.COLOR_GREEN,
+    radar.IDLE: curses.COLOR_WHITE,
     # Resolved against the palette size at startup: "bright black" is colour 8,
     # which only exists on a 16-colour terminal. COLOR_BLACK is not a substitute
     # -- on a dark background it is invisible.
@@ -88,12 +91,15 @@ COLOUR = {
 # focused_pane below for how the row is chosen.
 RAIL_COLOUR = curses.COLOR_BLUE
 
-# The state word carries the colour, so it is emphasised; unknown is the one
-# state you are explicitly not being asked to look at.
+# The state word carries the colour, so it is emphasised -- except in the two
+# states that are explicitly not asking for you. Idle lost its bold along with
+# its green: a pane you have already read should sit quietly under the ones that
+# have something to say.
 STATE_EMPHASIS = {
     radar.BLOCKED: curses.A_BOLD,
+    radar.DONE: curses.A_BOLD,
     radar.WORKING: curses.A_BOLD,
-    radar.IDLE: curses.A_BOLD,
+    radar.IDLE: curses.A_NORMAL,
     radar.UNKNOWN: curses.A_DIM,
 }
 
@@ -130,7 +136,7 @@ def jump(pane_id: str) -> None:
 def state_width(panes: list) -> int:
     """How wide the state word column has to be.
 
-    Padded, unlike anything on the second line: the vocabulary is four fixed
+    Padded, unlike anything on the second line: the vocabulary is five fixed
     words, so the column can never grow to swallow the row the way a padded
     session or branch column does. Keeping it aligned is what lets the session
     names start at the same place down the pane.

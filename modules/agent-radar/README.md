@@ -5,12 +5,13 @@ Answers one question: **which coding agent is waiting for me right now?**
     prefix + t  then  a     popup picker -- pick an agent, jump to its pane
     prefix + t  then  A     the same list, live, in a normal pane
     prefix + t  then  r     the same live pane, chrome-free (curses, not fzf)
-    status bar              ●2●1  -- two waiting, one working
+    status bar              ●2●1●1  -- two waiting, one finished, one working
 
 The picker and the fzf watcher list one agent per line:
 
 ```
 Autotrac_Starlink_Portal  Claude Code  claude  ● waiting  permission prompt
+notas                     Claude Code  claude  ● done     ready
 dev-environment           Claude Code  claude  ● working
 herdr                     Claude Code  claude  ● idle     ready
 ```
@@ -21,6 +22,8 @@ on top, what kind of agent it is and whatever it is waiting on underneath:
 ```
  ● waiting  Autotrac_Starlink_Portal
    Claude Code  permission prompt
+ ● done     notas
+   Claude Code  ready
 ▎● working  dev-environment
 ▎  Claude Code
  ● idle     herdr
@@ -33,7 +36,7 @@ of grey text. Two lines let each row be exactly as wide as it needs to be; when
 the pane is narrower than a row, the session and the agent name are truncated
 with an ellipsis before the detail is, because the detail is why you looked.
 
-The state word stays padded -- the vocabulary is four fixed words, so that column
+The state word stays padded -- the vocabulary is five fixed words, so that column
 cannot grow to swallow the row, and keeping it aligned is what makes a `waiting`
 row land where you last saw one.
 
@@ -49,7 +52,7 @@ the normal state and a real answer: *you are not in an agent right now*.
 
 It needs a channel of its own because every other one is taken: the state word's
 colour is the state, bold is the selected row, and the background is the
-selection band. Blue is the one hue none of the four states claims, so it cannot
+selection band. Blue is the one hue none of the five states claims, so it cannot
 be misread as one. It is the same mark, in the same colour, as
 [git-radar](../git-radar/README.md)'s "you are here" rail.
 
@@ -264,17 +267,69 @@ an event, so demux and herdr keep working. To paste it by hand instead:
 that outlives its dialog is the failure users would never forgive. `PreToolUse`
 is *not* among them: it fires **before** the permission prompt it would clear.
 
-## The four states
+## The four states a screen can be in
 
-`blocked` · `working` · `idle` · `unknown`. There is no fifth. "Waiting for
-input" **is** `blocked` -- the difference between waiting for approval and
-waiting for a prompt is already carried by `blocked` vs `idle`, and a fifth value
-would have to be taught to every consumer to gain nothing.
+`blocked` · `working` · `idle` · `unknown`. There is no fifth, and there cannot
+be: this is the vocabulary of *classification*, and a rule that names anything
+else is a load error. "Waiting for input" **is** `blocked` -- the difference
+between waiting for approval and waiting for a prompt is already carried by
+`blocked` vs `idle`.
 
 An agent that is identified but whose screen matches no rule falls back to
 `idle`, never to a guessed `blocked`. The direction is the point: a false idle
 costs a stale row, a false blocked sends you to a pane that did not need you,
 and a display that cries wolf stops being read.
+
+## `done`, the fifth state nothing can classify
+
+`idle` answered two different questions with one word. An agent that has never
+been asked anything, an agent whose answer you read an hour ago, and an agent
+that finished a twenty-minute job while you were in another session were all the
+same green row -- and only the last of them wanted you. So green went unread,
+which is the failure mode this whole tool exists to avoid.
+
+`done` is that third case, and it is not a fifth thing a screen can say. No
+snapshot contains it: it is `idle` **plus** two facts about the past --
+
+    this pane was working a moment ago
+    and nothing has displayed it since
+
+-- so it is not classified but *remembered*. That places it exactly: the one
+component that already holds state across samples is `agent_feed.debounce`,
+where the `working -> idle` smoothing lives, and for the same reason (it
+compares each sample against the previous one, so it is only correct while one
+process takes all the samples). `done` is that same confirmed transition,
+committed to a different word.
+
+| | |
+| --- | --- |
+| `done` is created | when a confirmed `working -> idle` lands on a pane nothing was displaying |
+| `done` ends | when some client displays the pane -- or when the agent starts doing something again |
+| `done` never appears | for an agent that was never seen working, however long it sits there |
+
+**"Have you looked at it?" costs nothing to ask.** `tmux list-panes -a` already
+carried `#{pane_active}` and `#{window_active}` for the focus rail; adding
+`#{session_attached}` to the same format makes `active and attached` mean *some
+client is displaying this pane right now*. Zero extra tmux calls, on the one
+process that samples -- and per-consumer tmux calls are what
+[the sampler section](#one-sampler-many-readers) exists to prevent.
+
+It is a coarser question than the rail's "which agent are *you* in", and
+deliberately so. The rail's answer needs `$TMUX_PANE` and is therefore each
+consumer's own; the sampler is detached and belongs to no session, so it cannot
+ask it. Two attached clients showing two agents means both were seen -- which
+is true, they are both on a screen in front of you.
+
+Colour follows the meaning rather than the other way round: **green now means
+"there is something here for you"**, and only `done` is that. `idle` takes grey,
+loses its bold, and sinks below `working` in the sort. The status bar counts
+`done` for the same reason it refuses to count `idle` -- a dot that is always
+lit teaches you to skip the segment, and this one clears itself the moment you
+look at the pane.
+
+Restarting the sampler is what deploys a change to any of this
+(`pkill -f Start-AgentRadar.py`; the next consumer respawns it). A running
+daemon has the old code in memory and keeps holding the lock.
 
 ## Writing rules
 
@@ -346,7 +401,7 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | Path | |
 | --- | --- |
 | `scripts/agent_radar.py` | the engine: identification, regions, gates, classification |
-| `scripts/agent_feed.py` | agent-specific backend: which fields get published, and the debounce |
+| `scripts/agent_feed.py` | agent-specific backend: which fields get published, the debounce, and `done` |
 | `../tmux/scripts/radar_cache.py` | shared with git-radar: publish, read, flock liveness, spawn-if-missing |
 | `../tmux/scripts/radar_ui.py` | shared with git-radar: curses palette, banding, truncation |
 | `scripts/Start-AgentRadar.py` | the one sampler; started by whichever consumer notices it is missing |

@@ -185,15 +185,25 @@ def daemon_script() -> Path:
 
 
 def debounce(panes: list[radar.Pane]) -> None:
-    """Smooth working -> idle transitions, in place.
+    """Turn classified states into published ones, in place.
 
-    Only that one transition is held. Positive evidence needs no confirmation:
-    a matched blocked rule publishes immediately, because the entire point of
-    the tool is to tell you about it now.
+    Two things happen here, and both are the same kind of thing: a fact about
+    the *previous* sample changing what this one publishes. That is why they sit
+    with the single sampler rather than in a consumer -- they are only correct
+    while one process takes all the samples. The daemon is that process.
 
-    This lives in the backend rather than in a consumer because it is stateful:
-    it compares against the previous sample, so it is only correct when one
-    process takes all the samples. The daemon is that process.
+      working -> idle is held until confirmed, so a working agent blinking
+      through an idle-looking frame between tool calls does not flicker.
+
+      a confirmed working -> idle publishes DONE rather than IDLE, unless some
+      client was displaying the pane when it landed -- in which case you watched
+      it finish, and there is nothing left to tell you. DONE then stands until
+      you look, which is the whole reason it exists: IDLE could not tell an
+      agent that has never been asked anything from one that just answered.
+
+    Only that one transition is smoothed. Positive evidence needs no
+    confirmation: a matched blocked rule publishes immediately, because the
+    entire point of the tool is to tell you about it now.
     """
     path = debounce_path()
     try:
@@ -207,21 +217,38 @@ def debounce(panes: list[radar.Pane]) -> None:
         entry = previous.get(pane.pane_id, {})
         published = entry.get("published")
         raw = pane.state
+        # Some client is displaying this pane, so whatever it has to show you,
+        # you are being shown. Both halves come off the sample: `active` is
+        # tmux's "the pane its session would draw", `attached` its "someone is
+        # looking at that session". Neither is worth a tmux call of its own --
+        # list_panes already carried them.
+        seen = pane.active and pane.attached
 
         if published == radar.WORKING and raw == radar.IDLE:
             count = entry.get("count", 0) + 1
             first = entry.get("first", now)
             if count >= PENDING_IDLE_CONFIRMATIONS or now - first >= PENDING_IDLE_CAP_SECONDS:
-                published = raw
+                # The one place DONE is ever created: an agent that was working
+                # has stopped, and you were not there to see it.
+                published = radar.IDLE if seen else radar.DONE
                 count, first = 0, now
             else:
                 # Keep reporting working, and keep the detail that came with it
                 # so the row does not half-update.
-                pane.state = radar.WORKING
+                published = radar.WORKING
                 pane.detail = entry.get("detail", pane.detail)
+        elif published == radar.DONE and raw in (radar.IDLE, radar.UNKNOWN):
+            # DONE deliberately outlives the sample that created it, and ends in
+            # exactly two ways: you look at the pane, or the agent does
+            # something again -- which is the branch below, since raw would no
+            # longer be idle. A momentary UNKNOWN is neither, so it holds.
+            published = radar.IDLE if seen else radar.DONE
+            count, first = 0, now
         else:
             published = raw
             count, first = 0, now
+
+        pane.state = published
 
         current[pane.pane_id] = {
             "published": published,
@@ -238,6 +265,12 @@ def sample() -> list[radar.Pane]:
     """One live reading of the world, smoothed. The expensive path."""
     panes = radar.detect()
     debounce(panes)
+    # detect() sorted by the classified state, and debounce has just changed
+    # some of them -- a held working, a DONE. Sort again, or a row sits under
+    # the heading its old state earned it.
+    panes.sort(
+        key=lambda p: (radar.STATE_ORDER.get(p.state, 9), p.session, p.pane_id)
+    )
     return panes
 
 

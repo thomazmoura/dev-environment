@@ -74,10 +74,16 @@ GLYPH = "\u25cf"
 CURRENT_RAIL = "\u258e"
 RAIL_WIDTH = 1
 
+# Green is "there is something here for you", and only DONE is that: an agent
+# that finished while you were elsewhere. IDLE used to hold it and could not
+# earn it -- an agent sitting at a fresh prompt and one whose answer you read an
+# hour ago are the same green row, which is a colour you learn to skip. Grey
+# says "nothing to collect", which is what idle actually means.
 ANSI = {
     radar.BLOCKED: "\033[91m",   # bright red -- the row you opened the list for
     radar.WORKING: "\033[33m",
-    radar.IDLE: "\033[32m",
+    radar.DONE: "\033[32m",
+    radar.IDLE: "\033[37m",      # grey, but a lighter one than unknown's
     radar.UNKNOWN: "\033[90m",
 }
 RESET = "\033[0m"
@@ -87,15 +93,17 @@ DIM = "\033[2m"
 TMUX_COLOUR = {
     radar.BLOCKED: "#f38ba8",
     radar.WORKING: "#f9e2af",
-    radar.IDLE: "#a6e3a1",
+    radar.DONE: "#a6e3a1",
+    radar.IDLE: "#9399b2",
     radar.UNKNOWN: "#6c7086",
 }
 
 WAITING_LABEL = {
-    # The vocabulary is herdr's four states; the words shown are the ones that
-    # answer the question you actually asked. "blocked" is jargon for "it wants
-    # you", so say that.
+    # The vocabulary is herdr's four states plus DONE; the words shown are the
+    # ones that answer the question you actually asked. "blocked" is jargon for
+    # "it wants you", so say that.
     radar.BLOCKED: "waiting",
+    radar.DONE: "done",
     radar.WORKING: "working",
     radar.IDLE: "idle",
     radar.UNKNOWN: "unknown",
@@ -155,15 +163,17 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
 def render_status(panes: list[radar.Pane]) -> str:
     """A compact count per state for the tmux status bar.
 
-    Idle agents are omitted: the status bar is glanced at, not read, and a green
-    dot that is always present teaches you to ignore the whole segment.
+    Idle agents are omitted: the status bar is glanced at, not read, and a dot
+    that is always present teaches you to ignore the whole segment. DONE is
+    counted precisely because it cannot always be present -- it clears itself
+    the moment you look at the pane, so a green dot here is news every time.
     """
     counts: dict[str, int] = {}
     for p in panes:
         counts[p.state] = counts.get(p.state, 0) + 1
     parts = [
         f"#[fg={TMUX_COLOUR[state]}]{GLYPH}{counts[state]}"
-        for state in (radar.BLOCKED, radar.WORKING, radar.UNKNOWN)
+        for state in (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
         if counts.get(state)
     ]
     if not parts:
