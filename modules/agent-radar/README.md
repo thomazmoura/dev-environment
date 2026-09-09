@@ -52,8 +52,9 @@ the normal state and a real answer: *you are not in an agent right now*.
 
 It needs a channel of its own because every other one is taken: the state word's
 colour is the state, bold is the selected row, and the background is the
-selection band. Blue is the one hue none of the five states claims, so it cannot
-be misread as one. It is the same mark, in the same colour, as
+selection band. Blue is the one hue no state claims -- idle's muted teal is the
+nearest and is neither saturated nor ever drawn in this column -- so the rail
+cannot be misread as a state. It is the same mark, in the same colour, as
 [git-radar](../git-radar/README.md)'s "you are here" rail.
 
 It is not the same thing as the selection, and the difference is the whole
@@ -321,8 +322,12 @@ ask it. Two attached clients showing two agents means both were seen -- which
 is true, they are both on a screen in front of you.
 
 Colour follows the meaning rather than the other way round: **green now means
-"there is something here for you"**, and only `done` is that. `idle` takes grey,
-loses its bold, and sinks below `working` in the sort. The status bar counts
+"there is something here for you"**, and only `done` is that. `idle` loses its
+bold and sinks below `working` in the sort, and takes a muted teal -- quiet
+enough not to compete with the states that do want you, but still a colour. It
+was plain white for one revision, which is the colour the session names and
+everything else are drawn in, and a feed of idle agents read as one
+undifferentiated block of text. The status bar counts
 `done` for the same reason it refuses to count `idle` -- a dot that is always
 lit teaches you to skip the segment, and this one clears itself the moment you
 look at the pane.

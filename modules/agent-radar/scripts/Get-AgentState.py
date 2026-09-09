@@ -77,13 +77,21 @@ RAIL_WIDTH = 1
 # Green is "there is something here for you", and only DONE is that: an agent
 # that finished while you were elsewhere. IDLE used to hold it and could not
 # earn it -- an agent sitting at a fresh prompt and one whose answer you read an
-# hour ago are the same green row, which is a colour you learn to skip. Grey
-# says "nothing to collect", which is what idle actually means.
+# hour ago are the same green row, which is a colour you learn to skip.
+#
+# What idle takes instead has to clear two bars at once: quiet enough not to
+# compete with the states that do want you, and still visibly a *state* rather
+# than more body text. Plain white failed the second -- it is the colour the
+# session names and everything else are already drawn in, so a feed of idle
+# agents read as one undifferentiated block. A muted teal is off every other
+# axis in use: red, yellow and green are the states that want you, grey is
+# unknown, and the focus rail's blue is a saturated hue in a column of its own.
+IDLE_256 = 73  # xterm 73, #5fafaf -- desaturated cyan, dimmer than the text
 ANSI = {
     radar.BLOCKED: "\033[91m",   # bright red -- the row you opened the list for
     radar.WORKING: "\033[33m",
     radar.DONE: "\033[32m",
-    radar.IDLE: "\033[37m",      # grey, but a lighter one than unknown's
+    radar.IDLE: f"\033[38;5;{IDLE_256}m",
     radar.UNKNOWN: "\033[90m",
 }
 RESET = "\033[0m"
@@ -94,7 +102,7 @@ TMUX_COLOUR = {
     radar.BLOCKED: "#f38ba8",
     radar.WORKING: "#f9e2af",
     radar.DONE: "#a6e3a1",
-    radar.IDLE: "#9399b2",
+    radar.IDLE: "#5fafaf",
     radar.UNKNOWN: "#6c7086",
 }
 

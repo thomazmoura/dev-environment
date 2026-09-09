@@ -72,16 +72,22 @@ state_cli = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(state_cli)
 
 # The same colours as the ANSI map in Get-AgentState.py, in curses terms. Green
-# belongs to DONE alone -- an agent that finished while you were elsewhere --
-# and idle drops to plain white, because "nothing to collect here" is not news.
+# belongs to DONE alone -- an agent that finished while you were elsewhere.
+#
+# Two of these are placeholders resolved against the palette the terminal
+# actually has, at startup in run():
+#
+#   idle     state_cli.IDLE_256, a muted teal, where there are 256 colours.
+#            Base cyan is the fallback and is louder than idle deserves, but a
+#            16-colour terminal has nothing quieter that is not the text colour.
+#   unknown  grey, i.e. "bright black" -- colour 8, which only exists from 16
+#            colours up. COLOR_BLACK is not a substitute: on a dark background
+#            it is invisible.
 COLOUR = {
     radar.BLOCKED: curses.COLOR_RED,
     radar.WORKING: curses.COLOR_YELLOW,
     radar.DONE: curses.COLOR_GREEN,
-    radar.IDLE: curses.COLOR_WHITE,
-    # Resolved against the palette size at startup: "bright black" is colour 8,
-    # which only exists on a 16-colour terminal. COLOR_BLACK is not a substitute
-    # -- on a dark background it is invisible.
+    radar.IDLE: curses.COLOR_CYAN,
     radar.UNKNOWN: curses.COLOR_WHITE,
 }
 
@@ -322,6 +328,10 @@ def run(stdscr, interval: float) -> None:
     if grey is not None:
         # The state you are explicitly not being asked to look at.
         COLOUR[radar.UNKNOWN] = grey
+    if curses.COLORS >= 256:
+        # Quiet, but still a colour rather than the colour everything else on
+        # the row is already drawn in. See IDLE_256 in Get-AgentState.py.
+        COLOUR[radar.IDLE] = state_cli.IDLE_256
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
