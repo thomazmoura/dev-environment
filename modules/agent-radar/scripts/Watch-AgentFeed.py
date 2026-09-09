@@ -13,19 +13,24 @@ pane that is three lines of chrome and a permanent flicker at the edge of vision
 -- which is the opposite of what something you glance at should do. curses draws
 only what it is asked to, repaints in place, and still gives j/k and Enter.
 
-Two lines per agent: the state and the session on top -- the two things you
-scan for -- with what kind of agent it is and whatever it is waiting on indented
-underneath, and a rail down the left of the agent you are currently focused on.
+Two lines per agent: an icon for which agent it is and the session it runs in on
+top, the state and whatever it is waiting on underneath, indented to start at
+the same column as the session name, and a rail down the left of the agent you
+are currently focused on. The session leads because it is the only part of an
+entry that is unique -- states repeat down the pane by design -- and which agent
+it is costs no columns at all, being an icon in the gutter.
 One line per agent was the first shape, and in a 35%-wide pane it padded every
 column to the width of the widest row, which turned the list into a
 block of grey text. Two lines let each row be exactly as wide as it needs to be.
 Watch-GitFeed.py has the same shape for the same reason, and both draw with the
 primitives in modules/tmux/scripts/radar_ui.py.
 
-The state word stays padded, unlike anything on the second line: the vocabulary
-is five fixed words, so that column cannot grow to swallow the row, and keeping
-it aligned is what lets the session names start in the same place down the pane.
-A `waiting` row therefore lands where you last saw one.
+The state word stays padded, unlike the session above it: the vocabulary is five
+fixed words, so that column cannot grow to swallow the row, and keeping it
+aligned is what lets the details start in the same place down the pane. It has
+lost the dot it used to carry -- a mark on every row in the same place is one
+you stop seeing, and the colour it carried is now on the icon instead. The fzf
+picker keeps it, where the state has no other mark of its own.
 
 Refreshing once a second, in every session at once, is affordable because this
 does not sample: Start-AgentRadar.py samples for the whole machine and this
@@ -93,13 +98,17 @@ COLOUR = {
 
 # Which agent, by colour -- the tools' own hues, so nothing has to be learned:
 # Claude Code orange, Copilot purple, and the two remaining ones for Codex and
-# opencode. It is a second axis from the state, and it gets the second line the
-# way the state gets the first; Get-AgentState.py owns both tables.
+# opencode. In the feed it colours the agent's icon, which is the only place the
+# row says which agent this is at all -- the name is gone. Get-AgentState.py owns
+# both the hues and the icons, and the fzf picker still prints the name in
+# words.
 #
 # Starts as the 16-colour fallback and is upgraded to the 256-colour table in
 # run(), which is the same shape COLOUR[IDLE] uses below. An agent with no entry
-# here -- one the rules matched by a name nobody has picked a colour for -- keeps
-# the plain dim second line rather than borrowing someone else's hue.
+# here -- one the rules matched by a name nobody has picked a colour for -- gets
+# a plain terminal icon in the plain text colour rather than borrowing someone
+# else's hue, so it is unidentified rather than mislabelled. Adding it here and
+# to AGENT_ICON is the fix.
 AGENT_COLOUR = dict(state_cli.AGENT_BASIC)
 
 # The rail marking the agent you are focused on. Blue is the one hue none of the
@@ -122,9 +131,16 @@ STATE_EMPHASIS = {
 
 EMPTY_MESSAGE = "no coding agents running"
 
-# The narrowest the agent name is allowed to be squeezed before the detail beside
-# it starts giving way instead. Enough to tell "Claude C…" from "Codex".
-MIN_AGENT = 8
+# The agent icon plus the space after it, and therefore how far the second line
+# is indented to line its state word up under the session name.
+#
+# Two, because these are Nerd Font glyphs from the private use area and the fonts
+# that carry them come in a single-advance "Mono" cut -- which is what is
+# installed here, and what a terminal grid wants. A double-width cut would draw
+# the icon over that trailing space and push the session name one column right
+# of the state word underneath it; if that is what you are looking at, the font
+# is the thing to change, not this number.
+ICON_WIDTH = 2
 
 
 def sample() -> list:
@@ -153,10 +169,10 @@ def jump(pane_id: str) -> None:
 def state_width(panes: list) -> int:
     """How wide the state word column has to be.
 
-    Padded, unlike anything on the second line: the vocabulary is five fixed
+    Padded, unlike the session name above it: the vocabulary is five fixed
     words, so the column can never grow to swallow the row the way a padded
-    session or branch column does. Keeping it aligned is what lets the session
-    names start at the same place down the pane.
+    session or branch column does. Keeping it aligned is what lets the details
+    start at the same place down the pane.
     """
     return max(len(state_cli.WAITING_LABEL[pane.state]) for pane in panes)
 
@@ -192,8 +208,18 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
                   state_w: int, focused_id: str):
     """The two lines of one entry, as (text, attribute) segments.
 
-    State and session on top -- the two things you are scanning for -- with what
-    kind of agent it is and whatever it is waiting on indented underneath.
+    An icon for which agent it is, then the session, with the state and whatever
+    it is waiting on on the line below -- starting at the same column as the
+    session name, so the two read as a block rather than a staircase:
+
+        ▎ dev-environment
+        ▎ working  ready
+
+    The icon is the only thing in the gutter, and it is the only thing that says
+    which agent this is: the name was the same string on nearly every row and
+    cost columns a 35%-wide pane does not have. The colour it is drawn in says
+    the same thing twice, deliberately -- a glyph you have not learned yet is
+    still a hue you have, and a font that cannot draw one still has the other.
     """
     body = band if chosen else curses.A_NORMAL
     # Bold only where it distinguishes: bolding every name spends the emphasis
@@ -218,60 +244,45 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
         (coloured(RAIL_COLOUR) | curses.A_BOLD) if (use_colour and railed) else body
     )
 
-    # Budgets subtract the rail's column and the same trailing column draw_line
-    # refuses to write into. Getting this off by one does not overflow --
-    # draw_line clips -- it eats the ellipsis, so a truncated name silently
+    # Undimmed: A_DIM over a 256-colour hue is what makes orange and mauve
+    # converge on the same muddy grey at a glance, which is the one thing this
+    # colour exists to prevent.
+    icon = state_cli.AGENT_ICON.get(pane.agent, state_cli.UNKNOWN_ICON)
+    agent_colour = AGENT_COLOUR.get(pane.agent)
+    icon_attr = coloured(agent_colour) if (use_colour and agent_colour) else body
+
+    # Budgets subtract the rail and icon columns and the same trailing column
+    # draw_line refuses to write into. Getting this off by one does not overflow
+    # -- draw_line clips -- it eats the ellipsis, so a truncated name silently
     # reads as a shorter real one.
-    marker = f"{state_cli.GLYPH} {state:<{state_w}}  "
+    left = state_cli.RAIL_WIDTH + ICON_WIDTH
     first = [
         (gutter, rail_attr),
-        (marker, state_attr),
-        (
-            ui.truncate(
-                pane.session, width - state_cli.RAIL_WIDTH - len(marker) - 1
-            ),
-            name_attr,
-        ),
+        (f"{icon} ", icon_attr),
+        (ui.truncate(pane.session, width - left - 1), name_attr),
     ]
 
-    # The detail is the one thing on the second line worth colouring: it is why
-    # a blocked agent is blocked. It takes the state's own colour so the row
-    # reads as one thing rather than two.
-    detail = state_cli.extra_detail(pane)
-    agent = state_cli.agent_line(pane)
-    budget = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - 1
+    # Indented to exactly where the session name starts, which is what makes the
+    # entry read as one block. The state word is still padded on top of that:
+    # five fixed words cannot grow to swallow the row, and keeping them aligned
+    # is what lets the details line up too.
+    state_text = f"{state:<{state_w}}"
 
-    # The detail is the more actionable half, so it is measured first and the
-    # agent name gets what is left -- but never less than MIN_AGENT, because an
-    # agent name squeezed to nothing leaves the line starting with stray indent
-    # and reads as a rendering fault rather than as a narrow pane.
-    room = max(MIN_AGENT, budget - len(detail) - 2) if detail else budget
-    agent_text = ui.truncate(agent, min(room, budget))
-    detail_room = budget - len(agent_text) - 2
-    detail_text = ui.truncate(detail, detail_room) if detail and detail_room >= 3 else ""
-
-    # The agent name is what carries the hue, and it carries it undimmed: A_DIM
-    # over a 256-colour hue is what makes orange and mauve converge on the same
-    # muddy grey at a glance, which is the one thing this colour exists to
-    # prevent. It is still not emphasis -- the colour tells you which tool, the
-    # first line still owns whether it wants you. An agent with no colour of its
-    # own falls back to the dim grey the whole line used to be.
-    agent_colour = AGENT_COLOUR.get(pane.agent)
-    agent_attr = (
-        coloured(agent_colour)
-        if (use_colour and agent_colour is not None)
-        else body | curses.A_DIM
-    )
-
-    second = [
-        (gutter, rail_attr),
-        (ui.INDENT, body),
-        (agent_text, agent_attr),
-    ]
-    # The detail stays dim whether or not the row is selected. It is secondary by
+    # The detail is why a blocked agent is blocked, so there it takes the state's
+    # own colour and the row reads as one thing rather than two. Everywhere else
+    # it is dim whether or not the row is selected: it is secondary by
     # definition, and un-dimming it on selection made the highlight shout twice
     # -- once with the band, once by brightening text -- in a pane that is
     # usually not even focused.
+    detail = state_cli.extra_detail(pane)
+    detail_room = width - left - len(state_text) - 3
+    detail_text = ui.truncate(detail, detail_room) if detail and detail_room >= 3 else ""
+
+    second = [
+        (gutter, rail_attr),
+        (" " * ICON_WIDTH, body),
+        (state_text, state_attr),
+    ]
     if detail_text:
         second.append(
             (

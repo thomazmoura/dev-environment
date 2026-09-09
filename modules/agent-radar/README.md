@@ -16,25 +16,33 @@ dev-environment           Claude Code  claude  ● working
 herdr                     Claude Code  claude  ● idle     ready
 ```
 
-The curses feed on `r` gives each agent two lines instead -- state and session
-on top, what kind of agent it is and whatever it is waiting on underneath:
+The curses feed on `r` gives each agent two lines instead -- an icon for which
+agent it is and the session it runs in on top, the state and whatever it is
+waiting on underneath:
 
 ```
- ● waiting  Autotrac_Starlink_Portal
-   Claude Code  permission prompt
- ● done     notas
-   Claude Code  ready
-▎● working  dev-environment
-▎  Claude Code
- ● idle     herdr
-   Claude Code  ready
+  Autotrac_Starlink_Portal     (the icon is orange -- Claude Code)
+   waiting  permission prompt
+  notas                        (purple -- Copilot)
+   done
+▎ dev-environment
+▎  working
+  herdr                        (sky -- Codex)
+   idle     ready
 ```
+
+The session leads because it is the only part of an entry that is unique --
+states repeat down the pane by design, and a column of them read top-first made
+every entry open with the same word. The state indents to exactly where the
+session name starts, so an entry reads as one block rather than a staircase, and
+it carries no dot: a mark in the same place on every row is one you stop seeing.
+The fzf picker keeps its dot, where the state has no other mark of its own.
 
 One line per agent was the original shape, and in a 35%-wide pane it padded
 every column to the width of the widest row, which turned the list into a block
 of grey text. Two lines let each row be exactly as wide as it needs to be; when
-the pane is narrower than a row, the session and the agent name are truncated
-with an ellipsis before the detail is, because the detail is why you looked.
+the pane is narrower than a row, the session takes the ellipsis on its own line
+and the detail takes one on the line below, so neither can ever eat the other.
 
 The state word stays padded -- the vocabulary is five fixed words, so that column
 cannot grow to swallow the row, and keeping it aligned is what makes a `waiting`
@@ -86,8 +94,10 @@ reporting (`CSI ?1004h`) which `focus-events on` in `modules/tmux/common.conf`
 makes tmux forward. Polling tmux instead would have cost about 14ms per ask --
 more per feed pane than sampling the whole machine does.
 
-The second line is dim whether or not its row is selected. It is secondary by
-definition, and brightening it on selection made the highlight shout twice.
+The detail is dim whether or not its row is selected. It is secondary by
+definition, and brightening it on selection made the highlight shout twice. The
+one exception is a `waiting` row, where the detail is why the agent is blocked
+and takes the state's own colour so the entry reads as one thing.
 
 ## Why it is not demux
 
@@ -336,28 +346,39 @@ look at the pane.
 
 The state answers *does this row want me*; the agent answers *what am I about to
 be talking to*. They are separate questions, asked about the same row, so they
-get separate channels: the state colours the first line, and the agent's own
-name -- the second line -- carries a hue per tool. Claude Code is orange,
-Copilot purple, Codex sky, opencode sage -- all of them a tone down from full
-chroma, the same call `IDLE_256` makes: a column of saturated names competes
-with the state words, which are the half that is actually asking for you.
+get separate channels: the state colours its own word, and the session name
+above it is drawn in the colour of whichever agent is running there -- Claude
+Code orange, Copilot purple, Codex sky, opencode sage.
 
-The hues are the tools' own, which is the point: nothing has to be learned, and
-in a column of six panes "which of these is Copilot" stops being a question you
-read words to answer. They deliberately do *not* dodge the state colours, since
-the two never share a line and the pairing is itself worth reading -- a red
-`waiting` over an orange name is "Claude Code wants you". An agent nobody has
-picked a colour for keeps the plain dim second line rather than borrowing
-someone else's hue, so adding a tool to `AGENT_ALIASES` never silently makes it
-look like another one.
+The agent is never *named* in the feed. It was, for one revision, and the name
+was the same string on nearly every row: "Claude Code" beside a session called
+`dev-environment` says nothing you did not already assume, and it cost columns
+in a pane that has none to spare. An icon in the gutter says it in one, and the
+hues are the tools' own, which is what makes that trade work -- nothing has to
+be learned, and "which of these is Copilot" stops being a question you read
+words to answer.
 
-The name is drawn undimmed, unlike the detail beside it: `A_DIM` over a
-256-colour hue is exactly what makes orange and mauve converge on the same
-muddy grey at the glancing distance this is meant to be read from. Below 256
-colours the table falls back to yellow/magenta/cyan/green -- orange does not
-exist down there. `AGENT_256`, `AGENT_BASIC` and `AGENT_ANSI` live in
-`Get-AgentState.py` beside the state colours, so the fzf picker and the curses
-feed cannot drift apart.
+The icons are Nerd Font glyphs (`AGENT_ICON`): `nf-cod-claude`, `nf-cod-copilot`,
+`nf-cod-openai` for Codex, `nf-fa-code` for opencode, and `nf-fa-terminal` for
+anything else. Two of them need **Nerd Fonts 3.5.0 or newer** -- the codicon
+block ended at `nf-cod-copilot` (U+EC1E) in 3.4.0, so on an older font the
+Claude and Codex marks come out as tofu. That is why the icon and the colour say
+the same thing: a glyph a font cannot draw is still a hue it can.
+
+All four sit a tone down from full chroma, the same call `IDLE_256` makes: this
+is a pane you glance at, and a column of saturated names competes with the state
+words, which are the half that is actually asking for you. They are drawn
+undimmed, though -- `A_DIM` over a 256-colour hue is exactly what makes orange
+and mauve converge on the same muddy grey at glancing distance.
+
+The cost of spending colour on identity is that identity has nothing else: an
+agent nobody has picked a hue for is drawn in the plain text colour, which
+leaves it *unidentified* rather than mislabelled -- adding it to `AGENT_256` is
+the fix, and until then the fzf picker still spells the name out. Below 256
+colours the table falls back to yellow/magenta/cyan/green; orange does not exist
+down there. `AGENT_256`, `AGENT_BASIC` and `AGENT_ANSI` live in
+`Get-AgentState.py` beside the state colours, so the picker and the feed cannot
+drift apart.
 
 Restarting the sampler is what deploys a change to any of this
 (`pkill -f Start-AgentRadar.py`; the next consumer respawns it). A running

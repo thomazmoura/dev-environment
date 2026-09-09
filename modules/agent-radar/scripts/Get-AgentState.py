@@ -100,8 +100,10 @@ DIM = "\033[2m"
 # --- Which agent, by colour ---------------------------------------------------
 # The state answers "does this row want me"; the agent answers "what am I about
 # to be talking to", and in a list of eight panes that second question is asked
-# just as often. It is a separate axis, so it gets a separate channel: the state
-# colours the first line, the agent colours the second.
+# just as often. It is a separate axis, so it gets a channel of its own: in the
+# curses feed the session name is drawn in its agent's colour and the agent is
+# never named in words at all, which costs no columns in a narrow pane. The fzf
+# picker has room and still prints the name.
 #
 # The hues are the tools' own, because those are the ones already in your head
 # from their own UIs -- Claude Code orange, Copilot purple. That is the whole
@@ -109,9 +111,10 @@ DIM = "\033[2m"
 # opencode take the two remaining hues that neither the states nor the focus
 # rail claim.
 #
-# These deliberately do NOT need to avoid the state colours. They never share a
-# line with them, and the pairing is one of the useful things to read at a
-# glance -- a red "waiting" over an orange name is "Claude Code wants you".
+# These deliberately do NOT dodge the state colours. The pairing is the useful
+# thing to read at a glance -- a red "waiting" beside an orange name is "Claude
+# Code wants you" -- and the muting below is what keeps the two apart: the
+# states are saturated, the agents are not.
 # Muted rather than saturated, and that is the same call IDLE_256 makes for the
 # same reason: this is a pane you glance at, not one you look at, and a column
 # of full-chroma names competes with the state words -- which are the thing that
@@ -138,6 +141,32 @@ AGENT_BASIC = {
 
 AGENT_ANSI = {name: f"\033[38;5;{code}m" for name, code in AGENT_256.items()}
 
+# The same identity again, as a glyph, for the feed -- where the agent is never
+# named in words and the row has no columns to spare for one. Nerd Font private
+# use area, so a terminal without one of those fonts draws four tofu boxes; that
+# is a font problem with a font fix, and the fzf picker still spells the names
+# out for anyone who does not want to install one.
+#
+# Two of these need Nerd Fonts 3.5.0 or newer. The codicon block ended at
+# nf-cod-copilot (U+EC1E) in 3.4.0, which is what shipped in the Caskaydia Cove
+# installed here, so openai and claude land in a range that font does not cover.
+# To check a font before blaming the code:
+#
+#   fc-list | rg -i nerd          # find the file
+#   # then look for cod-openai / cod-claude in its glyph names
+#
+AGENT_ICON = {
+    "claude": "\uec82",    # nf-cod-claude  (3.5.0+)
+    "copilot": "\uec1e",   # nf-cod-copilot
+    "codex": "\uec81",     # nf-cod-openai  (3.5.0+)
+    "opencode": "\uf121",  # nf-fa-code
+}
+
+# An agent the rules matched but nobody has given an icon: a plain terminal,
+# which is honestly what it is. Never one of the four above -- an unknown agent
+# wearing Claude's mark is worse than an unknown agent looking generic.
+UNKNOWN_ICON = "\uf120"  # nf-fa-terminal
+
 
 # Catppuccin Mocha, matching the rest of the status bar.
 TMUX_COLOUR = {
@@ -158,21 +187,6 @@ WAITING_LABEL = {
     radar.IDLE: "idle",
     radar.UNKNOWN: "unknown",
 }
-
-
-def agent_line(pane: radar.Pane) -> str:
-    """What a row says about *which* agent this is.
-
-    The pane label is the readable name -- "Claude Code", set by
-    tmux-helpers.sh:label_pane for every pane the bindings open -- and the agent
-    id is what the rules matched. Showing both is usually saying the same thing
-    twice, so the id is appended only when the label does not already contain
-    it: an agent someone started by hand has no @pane_label and falls back to
-    the window name, where "pwsh  claude" is exactly the pair you want to see.
-    """
-    if pane.agent and pane.agent.lower() not in pane.label.lower().replace(" ", ""):
-        return f"{pane.label}  {pane.agent}"
-    return pane.label
 
 
 def extra_detail(pane: radar.Pane) -> str:
