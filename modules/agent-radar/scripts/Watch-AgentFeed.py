@@ -91,6 +91,17 @@ COLOUR = {
     radar.UNKNOWN: curses.COLOR_WHITE,
 }
 
+# Which agent, by colour -- the tools' own hues, so nothing has to be learned:
+# Claude Code orange, Copilot purple, and the two remaining ones for Codex and
+# opencode. It is a second axis from the state, and it gets the second line the
+# way the state gets the first; Get-AgentState.py owns both tables.
+#
+# Starts as the 16-colour fallback and is upgraded to the 256-colour table in
+# run(), which is the same shape COLOUR[IDLE] uses below. An agent with no entry
+# here -- one the rules matched by a name nobody has picked a colour for -- keeps
+# the plain dim second line rather than borrowing someone else's hue.
+AGENT_COLOUR = dict(state_cli.AGENT_BASIC)
+
 # The rail marking the agent you are focused on. Blue is the one hue none of the
 # four states claims, so it cannot be misread as one -- see CURRENT_RAIL in
 # Get-AgentState.py for why this needs a channel of its own at all, and
@@ -239,15 +250,28 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     detail_room = budget - len(agent_text) - 2
     detail_text = ui.truncate(detail, detail_room) if detail and detail_room >= 3 else ""
 
-    # Dim whether or not the row is selected. The second line is secondary by
-    # definition, and un-dimming it on selection made the highlight shout twice
-    # -- once with the band, once by brightening text -- in a pane that is
-    # usually not even focused.
+    # The agent name is what carries the hue, and it carries it undimmed: A_DIM
+    # over a 256-colour hue is what makes orange and mauve converge on the same
+    # muddy grey at a glance, which is the one thing this colour exists to
+    # prevent. It is still not emphasis -- the colour tells you which tool, the
+    # first line still owns whether it wants you. An agent with no colour of its
+    # own falls back to the dim grey the whole line used to be.
+    agent_colour = AGENT_COLOUR.get(pane.agent)
+    agent_attr = (
+        coloured(agent_colour)
+        if (use_colour and agent_colour is not None)
+        else body | curses.A_DIM
+    )
+
     second = [
         (gutter, rail_attr),
         (ui.INDENT, body),
-        (agent_text, body | curses.A_DIM),
+        (agent_text, agent_attr),
     ]
+    # The detail stays dim whether or not the row is selected. It is secondary by
+    # definition, and un-dimming it on selection made the highlight shout twice
+    # -- once with the band, once by brightening text -- in a pane that is
+    # usually not even focused.
     if detail_text:
         second.append(
             (
@@ -332,6 +356,8 @@ def run(stdscr, interval: float) -> None:
         # Quiet, but still a colour rather than the colour everything else on
         # the row is already drawn in. See IDLE_256 in Get-AgentState.py.
         COLOUR[radar.IDLE] = state_cli.IDLE_256
+        # Orange and mauve do not exist in 16 colours; where they do, take them.
+        AGENT_COLOUR.update(state_cli.AGENT_256)
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.

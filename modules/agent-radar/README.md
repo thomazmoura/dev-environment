@@ -332,6 +332,33 @@ undifferentiated block of text. The status bar counts
 lit teaches you to skip the segment, and this one clears itself the moment you
 look at the pane.
 
+### Two axes, two lines
+
+The state answers *does this row want me*; the agent answers *what am I about to
+be talking to*. They are separate questions, asked about the same row, so they
+get separate channels: the state colours the first line, and the agent's own
+name -- the second line -- carries a hue per tool. Claude Code is orange,
+Copilot purple, Codex sky, opencode sage -- all of them a tone down from full
+chroma, the same call `IDLE_256` makes: a column of saturated names competes
+with the state words, which are the half that is actually asking for you.
+
+The hues are the tools' own, which is the point: nothing has to be learned, and
+in a column of six panes "which of these is Copilot" stops being a question you
+read words to answer. They deliberately do *not* dodge the state colours, since
+the two never share a line and the pairing is itself worth reading -- a red
+`waiting` over an orange name is "Claude Code wants you". An agent nobody has
+picked a colour for keeps the plain dim second line rather than borrowing
+someone else's hue, so adding a tool to `AGENT_ALIASES` never silently makes it
+look like another one.
+
+The name is drawn undimmed, unlike the detail beside it: `A_DIM` over a
+256-colour hue is exactly what makes orange and mauve converge on the same
+muddy grey at the glancing distance this is meant to be read from. Below 256
+colours the table falls back to yellow/magenta/cyan/green -- orange does not
+exist down there. `AGENT_256`, `AGENT_BASIC` and `AGENT_ANSI` live in
+`Get-AgentState.py` beside the state colours, so the fzf picker and the curses
+feed cannot drift apart.
+
 Restarting the sampler is what deploys a change to any of this
 (`pkill -f Start-AgentRadar.py`; the next consumer respawns it). A running
 daemon has the old code in memory and keeps holding the lock.

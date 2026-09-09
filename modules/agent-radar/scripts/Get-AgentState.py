@@ -97,6 +97,48 @@ ANSI = {
 RESET = "\033[0m"
 DIM = "\033[2m"
 
+# --- Which agent, by colour ---------------------------------------------------
+# The state answers "does this row want me"; the agent answers "what am I about
+# to be talking to", and in a list of eight panes that second question is asked
+# just as often. It is a separate axis, so it gets a separate channel: the state
+# colours the first line, the agent colours the second.
+#
+# The hues are the tools' own, because those are the ones already in your head
+# from their own UIs -- Claude Code orange, Copilot purple. That is the whole
+# reason this is worth colouring at all: nothing has to be learned. Codex and
+# opencode take the two remaining hues that neither the states nor the focus
+# rail claim.
+#
+# These deliberately do NOT need to avoid the state colours. They never share a
+# line with them, and the pairing is one of the useful things to read at a
+# glance -- a red "waiting" over an orange name is "Claude Code wants you".
+# Muted rather than saturated, and that is the same call IDLE_256 makes for the
+# same reason: this is a pane you glance at, not one you look at, and a column
+# of full-chroma names competes with the state words -- which are the thing that
+# is actually asking for you. 208 (#ff8700) was the first orange and read as an
+# alert in its own right; 173 sits a tone down, unmistakably the same hue and
+# no longer shouting it.
+AGENT_256 = {
+    "claude": 173,    # #d7875f -- muted orange
+    "copilot": 141,   # #af87ff -- mauve
+    "codex": 117,     # #87d7ff -- sky
+    "opencode": 114,  # #87d787 -- sage
+}
+
+# The 16-colour fallback. The numbers are the ANSI indices, which are also
+# curses' COLOR_* constants, so a curses consumer can use either table without
+# translating. Orange does not exist down here -- yellow is the closest thing
+# with the right warmth -- and sage collapses into green.
+AGENT_BASIC = {
+    "claude": 3,    # yellow
+    "copilot": 5,   # magenta
+    "codex": 6,     # cyan
+    "opencode": 2,  # green
+}
+
+AGENT_ANSI = {name: f"\033[38;5;{code}m" for name, code in AGENT_256.items()}
+
+
 # Catppuccin Mocha, matching the rest of the status bar.
 TMUX_COLOUR = {
     radar.BLOCKED: "#f38ba8",
@@ -161,9 +203,15 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
         cell = f"{ANSI[p.state]}{GLYPH} {state:<{state_width}}{RESET}"
         extra = extra_detail(p)
         detail = f"  {DIM}{extra}{RESET}" if extra else ""
+        # Padded first, coloured second: the escape bytes are zero-width on
+        # screen but not to %-*s, so colouring before padding takes the width
+        # out of the column and staggers every row below it.
+        agent = f"{p.agent:<{agent_width}}"
+        if p.agent in AGENT_ANSI:
+            agent = f"{AGENT_ANSI[p.agent]}{agent}{RESET}"
         rows.append(
             f"{p.pane_id}\t{p.session:<{session_width}}  {p.label:<{label_width}}"
-            f"  {p.agent:<{agent_width}}  {cell}{detail}"
+            f"  {agent}  {cell}{detail}"
         )
     return rows
 
