@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
-# Explains a failed fetch from the git feed, and offers to unlock the key it
-# needed. Runs inside a tmux popup, launched by Watch-GitFeed.show_failure.
+# Explains a failed fetch, pull or push from the git feed, and offers to unlock
+# the key it needed. Runs inside a tmux popup, launched by
+# Watch-GitFeed.show_failure.
 #
 # Usage, as the command of a display-popup (through Invoke-Popup.sh):
-#   Show-FetchFailure.sh <session> <repo-root> <message-file>
+#   Show-GitFailure.sh <verb> <session> <repo-root> <message-file>
+#
+# <verb> is fetch, pull or push. It names the failure in the banner and is what
+# the retry below re-runs -- a passphrase is just as likely to be what stopped a
+# push as a fetch, so the unlock offer belongs to all three rather than to the
+# one that happened to need it first.
 #
 # Why a popup and not the pane: the feed's column is 12% of the window in the
 # default layout, so a git error rendered on a row is truncated into nonsense.
 # The popup is also the only place a passphrase may be *typed*. The feed pane is
 # a curses screen, and curses repaints differentially -- anything written to that
 # tty behind its back is never painted over, which is exactly how ssh's
-# "Enter passphrase" prompts used to end up welded to the pane. The fetch itself
-# now runs with BatchMode so it can never prompt at all (see FETCH_ENV in
-# Watch-GitFeed.py); this is where the prompt is allowed to happen instead,
-# because a popup is its own pty and takes its corruption with it when it closes.
+# "Enter passphrase" prompts used to end up welded to the pane. The commands
+# themselves now run with BatchMode so they can never prompt at all (see
+# fetch_env in Watch-GitFeed.py); this is where the prompt is allowed to happen
+# instead, because a popup is its own pty and takes its corruption with it when
+# it closes.
 #
 # Unlocking is on demand and only ever once: nothing is added to the agent at
 # login beyond whatever the shell profile already loads, and the only key
@@ -23,9 +30,35 @@
 # would not have helped.
 set -euo pipefail
 
-session=${1:?session}
-root=${2:-}
-message_file=${3:-}
+verb=${1:?verb}
+session=${2:?session}
+root=${3:-}
+message_file=${4:-}
+
+# The retry is the operation that failed, not always a fetch. Spelled out per
+# verb rather than assembled from the argument, so this script decides what it
+# is willing to run and an unexpected verb retries nothing at all.
+#
+# push asks about the upstream the same way Watch-GitFeed does, and for the same
+# reason: the first attempt was the one that would have created it, so after an
+# authentication failure there is still no upstream for a plain push to find.
+retry=()
+case "$verb" in
+  fetch) retry=(--no-optional-locks fetch --quiet) ;;
+  pull)  retry=(pull --ff-only --quiet) ;;
+  push)
+    if [ -n "$root" ] && ! git -C "$root" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+      branch=$(git -C "$root" branch --show-current 2>/dev/null || true)
+      # An empty branch is a detached HEAD, and leaves retry empty: there is
+      # nothing to name as the upstream, so there is nothing to offer a key for.
+      if [ -n "$branch" ]; then
+        retry=(push --set-upstream origin "$branch" --quiet)
+      fi
+    else
+      retry=(push --quiet)
+    fi
+    ;;
+esac
 
 # The message is passed as a file, not an argument: git's stderr is multi-line
 # and quoting it through display-popup's shell would be a losing game.
@@ -38,9 +71,9 @@ fi
 hold() { read -rsn1 -p "Press any key to close..." _ || true; }
 
 # --- What the popup says ------------------------------------------------------
-printf '\033[1;31mfetch failed\033[0m  %s\n' "$session"
+printf '\033[1;31m%s failed\033[0m  %s\n' "$verb" "$session"
 [ -n "$root" ] && printf '\033[2m%s\033[0m\n' "$root"
-printf '\n%s\n\n' "${message:-fetch failed}"
+printf '\n%s\n\n' "${message:-$verb failed}"
 
 # --- Is this an authentication problem at all? --------------------------------
 # Only these get an unlock offer. A network outage or a missing remote is not
@@ -92,7 +125,9 @@ candidate_key() {
 }
 
 key=""
-if [ -n "$root" ] && is_auth_failure; then
+# No retry means no offer: unlocking a key to then do nothing with it would ask
+# for a passphrase and give nothing back.
+if [ -n "$root" ] && [ ${#retry[@]} -gt 0 ] && is_auth_failure; then
   key=$(candidate_key) || key=""
 fi
 
@@ -117,16 +152,20 @@ if ! ssh-add "$key"; then
   exit 1
 fi
 
-printf '\nretrying fetch...\n'
+printf '\nretrying %s...\n' "$verb"
 # Still BatchMode: if the key that was just added is not the one this remote
 # wanted, the retry must fail rather than start prompting for the next one.
+#
+# --no-optional-locks belongs to the fetch and to nothing else (see the case
+# above): it exists to keep the *sampler* from taking index.lock out from under
+# an interactive git, and pull and push are that interactive git.
 if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -o BatchMode=yes" \
     SSH_ASKPASS_REQUIRE=never \
-    git --no-optional-locks -C "$root" fetch --quiet; then
-  printf '\033[32mfetched\033[0m\n'
+    git -C "$root" "${retry[@]}"; then
+  printf '\033[32m%sed\033[0m\n' "$verb"
   exit 0
 fi
 
-printf '\033[31mstill unable to fetch\033[0m\n'
+printf '\033[31mstill unable to %s\033[0m\n' "$verb"
 hold
 exit 1

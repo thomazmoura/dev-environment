@@ -69,8 +69,9 @@ fully in sync -- the one case where an absent arrow means the opposite of what i
 usually does.
 
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
-`f` fetches the selected repository and `F` fetches every listed one,
-`Ctrl-C` closes the pane.
+`f` fetches the selected repository and `F` fetches every listed one, `p` pulls
+it and `P` pushes it, `q` kills the selected session after asking, `Ctrl-C`
+closes the pane.
 
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the
@@ -117,12 +118,15 @@ something a daemon runs every few seconds across every session you have open.
 The cost is honest and worth naming: *behind* is only as fresh as your last
 fetch. `f` fetches the selected repository on demand, on a background thread so
 the pane never freezes, and the counts update on the next tick. `F` does the same
-for every session listed, four at a time.
+for every session listed, four at a time. `p` and `P` -- the pull and the push
+described below -- are the other two commands this pane will run, and everything
+in the next paragraph is true of all three.
 
-**A fetch is given no way to ask you anything.** It runs under `BatchMode` with no
-stdin and no controlling terminal, so it cannot prompt for a passphrase or a
-password; one that would have needed a credential fails in milliseconds and its
-row says `unable to fetch` for a few seconds.
+**None of the three is given any way to ask you anything.** `f`, `p` and `P` all
+run under `BatchMode` with no stdin and no controlling terminal, so they cannot
+prompt for a passphrase or a password; one that would have needed a credential
+fails in milliseconds and its row says `unable to fetch` -- or `pull`, or `push`
+-- for a few seconds.
 
 That is not politeness, it is the only way this can be correct. Capturing a
 fetch's output does not keep a prompt off the screen: `ssh` does not ask on
@@ -132,14 +136,17 @@ paints over them -- the prompt stays welded to the pane for the rest of its life
 Closing every prompt path is what makes `F` cheap too: "fetch everything, skip
 whatever would have asked" needs no detection pass when nothing *can* ask.
 
-The prompt has to happen somewhere, so `f` -- and only `f`, since you asked about
-that repository by name -- opens a popup on failure with git's full message. When
-the failure was an authentication one, the popup offers to unlock the key this
-host would have tried for that remote and does not already hold, and retries.
+The prompt has to happen somewhere, so a failure you asked for by name -- `f`,
+`p` or `P`, but never one of the many that an `F` starts -- opens a popup with
+git's full message. When the failure was an authentication one, the popup offers
+to unlock the key this host would have tried for that remote and does not already
+hold, and retries. The retry is the operation that failed, not always a fetch: a
+passphrase is just as likely to be what stopped a push.
+
 The passphrase is typed in the popup, which is its own pty and takes any mess
 away with it when it closes. It is asked at most once: the key goes into the
-agent, so every later fetch finds it there. Nothing is unlocked at login, and a
-key that is already loaded is never asked for again.
+agent, so every later fetch, pull or push finds it there. Nothing is unlocked at
+login, and a key that is already loaded is never asked for again.
 
 **One `git status` per repository.** `--porcelain=v2 --branch` returns the
 branch, the upstream *and* the ahead/behind pair in its header lines, so a
@@ -147,6 +154,45 @@ repository does not cost a `status` plus a `rev-list`. Sessions sharing a
 repository share its call. Everything runs under `--no-optional-locks`, so the
 daemon never takes `index.lock` and never loses that race against your own
 interactive git.
+
+## `p` pulls and `P` pushes
+
+The two counters this pane spends most of its time showing were the two it could
+do nothing about: it would tell you a repository was four commits behind and then
+send you elsewhere to act on it. `p` and `P` clear a `⇣` or a `⇡` where you read
+it.
+
+**Both act on the selected row and only on it.** There is deliberately no
+shifted all-rows twin to match `F`. `F` is affordable because a fetch changes
+nothing locally and one that cannot authenticate costs milliseconds; "pull every
+repository on this machine" is a work tree changed in a dozen places from one
+keystroke, and there is no version of that whose failures a row can honestly
+summarise.
+
+**`p` is `pull --ff-only`.** It fast-forwards or it refuses, which is what makes
+it safe to press in a pane you are only glancing at: it can never open a merge,
+never leave a conflicted tree and never want an editor -- and an editor is
+precisely what the no-tty rule above makes impossible to answer. A row that
+cannot fast-forward says `cannot fast-forward` and you go and do it in NeoVim,
+where you can see the conflict.
+
+**`P` sets the upstream when there is none**, rather than refusing: publishing a
+branch you have never pushed is the main thing `P` is wanted for on the rows
+marked `local`, and that marker disappearing on the next tick is the
+confirmation. It does not ask first, unlike the `q` beside it: a push is one
+`--force-with-lease` away from undone, and killing a session is not.
+
+Two refusals are answered from the row already on screen rather than from the
+network -- `no upstream` for a `p` on a `local` branch, `detached HEAD` for
+either on a detached one. git would say the same thing in a paragraph, several
+seconds and one ssh connection later.
+
+Only one of the three runs in a repository at a time, and the guard is keyed by
+*repository root* rather than by session, because the root is what has an
+`index.lock` to fight over -- two sessions in one repository share it. A key
+pressed on a busy row does nothing rather than queueing: the row is already
+saying what it is doing, and a second command you did not notice starting is
+worse than a keypress that visibly did not take.
 
 ## Rows are in session order, not urgency order
 
@@ -178,6 +224,8 @@ Start-GitRadar.py     the daemon. One sampler for the whole machine.
   git_feed.py         binds the shared cache to Repo rows, at a 3s tick
   Get-GitState.py     presentation + CLI (table / tsv / json / fzf / status)
 Watch-GitFeed.py      the curses feed on prefix + t then R. Reads, never samples.
+  Show-GitFailure.sh  the popup a named f/p/P failure opens: the message, and
+                      an offer to unlock the key it wanted and retry.
 ```
 
 The daemon is nobody's responsibility to start. The first consumer that finds

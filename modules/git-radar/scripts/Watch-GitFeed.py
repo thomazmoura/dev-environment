@@ -31,19 +31,32 @@ doubles as your session list, and a row that jumps while you are reaching for
 Enter is worse than one you have to scan for -- attention is carried by colour.
 
 Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
-the selected repository and F fetches every listed one, q kills the selected
-session after asking, Ctrl-C closes the pane.
+the selected repository and F fetches every listed one, p pulls it and P pushes
+it, q kills the selected session after asking, Ctrl-C closes the pane.
 
-Fetching cannot prompt, by construction -- see FETCH_ENV. This is not tidiness:
-capturing a fetch's output is not enough to keep it off the screen, because ssh
-does not ask for a passphrase on stdout or stderr. It opens /dev/tty and writes
-there directly, which lands on this pane behind curses' back; and curses
+p and P exist because the two counters this pane spends most of its time showing
+-- behind and ahead -- were the two it could do nothing about: it would tell you
+a repository was four commits behind and then send you elsewhere to act on it.
+They act on the selected row and only on it. There is deliberately no pull-all or
+push-all to match F: F is affordable because a fetch changes nothing and a
+fetch that cannot authenticate costs milliseconds, whereas "pull every repository
+on this machine" is a work tree changed in a dozen places from one keystroke.
+
+p is `pull --ff-only`, which is what makes it safe to run from a pane you are
+only glancing at: it fast-forwards or it refuses, so it can never open a merge,
+never leave a conflicted tree and never want an editor. A row that cannot
+fast-forward says so and you go and do it in NeoVim, where you can see it.
+
+None of the three can prompt, by construction -- see fetch_env. This is not
+tidiness: capturing their output is not enough to keep it off the screen, because
+ssh does not ask for a passphrase on stdout or stderr. It opens /dev/tty and
+writes there directly, which lands on this pane behind curses' back; and curses
 repaints differentially, so it never paints over cells it does not know were
 written. Those "Enter passphrase for key" lines were welded to the pane for
-good. So the fetch is given no way to ask -- BatchMode, no controlling terminal
--- and a fetch that needed a passphrase fails immediately instead. What it
-needed is then asked for in a popup, which is its own pty and takes its own
-corruption away with it when it closes: see Show-FetchFailure.sh.
+good. So they are given no way to ask -- BatchMode, no controlling terminal --
+and one that needed a passphrase fails immediately instead. What it needed is
+then asked for in a popup, which is its own pty and takes its own corruption away
+with it when it closes: see Show-GitFailure.sh.
 
 That is also what makes F affordable. "Fetch everything and skip whatever would
 have asked" needs no detection pass and no list of known-awkward remotes: a
@@ -86,6 +99,7 @@ import sys
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -176,33 +190,26 @@ EMPTY_MESSAGE = "no tmux sessions"
 # because it is not the pane that gains the focus when a client arrives.
 SELF_KEY = 15
 
-# How long a fetch may run before it is abandoned. Generous, because a fetch you
-# asked for on a slow link is still a fetch you want; it is a thread, so nothing
-# else waits on it.
-FETCH_TIMEOUT = 120
+# How long one of these commands may run before it is abandoned. Generous,
+# because a fetch you asked for on a slow link is still a fetch you want; it is a
+# thread, so nothing else waits on it.
+OP_TIMEOUT = 120
 
-# How many fetches may be in flight at once. F starts one per session, and a
-# machine with twenty sessions opening twenty ssh connections at the same moment
-# is rude to the remote and slower than doing four at a time. Held on the worker
-# threads only -- the curses loop never waits on it.
-FETCH_PARALLEL = 4
+# How many may be in flight at once. F starts one per session, and a machine with
+# twenty sessions opening twenty ssh connections at the same moment is rude to
+# the remote and slower than doing four at a time. Held on the worker threads
+# only -- the curses loop never waits on it.
+OP_PARALLEL = 4
 
-# How long a finished fetch's note stays on its row. Long enough to read after
-# pressing the key, short enough that an F over a dozen repositories does not
-# leave the feed papered in stale complaints. Only finished notes expire;
-# FETCHING has no deadline because it ends when the fetch does.
+# How long a finished note stays on its row. Long enough to read after pressing
+# the key, short enough that an F over a dozen repositories does not leave the
+# feed papered in stale complaints. Only finished notes expire; a note marking
+# work in progress has no deadline, because it ends when the work does.
 NOTE_TTL = 8.0
 
-FETCHING = "fetching\u2026"
-
-# What a row says when the remote wanted credentials we would not give it. The
-# feed's column is far too narrow for the real message, and after an F this is
-# the only part that matters anyway: this one did not go through, the others
-# did. The real message is kept on the note for the popup to show.
-UNAUTHORISED = "unable to fetch"
-
 # The errors that mean "no usable credential", as opposed to "no network" or "no
-# such remote". Only these are worth offering a key for.
+# such remote". Only these are worth offering a key for, and they are the same
+# whichever of the three commands hit them.
 AUTH_MARKERS = (
     "permission denied",
     "authentication failed",
@@ -211,12 +218,31 @@ AUTH_MARKERS = (
     "publickey",
 )
 
+# Failures that deserve a phrase of their own rather than git's first line of
+# stderr. `git push` is the reason this table exists: its stderr opens with
+# "To github.com:owner/repo.git", which is the least useful line there is in a
+# column 12% of the window wide, and the fact worth reading -- "(fetch first)",
+# "[rejected]" -- is two lines further down. Matched in order, so the first entry
+# wins; checked after AUTH_MARKERS, which outrank everything.
+REASON_MARKERS = (
+    ("not possible to fast-forward", "cannot fast-forward"),
+    ("diverging branches", "cannot fast-forward"),
+    ("need to specify how to reconcile", "cannot fast-forward"),
+    ("[rejected]", "push rejected"),
+    ("failed to push some refs", "push rejected"),
+)
+
 
 def fetch_env() -> dict[str, str]:
-    """An environment in which a fetch has no way to ask for anything.
+    """An environment in which nothing here has any way to ask for anything.
 
     Every prompt path closed at once, because they fail differently and only one
     of them has to be open to put text on this pane:
+
+    Named for the fetch because that is what it was written for, and kept that
+    way because it is what the popup and the README both call it. It applies
+    unchanged to the other two: a push over ssh reaches for a passphrase by
+    exactly the same path.
 
     - GIT_TERMINAL_PROMPT stops git asking for an https username itself.
     - BatchMode stops ssh asking for a passphrase or a host key confirmation.
@@ -237,7 +263,7 @@ def fetch_env() -> dict[str, str]:
 
 @dataclass(frozen=True)
 class Note:
-    """What a fetch has to say about a row.
+    """What a fetch, pull or push has to say about a row.
 
     Frozen so that updating a note is a single dict assignment, which keeps the
     no-lock reasoning below true, and so that == compares by value -- the draw
@@ -249,17 +275,91 @@ class Note:
 
     text: str
     detail: str = ""
-    # A monotonic deadline, or 0 for "until something replaces it" -- FETCHING,
-    # which ends when its fetch does rather than on a clock.
+    # A monotonic deadline, or 0 for "until something replaces it" -- a note
+    # marking work in progress, which ends when the work does rather than on a
+    # clock.
     expires: float = 0.0
+    # Whether something is running in this repository right now. This is the
+    # re-entrancy guard, and it has to be a flag rather than a comparison
+    # against the progress text: notes are keyed by repository root, so with
+    # three operations sharing one note "is it fetching?" would happily let a p
+    # start on top of an f and leave two git processes fighting over index.lock.
+    busy: bool = False
 
 
-# Fetch notes by repository root, so two sessions on one repository both show it.
-# Written by fetch threads, read by the draw loop; assignment to a dict is atomic
-# under the GIL and nothing here does read-modify-write, so no lock is needed.
+def fetch_argv(repo) -> list[str] | str:
+    """`f` and `F`. The one command here that changes nothing locally."""
+    return ["git", "--no-optional-locks", "-C", repo.root, "fetch", "--quiet"]
+
+
+def pull_argv(repo) -> list[str] | str:
+    """`p`. Fast-forward or refuse -- see the module docstring for why only that.
+
+    Both refusals are answered from the row that is already on screen rather
+    than from the network: git would say the same thing in a paragraph, several
+    seconds and one ssh connection later.
+
+    Without --no-optional-locks, unlike the fetch: that flag exists to stop the
+    *sampler* taking index.lock out from under an interactive git, and a pull is
+    the interactive git it was protecting.
+    """
+    if repo.branch == gitr.DETACHED:
+        return "detached HEAD"
+    if not repo.upstream:
+        return "no upstream"
+    return ["git", "-C", repo.root, "pull", "--ff-only", "--quiet"]
+
+
+def push_argv(repo) -> list[str] | str:
+    """`P`. Sets the upstream when there is none, rather than refusing.
+
+    Publishing a branch you have never pushed is the main thing P is wanted for
+    on the rows the feed marks `local`, and the marker disappearing on the next
+    tick is the confirmation. Detached is still a refusal: there is no branch to
+    name as the upstream.
+    """
+    if repo.branch == gitr.DETACHED:
+        return "detached HEAD"
+    if not repo.upstream:
+        return [
+            "git", "-C", repo.root,
+            "push", "--set-upstream", "origin", repo.branch, "--quiet",
+        ]
+    return ["git", "-C", repo.root, "push", "--quiet"]
+
+
+@dataclass(frozen=True)
+class Op:
+    """One of the three things a key here can ask a repository to do.
+
+    Only the command and the words differ between them; the thread, the queue,
+    the no-tty environment, the note and the popup are shared, because every one
+    of those was written for reasons that have nothing to do with which git
+    subcommand is being run.
+
+    `argv` returns the command to run, or a short phrase saying why there is
+    none -- "no upstream" on a row that has never been pushed, say. A phrase
+    goes straight onto the row: it is an answer the feed already had, and asking
+    the network for it would cost a connection to be told what was on screen.
+    """
+
+    verb: str
+    progress: str
+    argv: Callable[[gitr.Repo], "list[str] | str"]
+
+
+FETCH = Op("fetch", "fetching\u2026", fetch_argv)
+PULL = Op("pull", "pulling\u2026", pull_argv)
+PUSH = Op("push", "pushing\u2026", push_argv)
+
+# Notes by repository root, so two sessions on one repository both show it -- and
+# so the busy flag is a lock on the thing that actually has an index.lock.
+# Written by worker threads, read by the draw loop; assignment to a dict is
+# atomic under the GIL and nothing here does read-modify-write, so no lock is
+# needed.
 notes: dict[str, Note] = {}
 
-_fetch_slots = threading.Semaphore(FETCH_PARALLEL)
+_op_slots = threading.Semaphore(OP_PARALLEL)
 
 
 def sample() -> list:
@@ -297,26 +397,33 @@ def prune_notes() -> bool:
     return bool(stale)
 
 
-def failure_note(message: str) -> Note:
+def failure_note(op: Op, message: str) -> Note:
     """Turn git's complaint into a row's worth of words, keeping the rest.
 
     An authentication failure gets its own short phrase because it is the one
-    that is expected: the fetch was refused a passphrase on purpose, so saying
+    that is expected: the command was refused a passphrase on purpose, so saying
     "Permission denied (publickey)" on the row would report our own policy back
-    to us as if it were news. Everything else keeps git's first line, which is
-    the one it puts the actual fact on.
+    to us as if it were news.
+
+    Then REASON_MARKERS, for the failures whose fact is not on the first line --
+    a rejected push announces the remote's URL first, and the reason two lines
+    down. Only after both does git's own first line stand, which is where it puts
+    the fact for everything else.
     """
     lines = message.strip().splitlines()
     lowered = message.lower()
     if any(marker in lowered for marker in AUTH_MARKERS):
-        text = UNAUTHORISED
+        text = f"unable to {op.verb}"
     else:
-        text = lines[0] if lines else "fetch failed"
+        text = next(
+            (phrase for marker, phrase in REASON_MARKERS if marker in lowered),
+            lines[0] if lines else f"{op.verb} failed",
+        )
     return Note(text, message.strip(), time.monotonic() + NOTE_TTL)
 
 
-def show_failure(repo, note: Note) -> None:
-    """Explain a failed fetch in a popup, where there is room to and it is safe to.
+def show_failure(op: Op, repo, note: Note) -> None:
+    """Explain a failure in a popup, where there is room to and it is safe to.
 
     A popup rather than the pane for two reasons: the feed's column is 12% of the
     window in the default layout, and a popup is a separate pty, so the one thing
@@ -332,7 +439,11 @@ def show_failure(repo, note: Note) -> None:
     The message goes through a file: it is several lines of git stderr and would
     have to survive display-popup's shell as an argument otherwise.
 
-    Failing to open the popup is not a failure of the fetch -- the row already
+    The verb goes first, because the popup both names the failure and offers to
+    retry it after unlocking a key: a passphrase is as likely to be what stopped
+    a push as a fetch.
+
+    Failing to open the popup is not a failure of the command -- the row already
     carries the short version -- so every error here is swallowed.
     """
     # The same modules/tmux/scripts radar_ui is imported from, rather than a
@@ -351,8 +462,8 @@ def show_failure(repo, note: Note) -> None:
                 "tmux", "display-popup", "-E",
                 "-w", "80%", "-h", "60%", "-x", "C", "-y", "C",
                 popup,
-                os.path.join(HERE, "Show-FetchFailure.sh"),
-                repo.session, repo.root or "", path,
+                os.path.join(HERE, "Show-GitFailure.sh"),
+                op.verb, repo.session, repo.root or "", path,
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -366,41 +477,54 @@ def show_failure(repo, note: Note) -> None:
             pass
 
 
-def start_fetch(repo, interactive: bool = True) -> None:
-    """Fetch one repository, on a thread, so the curses loop never blocks.
+def start_op(repo, op: Op, interactive: bool = True) -> None:
+    """Run one command against one repository, on a thread, so the loop never blocks.
 
-    This is the only thing in git-radar that touches the network, and it happens
-    only because you pressed a key. The sampler stays offline by design -- see
-    git_radar's module docstring.
+    These are the only things in git-radar that touch the network, and they
+    happen only because you pressed a key. The sampler stays offline by design --
+    see git_radar's module docstring.
 
-    `interactive` is what separates f from F. A fetch you asked for by name gets
-    a popup when it fails, because you are waiting for its answer; one of the
-    many F started does not, or a fetch-all across a dozen unreachable remotes
-    would bury the feed under a dozen popups. Their rows say `unable to fetch`
-    and that is the whole of what F promises.
+    `interactive` is what separates f from F. A command you asked for by name
+    gets a popup when it fails, because you are waiting for its answer; one of
+    the many F started does not, or a fetch-all across a dozen unreachable
+    remotes would bury the feed under a dozen popups. Their rows say
+    `unable to fetch` and that is the whole of what F promises. p and P are
+    always by name -- there is no all-rows version of either.
+
+    A repository already busy is left alone rather than queued. Two of these in
+    one work tree race for index.lock, and a second one you did not notice
+    starting is worse than a keypress that visibly did nothing: the row is
+    already saying what it is doing.
     """
     key = note_key(repo)
     current = notes.get(key)
-    if current is not None and current.text == FETCHING:
+    if current is not None and current.busy:
         return
     if not repo.root:
         notes[key] = Note("not a git repository", expires=time.monotonic() + NOTE_TTL)
         return
 
-    notes[key] = Note(FETCHING)
+    argv = op.argv(repo)
+    if isinstance(argv, str):
+        # A refusal the row could answer without asking anyone. It expires like
+        # any other finished note.
+        notes[key] = Note(argv, expires=time.monotonic() + NOTE_TTL)
+        return
+
+    notes[key] = Note(op.progress, busy=True)
 
     def worker() -> None:
         # Queue here rather than at the call site: the key press should be
         # acknowledged on the row immediately, even when three fetches are
         # already running ahead of this one.
-        with _fetch_slots:
+        with _op_slots:
             try:
                 result = subprocess.run(
-                    ["git", "--no-optional-locks", "-C", repo.root, "fetch", "--quiet"],
+                    argv,
                     capture_output=True,
                     text=True,
                     check=False,
-                    timeout=FETCH_TIMEOUT,
+                    timeout=OP_TIMEOUT,
                     env=fetch_env(),
                     # No stdin and no controlling terminal: the two ways a child
                     # could still have reached a keyboard. See fetch_env.
@@ -409,12 +533,12 @@ def start_fetch(repo, interactive: bool = True) -> None:
                 )
             except subprocess.TimeoutExpired:
                 notes[key] = Note(
-                    "fetch timed out", expires=time.monotonic() + NOTE_TTL
+                    f"{op.verb} timed out", expires=time.monotonic() + NOTE_TTL
                 )
                 return
             except OSError as error:
                 notes[key] = Note(
-                    "fetch failed", str(error), time.monotonic() + NOTE_TTL
+                    f"{op.verb} failed", str(error), time.monotonic() + NOTE_TTL
                 )
                 return
 
@@ -424,14 +548,16 @@ def start_fetch(repo, interactive: bool = True) -> None:
                 notes.pop(key, None)
                 return
 
-            note = failure_note(result.stderr or result.stdout or "fetch failed")
+            note = failure_note(
+                op, result.stderr or result.stdout or f"{op.verb} failed"
+            )
             notes[key] = note
 
         # Outside the semaphore: the popup waits for a human, and holding a
-        # fetch slot open for as long as it takes to read an error would stall
-        # the rest of an F behind it.
+        # slot open for as long as it takes to read an error would stall the
+        # rest of an F behind it.
         if interactive:
-            show_failure(repo, note)
+            show_failure(op, repo, note)
             # The popup may have unlocked a key and retried successfully, which
             # moves the refs without this thread ever hearing about it. Clearing
             # the note both tells the loop to resample and stops a stale
@@ -439,6 +565,11 @@ def start_fetch(repo, interactive: bool = True) -> None:
             notes.pop(key, None)
 
     threading.Thread(target=worker, daemon=True).start()
+
+
+def start_fetch(repo, interactive: bool = True) -> None:
+    """f and F, which are start_op(FETCH) and nothing else."""
+    start_op(repo, FETCH, interactive)
 
 
 # The labels the standard layout gives the radar column and the editor
@@ -897,7 +1028,7 @@ def run(stdscr, interval: float) -> None:
                     start_fetch(repos[selected])
             elif key == ord("F"):
                 # Every row, not the reachable ones: start_fetch already
-                # collapses two sessions on one repository (its FETCHING guard
+                # collapses two sessions on one repository (its busy guard
                 # is keyed by repository root), and a repository that needs a
                 # credential we will not give fails in milliseconds rather than
                 # blocking, so there is nothing to pre-filter. Silent per repo
@@ -905,6 +1036,14 @@ def run(stdscr, interval: float) -> None:
                 # on the rows and not in a stack of popups.
                 for row in repos:
                     start_fetch(row, interactive=False)
+            elif key == ord("p"):
+                # Selected row only, and no shifted all-rows twin: see the
+                # module docstring for why F has one and these do not.
+                if repos:
+                    start_op(repos[selected], PULL)
+            elif key == ord("P"):
+                if repos:
+                    start_op(repos[selected], PUSH)
             elif key == ord("q"):
                 # Reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm.
