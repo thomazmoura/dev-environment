@@ -69,7 +69,8 @@ fully in sync -- the one case where an absent arrow means the opposite of what i
 usually does.
 
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
-`f` fetches the selected repository, `Ctrl-C` closes the pane.
+`f` fetches the selected repository and `F` fetches every listed one,
+`Ctrl-C` closes the pane.
 
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the
@@ -115,7 +116,30 @@ something a daemon runs every few seconds across every session you have open.
 
 The cost is honest and worth naming: *behind* is only as fresh as your last
 fetch. `f` fetches the selected repository on demand, on a background thread so
-the pane never freezes, and the counts update on the next tick.
+the pane never freezes, and the counts update on the next tick. `F` does the same
+for every session listed, four at a time.
+
+**A fetch is given no way to ask you anything.** It runs under `BatchMode` with no
+stdin and no controlling terminal, so it cannot prompt for a passphrase or a
+password; one that would have needed a credential fails in milliseconds and its
+row says `unable to fetch` for a few seconds.
+
+That is not politeness, it is the only way this can be correct. Capturing a
+fetch's output does not keep a prompt off the screen: `ssh` does not ask on
+stdout or stderr, it opens `/dev/tty` and writes straight to the pane. curses
+repaints differentially and has no idea those cells were touched, so it never
+paints over them -- the prompt stays welded to the pane for the rest of its life.
+Closing every prompt path is what makes `F` cheap too: "fetch everything, skip
+whatever would have asked" needs no detection pass when nothing *can* ask.
+
+The prompt has to happen somewhere, so `f` -- and only `f`, since you asked about
+that repository by name -- opens a popup on failure with git's full message. When
+the failure was an authentication one, the popup offers to unlock the key this
+host would have tried for that remote and does not already hold, and retries.
+The passphrase is typed in the popup, which is its own pty and takes any mess
+away with it when it closes. It is asked at most once: the key goes into the
+agent, so every later fetch finds it there. Nothing is unlocked at login, and a
+key that is already loaded is never asked for again.
 
 **One `git status` per repository.** `--porcelain=v2 --branch` returns the
 branch, the upstream *and* the ahead/behind pair in its header lines, so a
