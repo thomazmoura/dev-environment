@@ -34,6 +34,17 @@ Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
 the selected repository, q kills the selected session after asking, Ctrl-C
 closes the pane.
 
+The cursor starts on this pane's own session and is put back there whenever a
+client switches into it, so arriving in a session finds its feed already
+pointing at it rather than wherever it was last left. The pane cannot see the
+switch by itself -- it is not the pane that gains the focus -- so a tmux hook
+tells it: see SELF_KEY and modules/tmux/scripts/Sync-RadarSelection.sh.
+
+Enter switches to the selected session and, when that session is sitting on a
+radar pane, goes on into its NeoVim pane. On your own row -- where the cursor
+now starts -- switch-client alone does nothing, so Enter there means "stop
+reading, start working"; a session parked anywhere else is left as you left it.
+
 Ctrl-C closes the pane and nothing else does, deliberately: this is a pane you
 leave open and type past, so closing it should take a gesture you cannot make by
 accident. q and Esc used to close it and no longer do -- q now kills the selected
@@ -138,6 +149,13 @@ STATE_EMPHASIS = {
 
 EMPTY_MESSAGE = "no tmux sessions"
 
+# The key that means "put the cursor back on my own session's row". Ctrl-O:
+# nothing types it at a feed, and it is none of the keys below, so it cannot be
+# pressed by accident. Sent by modules/tmux/scripts/Sync-RadarSelection.sh from
+# the client-session-changed hook -- the pane cannot see the switch itself,
+# because it is not the pane that gains the focus when a client arrives.
+SELF_KEY = 15
+
 # How long a fetch may run before it is abandoned. Generous, because a fetch you
 # asked for on a slow link is still a fetch you want; it is a thread, so nothing
 # else waits on it.
@@ -213,22 +231,103 @@ def start_fetch(repo) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
-def jump(session: str) -> None:
-    """Switch the client to a session.
+# The labels the standard layout gives the radar column and the editor
+# (tmux-helpers.sh:label_pane). Enter reads labels rather than pane indexes: the
+# indexes are an accident of the order Set-NeovimLayout.sh splits in, while
+# @pane_label is what Select-Pane.sh already treats as a pane's identity.
+RADAR_LABEL = "Git"
+EDITOR_LABEL = "NeoVim"
 
-    One command, unlike the three the agent feed sends: those exist to land on a
-    specific *pane*, and a session's own current window and pane are already
-    where you left them.
+# Where the editor sits in a window the layout built, for panes that carry no
+# label because they were created some other way: Git 0, Agents 1, NeoVim 2.
+EDITOR_INDEX = "2"
+
+
+def window_panes(session: str) -> list[tuple[str, str, str, str]]:
+    """A session's current window, as (active, pane id, label, index) rows.
+
+    `-t <session>` lists the current window only -- which is exactly the window
+    switch-client is about to land in, so one call answers the whole question
+    Enter has to ask.
+    """
+    fmt = "\t".join(
+        ["#{pane_active}", "#{pane_id}", "#{@pane_label}", "#{pane_index}"]
+    )
+    try:
+        result = subprocess.run(
+            ["tmux", "list-panes", "-t", f"={session}", "-F", fmt],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if result.returncode != 0:
+        return []
+    rows = []
+    for line in result.stdout.splitlines():
+        fields = line.split("\t")
+        if len(fields) == 4:
+            rows.append((fields[0], fields[1], fields[2], fields[3]))
+    return rows
+
+
+def editor_pane(session: str) -> str:
+    """The pane Enter should land on, or "" to leave the focus where it is.
+
+    Only when the session is already sitting on a radar pane. Pressing Enter
+    there is a request to stop reading the list and start working -- and on your
+    own row, which is where the cursor now starts, switch-client alone does
+    nothing at all, so without this Enter would be a dead key on the one row you
+    press it on most.
+
+    A session parked on a terminal or an agent is left exactly as you left it:
+    arriving somewhere other than where you were is worse than one extra C-l.
+    """
+    panes = window_panes(session)
+    if not any(
+        active == "1" and label == RADAR_LABEL for active, _, label, _ in panes
+    ):
+        return ""
+    for _, pane_id, label, _ in panes:
+        if label == EDITOR_LABEL:
+            return pane_id
+    for _, pane_id, _, index in panes:
+        if index == EDITOR_INDEX:
+            return pane_id
+    return ""
+
+
+def jump(session: str) -> None:
+    """Switch the client to a session, and on into its editor where that applies.
+
+    The switch is one command, unlike the three the agent feed sends: those
+    exist to land on a specific *pane* in a specific window, and a session's own
+    current window and pane are already where you left them. The second command
+    here is not that -- it fires only when where you left them was the radar
+    itself (see editor_pane).
+
+    Asked before switching, so the answer describes the session you are going to
+    rather than one already half-changed.
 
     `=` makes the target an exact name rather than an fnmatch pattern, the same
     guard New-CodeSession.sh uses.
     """
+    editor = editor_pane(session)
     subprocess.run(
         ["tmux", "switch-client", "-t", f"={session}"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
     )
+    if editor:
+        subprocess.run(
+            ["tmux", "select-pane", "-t", editor],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
 
 
 def session_id(session: str) -> str:
@@ -438,6 +537,11 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
     stdscr.refresh()
 
 
+def listed(repos: list, session: str) -> bool:
+    """Whether a session has a row yet."""
+    return any(repo.session == session for repo in repos)
+
+
 def index_of(repos: list, session: str, fallback: int) -> int:
     """Re-find the selection after a refresh.
 
@@ -494,7 +598,17 @@ def run(stdscr, interval: float) -> None:
     current = gitr.current_session()
 
     repos = sample()
-    selected = 0
+    # On this pane's own row, not on row 0. Every session has a feed of its own,
+    # and the row worth having under the cursor in it is the session you are in
+    # -- the same row the rail already marks. See SELF_KEY for the arrivals that
+    # happen after startup.
+    selected = index_of(repos, current, 0)
+    # A session opened seconds ago is not in the shared snapshot yet -- it is
+    # published on the sampler's own tick and accepted for up to 15s (see
+    # radar_cache) -- so the first samples in a brand new session can be missing
+    # the very row this pane wants to start on. Keep homing until it turns up,
+    # or a feed opened with the session would sit on row 0 for good.
+    homed = listed(repos, current)
     # The session q has asked about and is waiting on an answer for, or "".
     pending = ""
     last_sample = time.monotonic()
@@ -552,6 +666,14 @@ def run(stdscr, interval: float) -> None:
             elif key == ord("G"):
                 selected = max(0, len(repos) - 1)
                 redraw = True
+            elif key == SELF_KEY:
+                # A client has just switched into this pane's session. Below the
+                # `pending` branch on purpose: a reset arriving while the kill
+                # question is up answers it "no", which is what leaving and
+                # coming back should do to a question you walked away from.
+                selected = index_of(repos, current, selected)
+                homed = homed or listed(repos, current)
+                redraw = True
             elif key in (curses.KEY_ENTER, 10, 13):
                 if repos:
                     jump(repos[selected].session)
@@ -584,6 +706,9 @@ def run(stdscr, interval: float) -> None:
                 anchor = repos[selected].session if repos else ""
                 repos = sample()
                 selected = index_of(repos, anchor, selected)
+                if not homed:
+                    selected = index_of(repos, current, selected)
+                    homed = listed(repos, current)
                 last_sample = now
                 redraw = True
 

@@ -71,6 +71,25 @@ usually does.
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
 `f` fetches the selected repository, `Ctrl-C` closes the pane.
 
+**The cursor is on your row when you arrive.** Every session runs a feed of its
+own, so the row worth having under the cursor in it is that session's -- the
+same one the rail marks. It starts there and is put back there on every switch
+into the session. The pane cannot see the switch by itself: it is not the pane
+that gains the focus, so no focus event reaches it, and asking tmux every tick
+whether the session is attached would cost the 14ms per pane per tick that the
+focus events below exist to avoid. A `client-session-changed` hook in
+`modules/tmux/common.conf` runs `Sync-RadarSelection.sh`, which sends the feed a
+single reserved keypress instead.
+
+**`Enter` goes on into NeoVim when the session is sitting on a radar pane.**
+Pressing it there is a request to stop reading the list and start working, and
+on your own row -- where the cursor now starts -- `switch-client` alone does
+nothing at all, so it would otherwise be a dead key on the row you press it on
+most. A session parked on a terminal or an agent is left exactly as you left it:
+arriving somewhere other than where you were is worse than one extra `C-l`. The
+editor is found by its `@pane_label`, not by pane index -- the index is an
+accident of the order `Set-NeovimLayout.sh` splits in.
+
 `Ctrl-C` and nothing else, deliberately. A feed is a pane you leave open and
 type past, so closing it should take a gesture you cannot make by accident: `q`
 is one fumbled pane away and `Esc` is muscle memory from vim. Both used to close
