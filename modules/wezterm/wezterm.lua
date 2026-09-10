@@ -70,7 +70,7 @@ return {
   animation_fps = 24,
   audible_bell = "Disabled",
   background = background,
-  default_prog = { "pwsh", "-C", "vtmux" },
+  default_prog = { "pwsh" },
   enable_tab_bar = false,
   initial_cols = 180,
   initial_rows = 50,
