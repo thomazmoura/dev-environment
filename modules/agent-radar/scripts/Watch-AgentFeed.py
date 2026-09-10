@@ -32,10 +32,14 @@ lost the dot it used to carry -- a mark on every row in the same place is one
 you stop seeing, and the colour it carried is now on the icon instead. The fzf
 picker keeps it, where the state has no other mark of its own.
 
-Refreshing once a second, in every session at once, is affordable because this
-does not sample: Start-AgentRadar.py samples for the whole machine and this
-reads what it published (agent_feed.py). Opening a second feed pane costs a file
-read per second, not another `ps` and a `capture-pane` per agent.
+Refreshing in every session at once is affordable because this does not sample:
+Start-AgentRadar.py samples for the whole machine and this reads what it
+published (agent_feed.py). Opening a second feed pane costs a file read per
+sample, not another `ps` and a `capture-pane` per agent.
+
+It redraws when the sampler publishes rather than on a timer of its own, which
+would stack with the sampler's: a pane closing just after a tick would keep its
+row for the rest of that tick and then for the rest of ours.
 
 Keys: j/k/g/G move, Enter jumps to the agent's pane, r refreshes now, Ctrl-C
 closes the pane.
@@ -390,6 +394,9 @@ def run(stdscr, interval: float) -> None:
     panes = sample()
     selected = 0
     last_sample = time.monotonic()
+    # What the redraw follows: the mtime of the snapshot the sampler publishes.
+    # The interval is only the backstop for when there is no snapshot at all.
+    last_generation = feed.generation()
     draw(stdscr, panes, selected, use_colour, palette, band, focus.focused, current)
 
     try:
@@ -429,12 +436,19 @@ def run(stdscr, interval: float) -> None:
             elif key == ord("r"):
                 last_sample = 0
 
+            # A stat on every pass of this loop, which already runs ten times a
+            # second for the keyboard -- not a read, since decoding the snapshot
+            # each pass would be the per-consumer cost agent_feed.py exists to
+            # avoid. The interval covers what an mtime cannot: no daemon up,
+            # where generation() is a constant 0.0 and sample() detects live.
             now = time.monotonic()
-            if now - last_sample >= interval:
+            generation = feed.generation()
+            if generation != last_generation or now - last_sample >= interval:
                 anchor = panes[selected].pane_id if panes else ""
                 panes = sample()
                 selected = index_of(panes, anchor, selected)
                 last_sample = now
+                last_generation = generation
                 redraw = True
 
             if redraw:

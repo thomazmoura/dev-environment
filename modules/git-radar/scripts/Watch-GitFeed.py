@@ -954,6 +954,9 @@ def run(stdscr, interval: float) -> None:
     # The session q has asked about and is waiting on an answer for, or "".
     pending = ""
     last_sample = time.monotonic()
+    # What the redraw follows: the mtime of the snapshot the sampler publishes.
+    # last_sample is only the backstop for when there is none.
+    last_generation = feed.generation()
     # Fetch threads change the detail column between samples, and at a three
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
@@ -989,9 +992,20 @@ def run(stdscr, interval: float) -> None:
                 if key != -1:
                     if key == ord("y"):
                         kill(pending)
-                        # The row is gone as of now; do not wait out the tick
-                        # still showing it.
-                        last_sample = 0
+                        # Drop the row here: this pane killed the session, so it
+                        # knows before any sample could. Only a guess at what
+                        # the sampler will say -- if the kill failed, the next
+                        # sample brings the row back, which is the right way
+                        # round.
+                        repos = [row for row in repos if row.session != pending]
+                        selected = max(0, min(selected, len(repos) - 1))
+                        # Then tell the sampler, so the status bar and any other
+                        # feed pane stop showing it too. Not a forced re-read,
+                        # which is what this used to do: the published snapshot
+                        # is exactly what is out of date, so re-reading it would
+                        # put the row straight back until the sampler caught up.
+                        feed.request_sample()
+                        last_sample = time.monotonic()
                     pending = ""
                     redraw = True
             elif key == 3:  # Ctrl-C
@@ -1022,6 +1036,10 @@ def run(stdscr, interval: float) -> None:
             elif key == curses.KEY_RESIZE:
                 redraw = True
             elif key == ord("r"):
+                # A real sample, not a re-read: at a three-second tick the
+                # snapshot in hand can be most of a tick old, and "refresh now"
+                # returning the same numbers reads as a broken key.
+                feed.request_sample()
                 last_sample = 0
             elif key == ord("f"):
                 if repos:
@@ -1059,15 +1077,25 @@ def run(stdscr, interval: float) -> None:
             if notes != seen_notes:
                 seen_notes = dict(notes)
                 # A finished fetch has moved the refs; take a sample now rather
-                # than showing the old counts for the rest of the tick.
+                # than showing the old counts for the rest of the tick -- and
+                # the sampler has to take it, since a read here would only
+                # return the snapshot that predates the fetch.
+                feed.request_sample()
                 last_sample = 0
                 redraw = True
 
+            # Follow the snapshot's mtime rather than a timer of our own, which
+            # would stack with the sampler's three seconds. A stat on each pass
+            # of this loop, which already runs ten times a second for the
+            # keyboard; the interval survives as the backstop for when there is
+            # no sampler publishing at all.
             now = time.monotonic()
+            generation = feed.generation()
+            fresh = generation != last_generation
             # Not while a question is up: re-sampling can reorder the rows, and
             # the selection would move out from under an answer already being
             # typed. The question names its own session anyway.
-            if not pending and now - last_sample >= interval:
+            if not pending and (fresh or now - last_sample >= interval):
                 anchor = repos[selected].session if repos else ""
                 repos = sample()
                 selected = index_of(repos, anchor, selected)
@@ -1075,6 +1103,7 @@ def run(stdscr, interval: float) -> None:
                     selected = index_of(repos, current, selected)
                     homed = listed(repos, current)
                 last_sample = now
+                last_generation = generation
                 redraw = True
 
             if redraw:

@@ -74,3 +74,19 @@ def sample() -> list[git_radar.Repo]:
 def sample_cached(interval: float = DEFAULT_INTERVAL) -> list[git_radar.Repo]:
     """What consumers call: the shared snapshot, or a live sample if there is none."""
     return CACHE.sample_cached(sample, interval)
+
+
+def request_sample() -> None:
+    """Ask the sampler to publish now rather than at the end of its three seconds.
+
+    For what a consumer knows before any sample could -- it has just killed a
+    session, or a fetch it started has moved the refs. A forced *read* cannot
+    help: the published snapshot is exactly the thing that is out of date, so
+    the force has to reach the sampler.
+    """
+    CACHE.request_sample()
+
+
+def generation() -> float:
+    """The mtime of the published snapshot -- a change means a new sample."""
+    return CACHE.generation()

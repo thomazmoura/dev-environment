@@ -294,6 +294,15 @@ def read(max_age: float = STALE_AFTER) -> Snapshot | None:
     return CACHE.read(max_age)
 
 
+def nudge_stamp() -> float:
+    return CACHE.nudge_stamp()
+
+
+def generation() -> float:
+    """The mtime of the published snapshot -- a change means a new sample."""
+    return CACHE.generation()
+
+
 def daemon_running() -> bool:
     return CACHE.daemon_running()
 

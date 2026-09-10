@@ -78,6 +78,10 @@ def run(interval: float) -> int:
     # reads from would have no "last read" to age out of, and would run forever.
     feed.CACHE.touch_heartbeat()
 
+    # Adopt the flag rather than serving it: the touch that woke the *previous*
+    # sampler is not this one's to answer, and the loop samples immediately.
+    nudged = feed.CACHE.nudge_stamp()
+
     while True:
         if not tmux_is_running():
             return 0
@@ -99,8 +103,12 @@ def run(interval: float) -> int:
             print(f"git-radar: sample failed: {error!r}", file=sys.stderr, flush=True)
 
         # Sleep the remainder rather than a flat interval, so a slow sample on a
-        # machine full of large repositories does not stretch the tick into two.
-        time.sleep(max(0.0, interval - (time.monotonic() - started)))
+        # machine full of large repositories does not stretch the tick into two
+        # -- and cut even that short if something has asked for a sample in the
+        # meantime, a session killed from the feed pane being the usual reason.
+        nudged = feed.CACHE.wait_for_tick(
+            max(0.0, interval - (time.monotonic() - started)), nudged
+        )
 
 
 def main() -> int:

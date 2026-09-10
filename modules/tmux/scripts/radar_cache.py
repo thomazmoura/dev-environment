@@ -57,6 +57,12 @@ DEFAULT_INTERVAL = 1.0
 DEFAULT_STALE_AFTER = 5.0
 DEFAULT_IDLE_EXIT_SECONDS = 90.0
 
+# How often a sampler stats its "sample now" flag while it would otherwise be
+# asleep. Shared rather than scaled to the tick: this is the latency a person
+# waits, and a slower tick says a sample costs more, not that a dead row should
+# linger longer.
+NUDGE_POLL = 0.05
+
 
 def cache_root(name: str) -> Path:
     """Where a radar's runtime state lives: $XDG_CACHE_HOME/<name>.
@@ -151,6 +157,22 @@ class RadarCache:
     def log_path(self) -> Path:
         return self.cache_dir() / "daemon.log"
 
+    def nudge_path(self) -> Path:
+        """The "sample now" flag: a file whose mtime is the whole message.
+
+        The interval is what a sampler falls back on when nothing tells it
+        anything, and a pane closing is instant on screen, so its row is a lie
+        for whatever is left of the tick. Anything that knows such a moment
+        happened touches this file and the sampler wakes on it.
+
+        A file rather than a signal, because a signal needs a pid: the daemon
+        deliberately keeps no pidfile -- the flock *is* the liveness check --
+        and a pid read from a file can belong to whatever inherited the number.
+        Nobody has to be listening either; with no daemon up this is just a
+        file, whose mtime the next daemon adopts as its baseline.
+        """
+        return self.cache_dir() / "resample"
+
     # --- Publishing ----------------------------------------------------------
 
     def publish(self, rows: list, status: str) -> None:
@@ -188,6 +210,42 @@ class RadarCache:
             return max(0.0, time.time() - self.heartbeat_path().stat().st_mtime)
         except OSError:
             return float("inf")
+
+    def nudge_stamp(self) -> float:
+        """The mtime of the "sample now" flag, or 0.0 if nothing has ever asked.
+
+        Compared against the previous check rather than against the clock:
+        "has anyone asked since I last looked" needs no threshold for how
+        recent counts, and every value of such a threshold is either a missed
+        nudge or a repeated one.
+        """
+        try:
+            return self.nudge_path().stat().st_mtime
+        except OSError:
+            return 0.0
+
+    def request_sample(self) -> None:
+        """Ask the sampler to publish now instead of at the end of its tick."""
+        path = self.nudge_path()
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        except OSError:
+            pass
+
+    def generation(self) -> float:
+        """The mtime of the published snapshot, or 0.0 if there is none.
+
+        For consumers that redraw when the snapshot *changes* rather than when
+        their own timer comes round, so the two timers do not stack. A stat is
+        cheap enough for a keypress loop where a read and decode is not; 0.0
+        can only compare unequal to a real mtime, so a daemon appearing or
+        dying also reads as a change.
+        """
+        try:
+            return self.state_path().stat().st_mtime
+        except OSError:
+            return 0.0
 
     def read(self, max_age: float | None = None) -> Snapshot | None:
         """The published snapshot, or None if there is not a usable one.
@@ -303,6 +361,22 @@ class RadarCache:
             os.close(fd)
             return None
         return fd
+
+    def wait_for_tick(self, remaining: float, seen: float) -> float:
+        """Sleep out the rest of a tick, unless somebody asks for a sample sooner.
+
+        `seen` is the flag's mtime as of the last check and comes back updated,
+        so one touch wakes exactly one tick. See `nudge_path`.
+        """
+        deadline = time.monotonic() + remaining
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return seen
+            time.sleep(min(NUDGE_POLL, left))
+            stamp = self.nudge_stamp()
+            if stamp != seen:
+                return stamp
 
     def sample_cached(self, sample, interval: float | None = None) -> list:
         """What consumers call: the shared snapshot, or a live sample if there is none.

@@ -204,6 +204,48 @@ consumer keeps working, at the old cost, until it comes back.
 Consequently the watchers refresh **once a second**, and opening one in every
 session costs one file read per second each.
 
+## Closing an agent, and the two timers that used to stack
+
+A second is the rate at which the sampler *falls back* to looking, not the rate
+at which agents come and go, and a pane closing is instant on screen -- so the
+row left behind is the most obviously wrong thing this can show. It used to cost
+up to two seconds, because two independent timers stacked: up to a second for
+the sampler to notice, then up to another for the feed pane's own tick to read
+what it published. Measured against a pane closed half a tick in: **1.5s before,
+0.3s now**.
+
+Sampling faster would have paid for a moment all day long -- a `ps` plus a
+`capture-pane` per agent, every tick, forever. Both halves are event-driven
+instead, and neither costs anything between events:
+
+    pane-exited          Request-RadarSample.sh    touch ~/.cache/agent-radar/resample
+    pane-died            (tmux hook, common.conf)             |
+    session-closed                                            v
+                                        Start-AgentRadar.py wakes, samples, publishes
+                                                              |
+                                                              v
+                              Watch-AgentFeed.py sees state.json's mtime move, redraws
+
+The same flag, and the same `radar_cache.wait_for_tick`, is what makes killing a
+session with `q` in [git-radar](../git-radar/README.md)'s feed instant. That is
+the case the whole mechanism was built for -- three seconds of tick there, and
+a consumer that knows the session is gone before any sample could.
+
+The nudge is a file's mtime and nothing more. A signal would need a pid, and the
+daemon deliberately keeps none -- [the lock **is** the
+liveness check](#one-sampler-many-readers), while a pid read from a file can
+belong to whatever inherited the number. The sampler stats the flag every 50ms
+while it would otherwise be asleep, and nobody has to be listening: with no
+daemon up the touch is just a file, whose mtime the next daemon adopts as a
+baseline rather than serving.
+
+The feed pane watches the snapshot's mtime on the same 100ms pass that already
+reads the keyboard -- a stat, not a read, so it costs one syscall to ask a
+question that decoding the JSON would answer at the per-consumer price this
+whole design exists to avoid. Its own interval survives as the backstop for the
+one case an mtime cannot cover: no sampler running at all, where the feed is
+sampling live anyway.
+
 ## The Claude Code hook (optional second witness)
 
 Screen reading is the primary signal and needs no installation. For Claude Code
@@ -463,6 +505,7 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `scripts/Watch-Agents.sh` | the live pane, fzf (`prefix + t`, `A`) |
 | `scripts/Watch-AgentFeed.py` | the live pane, curses (`prefix + t`, `r`) |
 | `scripts/Get-AgentSummary.sh` | the status-bar segment; a `cat` on the hot path |
+| `../tmux/scripts/Request-RadarSample.sh` | the tmux close hooks' nudge: sample now, do not wait out the tick. Shared with git-radar -- a closed session is a row in both |
 | `scripts/Show-AgentSnapshot.sh` | what the matcher sees |
 | `scripts/Test-AgentRules.py` | why each rule did or did not fire |
 | `scripts/Test-Fixtures.sh` | regression check over `fixtures/` |

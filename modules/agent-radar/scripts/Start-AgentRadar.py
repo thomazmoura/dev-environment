@@ -79,6 +79,10 @@ def run(interval: float) -> int:
     # reads from would have no "last read" to age out of, and would run forever.
     feed.touch_heartbeat()
 
+    # Adopt the flag rather than serving it: the touch that woke the *previous*
+    # sampler is not this one's to answer, and the loop samples immediately.
+    nudged = feed.nudge_stamp()
+
     while True:
         if not tmux_is_running():
             return 0
@@ -100,8 +104,11 @@ def run(interval: float) -> int:
             print(f"agent-radar: sample failed: {error!r}", file=sys.stderr, flush=True)
 
         # Sleep the remainder rather than a flat interval, so a slow sample on a
-        # busy machine does not stretch the tick into two.
-        time.sleep(max(0.0, interval - (time.monotonic() - started)))
+        # busy machine does not stretch the tick into two -- and cut even that
+        # short if something has asked for a sample in the meantime.
+        nudged = feed.CACHE.wait_for_tick(
+            max(0.0, interval - (time.monotonic() - started)), nudged
+        )
 
 
 def main() -> int:

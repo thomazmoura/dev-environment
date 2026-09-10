@@ -222,6 +222,7 @@ where its branch would be. It shows no counters at all rather than zeros --
 Start-GitRadar.py     the daemon. One sampler for the whole machine.
   git_radar.py        collector: list_sessions -> repo_root -> inspect
   git_feed.py         binds the shared cache to Repo rows, at a 3s tick
+                      (and request_sample, for when 3s is too long to wait)
   Get-GitState.py     presentation + CLI (table / tsv / json / fzf / status)
 Watch-GitFeed.py      the curses feed on prefix + t then R. Reads, never samples.
   Show-GitFailure.sh  the popup a named f/p/P failure opens: the message, and
@@ -249,6 +250,52 @@ smoothing silently breaking once more than one process was sampling.
 work tree; a tick there is a `capture-pane`. And the latency that matters is
 different -- a blocked agent is waiting on you *now*, whereas a file you just
 saved can appear a moment later without anyone noticing.
+
+### Except when you did something, where three seconds is far too long
+
+The tick is the rate this falls back on when nothing tells it anything. It is
+the wrong answer entirely for the changes *you* just made, and killing a session
+with `q` is the worst of them: the session is gone the instant you answer `y`,
+and the row for it used to sit there for **two seconds** afterwards. Long enough
+to wonder whether the key worked, which is how you end up killing a second
+session by pressing it again.
+
+`q` did already try. It set the feed's next-sample deadline to zero, and it
+could not work, for a reason worth keeping written down: **what a consumer reads
+is the published snapshot, and the snapshot is exactly the thing that is out of
+date.** Forcing a re-read only re-read the sampler's last answer, taken before
+the kill. The force has to reach the sampler, and the sampler is another
+process.
+
+So three things happen when you answer `y`, in this order, because only the
+first is instant:
+
+    1. the row is dropped from this pane's own list        0ms
+    2. the sampler is asked to publish now, not in 3s      ~150ms for everyone else
+    3. this pane redraws when that publication lands       within one getch
+
+Dropping the row locally is a *guess about what the sampler will say*, and the
+sampler stays the authority: if the kill somehow failed, the next sample brings
+the row straight back. That is the right way round -- a row that flickers back
+is a bug report, where a row that never leaves is one you learn to ignore.
+
+Measured, killing a session from the feed with `q`,`y`: **2.1s before, 0.09s
+now**. A session closed from anywhere else -- an `exit` in its last pane, a
+`tmux kill-session` from a shell -- goes through the tmux hooks in
+[`modules/tmux/common.conf`](../tmux/common.conf) instead, which touch the same
+flag: **1.3s before, 0.2s now**.
+
+The same applies to `f`, `p` and `P`: a finished fetch has moved the refs, and
+the counts on screen cannot change until something samples the repository
+again. And to `r`, where "refresh now" that returns identical numbers is
+indistinguishable from a dead key.
+
+The machinery is [`radar_cache.py`](../tmux/scripts/radar_cache.py) --
+`request_sample()` touches a flag, `wait_for_tick()` is what the sampler sleeps
+in, and `generation()` is the snapshot's mtime, which the feed watches instead
+of running a timer of its own. agent-radar's feed uses all three the same way,
+and [its README](../agent-radar/README.md) has the longer version of why the
+flag is a file's mtime rather than a signal.
 
 ## Trying it without tmux bindings
 
