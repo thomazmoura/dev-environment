@@ -10,12 +10,25 @@ while IFS= read -r session_id; do
     class=$(loginctl show-session "$session_id" -p Class --value 2>/dev/null)
     state=$(loginctl show-session "$session_id" -p State --value 2>/dev/null)
     locked=$(loginctl show-session "$session_id" -p LockedHint --value 2>/dev/null)
+    remote=$(loginctl show-session "$session_id" -p Remote --value 2>/dev/null)
+
+    if [[ "$class" == "user" && "$remote" == "yes" ]]; then
+        active_login=1
+        break
+    fi
 
     if [[ "$class" == "user" && "$state" == "active" && "$locked" != "yes" ]]; then
         active_login=1
         break
     fi
 done < <(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}')
+
+# An SSH login since boot counts even if the session has already closed.
+# OpenSSH 9.8+ logs authentication from sshd-session, older versions from sshd.
+if [ "$active_login" -eq 0 ] &&
+    journalctl -b -t sshd -t sshd-session --no-pager -o cat 2>/dev/null | grep -q '^Accepted '; then
+    active_login=1
+fi
 
 if [ "$active_login" -eq 0 ]; then
     systemctl poweroff
@@ -25,7 +38,7 @@ chmod +x /usr/local/bin/login-timeout-check.sh
 
 cat > /etc/systemd/system/login-timeout-shutdown.service << 'EOF'
 [Unit]
-Description=Shut down if no user logged in at boot
+Description=Shut down if no local or SSH login since boot
 After=sddm.service graphical.target
 
 [Service]
