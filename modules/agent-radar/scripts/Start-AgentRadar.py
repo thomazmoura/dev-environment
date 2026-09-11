@@ -13,6 +13,11 @@ Nobody starts this by hand. Any consumer that finds the lock free spawns it
 (agent_feed.ensure_daemon), and it exits by itself when tmux is gone or nothing
 has read from it for a while, so it does not outlive the thing it was watching.
 
+The exception is notifications (agent_notify.py): while any notification action
+is enabled, nobody reading is not a reason to stop. Detached is exactly when a
+"your agent is waiting" message is worth sending, so the sampler then lives as
+long as the tmux server does.
+
   Start-AgentRadar.py                 sample forever, once a second
   Start-AgentRadar.py --interval 0.5  faster ticks
   Start-AgentRadar.py --ensure        start one if none is running, then exit
@@ -32,6 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import agent_feed as feed  # noqa: E402
+import agent_notify  # noqa: E402
 
 # render_status lives with the other presentation in Get-AgentState.py, whose
 # name has a hyphen and so cannot be imported by name. Same load-by-path trick
@@ -83,10 +89,14 @@ def run(interval: float) -> int:
     # sampler is not this one's to answer, and the loop samples immediately.
     nudged = feed.nudge_stamp()
 
+    # Constructed here, after the lock, so a sampler that lost the race never
+    # reads the environment or starts worker threads.
+    notifier = agent_notify.Notifier()
+
     while True:
         if not tmux_is_running():
             return 0
-        if feed.last_read_age() > feed.IDLE_EXIT_SECONDS:
+        if not notifier.active and feed.last_read_age() > feed.IDLE_EXIT_SECONDS:
             # Everyone detached. Leave the last snapshot on disk: it is stale by
             # definition and every reader checks the age, so it cannot be
             # mistaken for live data, and the next consumer respawns us.
@@ -96,6 +106,8 @@ def run(interval: float) -> int:
         try:
             panes = feed.sample()
             feed.publish(panes, state_cli.render_status(panes))
+            # After the publish, so the status bar never waits on a notifier.
+            notifier.observe(panes)
         except Exception as error:  # noqa: BLE001
             # Fail open, like radar._run does: one bad tick -- tmux restarting
             # mid-capture, a rules file being edited -- must not take the

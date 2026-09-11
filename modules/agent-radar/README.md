@@ -426,6 +426,56 @@ Restarting the sampler is what deploys a change to any of this
 (`pkill -f Start-AgentRadar.py`; the next consumer respawns it). A running
 daemon has the old code in memory and keeps holding the lock.
 
+## Notifications
+
+The status bar only helps while you are looking at tmux. When a pane moves
+*into* `waiting` or `done`, the sampler also hands an event to every enabled
+notification action:
+
+    dev-environment: Claude Code is waiting
+    permission prompt
+
+| Action | Enabled when | Notes |
+| --- | --- | --- |
+| `telegram` | `BOT_TOKEN` and `CHAT_ID` are set | the same bot as `~/.local/bin/send_notification.sh`, sent from Python so the payload is real JSON |
+| `desktop` | `notify-send` exists and there is a session bus or display | `waiting` is sent `critical`, so GNOME keeps it on screen; `done` times out normally |
+
+The sampler inherits these variables from tmux's global environment
+(`tmux show-environment -g`), not from your current shell. If you change them,
+restart the sampler.
+
+**When a notification is not sent**:
+- **The pane is on screen.** This is the same test that stops `done` from being
+  created: if a client is displaying the pane, you watched it happen.
+- **An agent was already in that state when the notifier first started.** The
+  first sample is a baseline, so switching notifications on does not send one
+  message per agent that is already waiting.
+- **The same pane already sent the same state in the last 30 seconds**
+  (`REPEAT_AFTER`). This absorbs a blocked → unknown → blocked flicker in the
+  screen reading.
+
+The previous states live in `$XDG_CACHE_HOME/agent-radar/notify.json`, so a
+respawned sampler neither repeats what it sent nor forgets what it saw.
+
+**Lifetime changes with it.** The sampler usually exits 90s after the last reader
+goes away. That is also the moment you walk away from tmux, and the point of a
+notification is to reach you then. So while any action is enabled, the sampler
+keeps running until the tmux server itself exits.
+
+```sh
+scripts/agent_notify.py --test               # a made-up "waiting" through every action
+scripts/agent_notify.py --test done --session notas
+AGENT_RADAR_NOTIFY=desktop                   # only these actions (comma-separated)
+AGENT_RADAR_NOTIFY=off                       # none; the sampler idle-exits as before
+```
+
+To add an action, write a class in `scripts/agent_notify.py` with `name`,
+`enabled()` and `send(event)`, and add it to `ACTIONS`. The event carries the
+session, window, agent name, state and detail. `event.title` and `event.body`
+are the wording every action shares. Each action runs on its own worker thread,
+so a slow action cannot stall the one-second tick or block the others, and its
+failures go to `daemon.log`.
+
 ## Writing rules
 
 Rules are TOML, one file per agent, evaluated highest-priority-first with ties
@@ -500,6 +550,7 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `../tmux/scripts/radar_cache.py` | shared with git-radar: publish, read, flock liveness, spawn-if-missing |
 | `../tmux/scripts/radar_ui.py` | shared with git-radar: curses palette, banding, truncation |
 | `scripts/Start-AgentRadar.py` | the one sampler; started by whichever consumer notices it is missing |
+| `scripts/agent_notify.py` | turns entering `waiting`/`done` into Telegram and desktop notifications; `--test` to try it |
 | `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status`; `--cached` reads the shared snapshot |
 | `scripts/Select-Agent.sh` | the popup picker (`prefix + t`, `a`) |
 | `scripts/Watch-Agents.sh` | the live pane, fzf (`prefix + t`, `A`) |
