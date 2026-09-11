@@ -137,6 +137,12 @@ chmod +x $HOME/.modules/git-radar/scripts/*
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
 
+# Claude Code agent skill for driving tmux. herdr generates its skill from its
+# own binary; tmux has no such command, so this one lives in the repo and is
+# linked into place, which keeps edits to it live without a reinstall.
+pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.claude/skills -Force"
+pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.claude/skills/tmux -Target $modules_path/tmux/skill"
+
 # NeoVim LSP Configuration
 pwsh -NoProfile -File $HOME/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
 
