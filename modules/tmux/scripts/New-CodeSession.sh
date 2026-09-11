@@ -12,9 +12,10 @@
 # Select-Pane.sh does.
 set -uo pipefail
 
-source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
-
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+source "$scripts/tmux-helpers.sh"
+source "$scripts/worktree-helpers.sh"
+
 code="$HOME/code"
 
 directory="${1:-}"
@@ -29,8 +30,9 @@ fi
 
 # tmux session names cannot contain dots -- they are the separator in
 # session:window.pane targets -- so a directory like Foo.Bar.Api becomes
-# Foo_Bar_Api.
-name="$(basename "$directory" | tr '.' '_')"
+# Foo_Bar_Api. A git worktree is prefixed with its repository's name
+# (session_name_for in worktree-helpers.sh).
+name="$(session_name_for_dir "$directory")"
 
 # Re-running the binding for a project that is already open should take you
 # there instead of failing on the duplicate name.
