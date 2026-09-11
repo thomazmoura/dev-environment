@@ -40,13 +40,35 @@ repo_root() {
   dirname "$common"
 }
 
-# session_name_for <dir>
-# The name New-CodeSession.sh gives a session opened on <dir>. tmux session
-# names cannot contain dots -- they are the separator in session:window.pane
-# targets. Must stay in step with New-CodeSession.sh and with session_name in
+# session_name_for <dir> [repo]
+# The name New-CodeSession.sh gives a session opened on <dir>. Pass <repo> when
+# <dir> is a linked worktree of it: the session is then named after both,
+# <repo>_<dir> (dev-environment_fix-radar), so worktrees of different
+# repositories do not collide and each sorts next to its repository's session.
+# tmux session names cannot contain dots -- they are the separator in
+# session:window.pane targets. Must stay in step with session_name in
 # Show-Worktrees.py.
 session_name_for() {
-  basename "$1" | tr '.' '_'
+  local name
+  name="$(basename "$1")"
+  [ -n "${2:-}" ] && name="$(basename "$2")_$name"
+  printf '%s\n' "$name" | tr '.' '_'
+}
+
+# session_name_for_dir <dir>
+# session_name_for, working out for itself whether <dir> is the root of a
+# linked worktree -- for callers that only have a directory. A subdirectory of
+# a worktree, or the main working tree, is named after itself alone.
+session_name_for_dir() {
+  local toplevel repo
+  toplevel="$(git -C "$1" rev-parse --show-toplevel 2>/dev/null)"
+  repo="$(repo_root "$1")" || repo=""
+  if [ -n "$toplevel" ] && [ "$toplevel" != "$repo" ] &&
+     [ "$(cd "$1" && pwd -P)" = "$(cd "$toplevel" && pwd -P)" ]; then
+    session_name_for "$1" "$repo"
+  else
+    session_name_for "$1"
+  fi
 }
 
 # registry_add <path> <repo>
@@ -78,13 +100,13 @@ registry_repo() {
 # registry_paths_for_session <session>
 # Every registered worktree whose session would be called <session>. Usually
 # none -- this is what every closing session is checked against -- and at most
-# one unless two repositories have a worktree of the same name.
+# one unless two repositories share a name and a worktree name.
 registry_paths_for_session() {
   [ -f "$WORKTREE_REGISTRY" ] || return 0
   local path repo
   while IFS=$'\t' read -r path repo; do
     [ -n "$path" ] || continue
-    [ "$(session_name_for "$path")" = "$1" ] && printf '%s\n' "$path"
+    [ "$(session_name_for "$path" "$repo")" = "$1" ] && printf '%s\n' "$path"
   done < "$WORKTREE_REGISTRY"
 }
 
@@ -146,7 +168,7 @@ remove_worktree() {
     fi
   fi
 
-  session="$(session_name_for "$path")"
+  session="$(session_name_for "$path" "$repo")"
   if tmux has-session -t "=$session" 2>/dev/null; then
     echo "killed session $session"
     tmux kill-session -t "=$session" 2>/dev/null

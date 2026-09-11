@@ -130,9 +130,12 @@ def repo_root(directory: str) -> str:
     return os.path.dirname(common)
 
 
-def session_name(path: str) -> str:
+def session_name(tree: Worktree) -> str:
     """Must stay in step with session_name_for in worktree-helpers.sh."""
-    return os.path.basename(path).replace(".", "_")
+    name = os.path.basename(tree.path)
+    if not tree.main:
+        name = f"{os.path.basename(tree.repo)}_{name}"
+    return name.replace(".", "_")
 
 
 def read_registry() -> list[tuple[str, str]]:
@@ -222,7 +225,7 @@ def load(repo: str, everything: bool) -> list[Worktree]:
 
     sessions = open_sessions()
     for tree in settled:
-        tree.session = session_name(tree.path) in sessions
+        tree.session = session_name(tree) in sessions
 
     # Grouped by repository, the main worktree leading its group, then by name.
     return sorted(settled, key=lambda t: (t.repo, not t.main, t.name.lower()))
