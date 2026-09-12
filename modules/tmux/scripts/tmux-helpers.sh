@@ -13,7 +13,10 @@
 # lives here.
 #
 # Sourced by a caller that has already set `set -euo pipefail`; nothing here
-# runs at source time. Same convention as modules/herdr/scripts/workspace-actions.sh.
+# runs at source time beyond sourcing ssh-helpers.sh, which is definitions too.
+# Same convention as modules/herdr/scripts/workspace-actions.sh.
+
+source "$(dirname "${BASH_SOURCE[0]}")/ssh-helpers.sh"
 
 # --- Failure reporting -------------------------------------------------------
 # die assumes it is running inside a popup, where the message would vanish with
@@ -94,13 +97,34 @@ label_pane() {
 # only on success: a failing command leaves the pane up with its error on
 # screen instead of taking the evidence with it.
 pwsh_command() {
+  printf '%s && exit' "$(pwsh_invocation "$@")"
+}
+
+# pwsh_invocation <command> [no-exit]
+# pwsh_command without the `&& exit`: just the pwsh call. An ssh session runs
+# this on the remote and puts the `&& exit` after the ssh instead (see
+# ssh-helpers.sh).
+pwsh_invocation() {
   local command=$1 no_exit=${2:-}
   if [ -z "$command" ]; then
-    printf 'pwsh && exit'
+    printf 'pwsh'
   elif [ -n "$no_exit" ]; then
-    printf 'pwsh -NoExit -Command "%s" && exit' "$command"
+    printf 'pwsh -NoExit -Command "%s"' "$command"
   else
-    printf 'pwsh -Command "%s" && exit' "$command"
+    printf 'pwsh -Command "%s"' "$command"
+  fi
+}
+
+# pane_command <pane> <command> [no-exit]
+# What a new pane split off <pane> should run: pwsh_command, or the same thing
+# over ssh when <pane> belongs to a session opened with prefix+N. Every
+# pane-creating script builds its command through here, which is what lets the
+# bindings in common.conf stay unaware of ssh sessions.
+pane_command() {
+  if [ -n "$(ssh_option "$1" @ssh_target)" ]; then
+    ssh_command "$@"
+  else
+    pwsh_command "${@:2}"
   fi
 }
 
