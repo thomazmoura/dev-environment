@@ -104,6 +104,26 @@ def truncate(text: str, width: int) -> str:
     return text[: width - 1] + ELLIPSIS
 
 
+def truncate_middle(text: str, width: int) -> str:
+    """Cut to `width` characters from the middle, keeping both ends.
+
+    For names whose two ends are what tell them apart: an ssh session is named
+    <host>-<directory>, so cutting the end drops the directory and a narrow
+    pane shows five sessions on one host as the same "apol…". The start gets
+    the odd character, since it is read first.
+    """
+    if width <= 0:
+        return ""
+    if len(text) <= width:
+        return text
+    if width == 1:
+        return ELLIPSIS
+    keep = width - 1
+    head = (keep + 1) // 2
+    tail = keep - head
+    return text[:head] + ELLIPSIS + (text[-tail:] if tail else "")
+
+
 def add(stdscr, row: int, column: int, text: str, attr: int) -> int:
     """Write text and return where the next column starts.
 

@@ -835,7 +835,10 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     first = [
         (gutter, rail_attr),
         (f"{state_cli.marker(repo)} ", marker_attr),
-        (ui.truncate(repo.session, width - state_cli.RAIL_WIDTH - 3), name_attr),
+        # Cut from the middle, not the end: an ssh session's name starts with
+        # its host and ends with its directory, and both are needed to tell
+        # the rows apart in a narrow pane.
+        (ui.truncate_middle(repo.session, width - state_cli.RAIL_WIDTH - 3), name_attr),
     ]
 
     cells = state_cli.counters(repo)

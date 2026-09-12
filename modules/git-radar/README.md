@@ -62,6 +62,9 @@ problem that keeps clean agents out of the status bar.
 what made the whole thing read as a single grey block. Two lines let each row be
 exactly as wide as it needs to be. When the pane is narrower than a row, the
 branch name is truncated before the counts are -- the counts are the point.
+A session name that does not fit is cut from the middle instead of the end
+(`apol…ment`): an ssh session is named `<host>-<directory>`, and it takes both
+ends to tell two of them apart.
 
 `local` marks a branch with no upstream. Without it, "show only non-zero
 counters" would render a branch you have never pushed identically to one that is
