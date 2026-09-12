@@ -811,17 +811,49 @@ function Create-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:
 
 function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = "id_rsa") {
   $sshKey = "$SshKeyFolder/$SshKeyFile"
-  if ( (!$env:SSH_AUTH_SOCK -or !$env:SSH_AGENT_PID) -and (Test-Path $sshKey) ) {
+  # An agent handed down with both variables -- by the tmux server locally, or
+  # by an ssh session's pane from the host's shared agent
+  # (modules/tmux/scripts/ssh-helpers.sh) -- is the one to use while it still
+  # answers. ssh-add -l exits 2 only when there is no agent to talk to.
+  $agentAlive = $env:SSH_AUTH_SOCK -and $env:SSH_AGENT_PID
+  if ($agentAlive) {
+    ssh-add -l *> $null
+    $agentAlive = $LASTEXITCODE -ne 2
+  }
+  if ( !$agentAlive -and (Test-Path $sshKey) ) {
     Write-Verbose "`n->> Adding SSH key"
     $sshAgent = ssh-agent;
     $env:SSH_AUTH_SOCK = $sshAgent[0].Split("=").Split(";")[1]
     $env:SSH_AGENT_PID = $sshAgent[1].Split("=").Split(";")[1]
     ssh-add $sshKey
   }
+  elseif ( (Test-Path $sshKey) -and !(Test-SshKeyInAgent $sshKey) ) {
+    # The agent is running but no longer has the key: it outlived the key's
+    # lifetime, or the key was removed. Added back into that same agent, so
+    # this pane asks and the ones after it don't.
+    Write-Verbose "`n->> Adding SSH key to the running agent"
+    ssh-add $sshKey
+  }
   else {
     Write-Information "`n->> SSH Agent already added"
   }
   Write-Information "`n->> Agent PID: $env:SSH_AGENT_PID"
+}
+
+# Whether the agent in SSH_AUTH_SOCK holds this private key, judged by its
+# public half: the first two fields of the .pub (type and key) against each
+# line of ssh-add -L. Without a .pub there is nothing to compare, and any key
+# in the agent is taken to be this one -- what Add-SshKey assumed before it
+# compared at all.
+function Test-SshKeyInAgent($SshKey) {
+  $pub = "$SshKey.pub"
+  if (!(Test-Path $pub)) {
+    ssh-add -l *> $null
+    return $LASTEXITCODE -eq 0
+  }
+  $id = ((Get-Content $pub -TotalCount 1) -split ' ')[0..1] -join ' '
+  $loaded = ssh-add -L 2>$null | Where-Object { (($_ -split ' ')[0..1] -join ' ') -eq $id }
+  return [bool]$loaded
 }
 
 function Start-DotnetWatchRunDockerContainer($Version = "3.1", $Port = "5001") {

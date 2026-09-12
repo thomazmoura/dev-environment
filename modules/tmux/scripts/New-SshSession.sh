@@ -10,7 +10,10 @@
 #      password prompt has a terminal to answer in;
 #   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
 #      has no ~/code -- the way prefix+C-n does locally;
-#   3. creates a session named <host>-<directory>, records the host and the
+#   3. on a remote with this dev-environment, unlocks the remote's ssh key in
+#      the host's shared agent -- asking for its password here, once, instead
+#      of in every pane (see ssh-helpers.sh);
+#   4. creates a session named <host>-<directory>, records the host and the
 #      directory on it (see ssh-helpers.sh), switches to it and applies the
 #      standard layout, every pane of which runs over ssh.
 #
@@ -94,6 +97,30 @@ dir="$root/${picked%/}"
 host="${target##*@}"
 name="$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')"
 
+# The remote's key, unlocked here once so that no pane has to ask for it (see
+# the shared agent in ssh-helpers.sh). Only on a dev-environment remote: that is
+# where the panes' profile would otherwise ask. Asked before the check below so
+# that prefix+N on an open directory is also the way to unlock the key again
+# once it has expired; when the agent still holds it, nothing is asked.
+#
+# A password that was never given is not a reason to stop: the panes then ask
+# for it themselves, as they did before there was a shared agent.
+if [ "$kind" = devenv ]; then
+  printf '\n'
+  if ! remote_agent_unlock "$target"; then
+    printf '\nThe key was not unlocked; each pane will ask for it.\n'
+    read -rsn1 -p "Press any key to continue..." _
+  fi
+fi
+
+# Recorded once there is a session for the host, not before: the
+# session-closed hook kills the agent of any recorded host without one, and a
+# session closing elsewhere in between must not take this agent with it.
+record_agent() {
+  [ "$kind" = devenv ] && add_agent_target "$target"
+  return 0
+}
+
 # Re-running prefix+N for a directory that is already open takes you there, as
 # prefix+C-n does. A session with the same name for somewhere else -- a local
 # one, or the same folder name elsewhere on that host -- is not ours to reuse.
@@ -102,6 +129,7 @@ if tmux has-session -t "=$name" 2>/dev/null; then
      [ "$(ssh_option "=$name:" @ssh_dir)" != "$dir" ]; then
     die "A session called $name is already open for something else"
   fi
+  record_agent
   tmux switch-client -t "=$name"
   exit 0
 fi
@@ -113,6 +141,7 @@ tmux new-session -s "$name" -d -c "$HOME" || die "Could not create session $name
 tmux set-option -t "=$name:" @ssh_target "$target"
 tmux set-option -t "=$name:" @ssh_dir "$dir"
 tmux set-option -t "=$name:" @ssh_devenv "$([ "$kind" = devenv ] && echo yes || echo no)"
+record_agent
 
 tmux switch-client -t "=$name"
 "$scripts/Set-NeovimLayout.sh" "$name:"
