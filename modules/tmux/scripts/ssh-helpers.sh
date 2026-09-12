@@ -45,6 +45,12 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPe
 # variables a local pane inherits (remote_agent_env), so the profile's
 # Add-SshKey finds the key already there.
 #
+# Every new pane also runs remote_agent_unlock before it connects
+# (Unlock-RemoteKey.sh, see ssh_command). When the key is there that is one
+# quiet round trip over the master connection; when the agent has died or the
+# key has expired, it is that pane that asks, once, and puts the key back in
+# the shared agent for the panes after it.
+#
 # The key is held for no longer than the sessions that use it: the
 # session-closed hook kills the agent once no session for that host is left
 # (Close-SshAgent.sh), and the agent itself drops the key after
@@ -100,16 +106,25 @@ remote_run() {
 # cd into the working directory and run the command there. `&& exit` works as
 # it does in pwsh_command -- ssh exits with the remote command's status -- so a
 # command that fails keeps its pane, and its error, on screen.
+#
+# On a dev-environment remote the ssh comes after Unlock-RemoteKey.sh, which
+# puts the key back in the host's shared agent when it is not there, so a pane
+# repairs an agent that died or a key that expired instead of falling back to
+# asking in every pane. Joined with `;`, not `&&`: a password that was not
+# given leaves the pane to ask for it in its profile, as before.
 ssh_command() {
   local pane=$1 command=$2 no_exit=${3:-}
-  local target dir remote opt line="ssh -t"
+  local target dir remote opt line="ssh -t" unlock=""
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   remote="cd $(sq "$dir") && $(remote_run "$pane" "$command" "$no_exit")"
   for opt in "${SSH_OPTS[@]}"; do
     line+=" $(printf '%q' "$opt")"
   done
-  printf '%s %q %q && exit' "$line" "$target" "$remote"
+  if ssh_is_devenv "$pane"; then
+    unlock="$(printf '%q %q; ' "$(dirname "${BASH_SOURCE[0]}")/Unlock-RemoteKey.sh" "$target")"
+  fi
+  printf '%s%s %q %q && exit' "$unlock" "$line" "$target" "$remote"
 }
 
 # remote_typed_command <pane> <command> [no-exit]
@@ -165,7 +180,14 @@ remote_agent_env() {
 # Makes sure the host's shared agent is running and holding the key, asking
 # for the password when it is not. Needs a terminal -- ssh-add reads the
 # password from it -- so it runs in New-SshSession.sh's popup, through the
-# master connection the popup has just made.
+# master connection the popup has just made, and in each new pane before its
+# own ssh (Unlock-RemoteKey.sh). -q because a pane runs it every time: it keeps
+# ssh's "Shared connection ... closed" off the pane, and leaves the password
+# prompt, which comes from the remote's ssh-add, alone.
+#
+# Panes opened together while the key is missing each ask on their own; there
+# is no lock between them. Unlocking in one pane and reopening the others is
+# the way out of that.
 #
 # The key, and the condition for adding it at all, are linux-profile.ps1's: a
 # host with no ~/.ssh/id_rsa.pub, or with ~/.skip-ssh, is left alone. An agent
@@ -193,7 +215,7 @@ if [ $? -eq 2 ]; then
   echo "$SSH_AGENT_PID" > "$a/agent.pid"
 fi
 ssh-add "$key"'
-  ssh "${SSH_OPTS[@]}" -t "$target" "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME")"
+  ssh "${SSH_OPTS[@]}" -q -t "$target" "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME")"
 }
 
 # remote_agent_kill <target>

@@ -103,12 +103,12 @@ name="$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')"
 # that prefix+N on an open directory is also the way to unlock the key again
 # once it has expired; when the agent still holds it, nothing is asked.
 #
-# A password that was never given is not a reason to stop: the panes then ask
-# for it themselves, as they did before there was a shared agent.
+# A password that was never given is not a reason to stop: each pane checks
+# the agent before it connects (Unlock-RemoteKey.sh) and asks for it then.
 if [ "$kind" = devenv ]; then
   printf '\n'
   if ! remote_agent_unlock "$target"; then
-    printf '\nThe key was not unlocked; each pane will ask for it.\n'
+    printf '\nThe key was not unlocked; the panes will ask for it.\n'
     read -rsn1 -p "Press any key to continue..." _
   fi
 fi
