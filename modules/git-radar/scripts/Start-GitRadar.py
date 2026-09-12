@@ -90,7 +90,7 @@ def run(interval: float) -> int:
 
     # The ssh sessions' hosts are asked from threads of their own, so a host
     # that is slow to answer never holds up this loop -- see git_remote.
-    poller = git_remote.RemotePoller(interval, feed.STALE_AFTER)
+    poller = git_remote.poller(interval, feed.STALE_AFTER)
 
     while True:
         # No tmux is only a reason to stop when no remote client is asking

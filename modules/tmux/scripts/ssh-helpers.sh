@@ -112,9 +112,19 @@ remote_run() {
 # repairs an agent that died or a key that expired instead of falling back to
 # asking in every pane. Joined with `;`, not `&&`: a password that was not
 # given leaves the pane to ask for it in its profile, as before.
+#
+# Also on a dev-environment remote, the remote shell -- and so every agent
+# started in it, by a binding or by hand -- carries AGENT_RADAR_PANE, naming
+# this machine and the local pane: the host's agent-radar reads it out of an
+# agent's environment to say which of our panes that agent is in (see
+# agent_radar.serve). It is a separate ssh argument, in double quotes and
+# outside the %q-quoted command, so that $TMUX_PANE is expanded by the pane's
+# own bash when it runs the line -- the pane does not exist yet while the line
+# is being built. ssh joins its arguments with spaces, so the remote reads one
+# command: `export AGENT_RADAR_PANE=<host>/%12; cd ... && ...`.
 ssh_command() {
   local pane=$1 command=$2 no_exit=${3:-}
-  local target dir remote opt line="ssh -t" unlock=""
+  local target dir remote opt line="ssh -t" unlock="" tag=""
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   remote="cd $(sq "$dir") && $(remote_run "$pane" "$command" "$no_exit")"
@@ -123,8 +133,9 @@ ssh_command() {
   done
   if ssh_is_devenv "$pane"; then
     unlock="$(printf '%q %q; ' "$(dirname "${BASH_SOURCE[0]}")/Unlock-RemoteKey.sh" "$target")"
+    tag=" \"export AGENT_RADAR_PANE=$(hostname)/\$TMUX_PANE;\""
   fi
-  printf '%s%s %q %q && exit' "$unlock" "$line" "$target" "$remote"
+  printf '%s%s %q%s %q && exit' "$unlock" "$line" "$target" "$tag" "$remote"
 }
 
 # remote_typed_command <pane> <command> [no-exit]

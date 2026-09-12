@@ -23,14 +23,27 @@
 # that can fail an agent's turn is worse than one that misses a state.
 set -u
 
-# Not in tmux: nothing to key a marker on, and nothing is watching. Not an error.
-[ -n "${TMUX_PANE:-}" ] || exit 0
-
 event="${1:-}"
-cache="${XDG_CACHE_HOME:-$HOME/.cache}/agent-radar/panes"
-# Pane ids are `%7`; the `%` is dropped so the filename needs no quoting and
-# agent_radar.read_marker() applies the same transform in the other direction.
-marker="$cache/${TMUX_PANE#%}.json"
+root="${XDG_CACHE_HOME:-$HOME/.cache}/agent-radar"
+if [ -n "${TMUX_PANE:-}" ]; then
+  cache="$root/panes"
+  # Pane ids are `%7`; the `%` is dropped so the filename needs no quoting and
+  # agent_radar.read_marker() applies the same transform in the other direction.
+  marker="$cache/${TMUX_PANE#%}.json"
+elif [ -n "${AGENT_RADAR_PANE:-}" ]; then
+  # An ssh pane of another machine's tmux (prefix+N there), which exported
+  # AGENT_RADAR_PANE=<host>/%12 on its way in. Its markers are kept apart --
+  # this machine's sweep_markers would take them for panes of its own tmux
+  # that are gone -- and handed to that machine by agent_radar.serve, which
+  # names the file with the same transform: `/` to `_`, `%` dropped.
+  cache="$root/ssh-panes"
+  name="${AGENT_RADAR_PANE//\//_}"
+  marker="$cache/${name//[%]/}.json"
+else
+  # Not in tmux: nothing to key a marker on, and nothing is watching. Not an
+  # error.
+  exit 0
+fi
 
 case "$event" in
   clear)

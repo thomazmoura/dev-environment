@@ -78,7 +78,7 @@ def sample(remote=None) -> list[git_radar.Repo]:
     """One live reading of every session, and of every watched directory.
 
     The expensive path. `remote` is how ssh sessions' hosts are asked -- see
-    git_radar.detect; the daemon passes its git_remote.RemotePoller.
+    git_radar.detect; the daemon passes its git_remote.poller().
     """
     return git_radar.detect(remote, watched_paths())
 

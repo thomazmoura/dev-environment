@@ -18,6 +18,11 @@ is enabled, nobody reading is not a reason to stop. Detached is exactly when a
 "your agent is waiting" message is worth sending, so the sampler then lives as
 long as the tmux server does.
 
+Agents in the panes of ssh sessions (prefix+N) run on another host, where this
+machine cannot see them: each host is asked which of those panes holds an agent
+(agent_remote.py), from a thread of its own, and the screens are then read here
+like any other pane's.
+
   Start-AgentRadar.py                 sample forever, once a second
   Start-AgentRadar.py --interval 0.5  faster ticks
   Start-AgentRadar.py --ensure        start one if none is running, then exit
@@ -38,6 +43,13 @@ sys.path.insert(0, HERE)
 
 import agent_feed as feed  # noqa: E402
 import agent_notify  # noqa: E402
+import agent_remote  # noqa: E402
+
+# How often each ssh session's host is asked which panes hold an agent. Slower
+# than the tick: it only drives identification -- an agent appearing or going
+# -- while the screen, and so the state, is still read here once a tick. And
+# each ask starts a python on the host.
+REMOTE_INTERVAL = 2.0
 
 # render_status lives with the other presentation in Get-AgentState.py, whose
 # name has a hyphen and so cannot be imported by name. Same load-by-path trick
@@ -93,6 +105,10 @@ def run(interval: float) -> int:
     # reads the environment or starts worker threads.
     notifier = agent_notify.Notifier()
 
+    # The ssh panes' hosts are asked from threads of their own, so a host that
+    # is slow to answer never holds up this loop -- see radar_remote.
+    poller = agent_remote.poller(REMOTE_INTERVAL, feed.STALE_AFTER)
+
     while True:
         if not tmux_is_running():
             return 0
@@ -104,7 +120,7 @@ def run(interval: float) -> int:
 
         started = time.monotonic()
         try:
-            panes = feed.sample()
+            panes = feed.sample(poller.lookup)
             feed.publish(panes, state_cli.render_status(panes))
             # After the publish, so the status bar never waits on a notifier.
             notifier.observe(panes)
@@ -117,10 +133,16 @@ def run(interval: float) -> int:
 
         # Sleep the remainder rather than a flat interval, so a slow sample on a
         # busy machine does not stretch the tick into two -- and cut even that
-        # short if something has asked for a sample in the meantime.
-        nudged = feed.CACHE.wait_for_tick(
-            max(0.0, interval - (time.monotonic() - started)), nudged
+        # short if something has asked for a sample in the meantime, or a
+        # host's answer has changed.
+        stamp = feed.CACHE.wait_for_tick(
+            max(0.0, interval - (time.monotonic() - started)), nudged, poller.updated
         )
+        if stamp != nudged:
+            # Asked for a sample now -- a pane closed, say. Ask the hosts now
+            # too, or a closed ssh pane keeps its agent until the next ask.
+            poller.wake()
+        nudged = stamp
 
 
 def main() -> int:

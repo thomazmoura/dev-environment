@@ -263,7 +263,10 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
     first = [
         (gutter, rail_attr),
         (f"{icon} ", icon_attr),
-        (ui.truncate(pane.session, width - left - 1), name_attr),
+        # Cut from the middle, not the end: an ssh session's name starts with
+        # its host and ends with its directory, and both are needed to tell
+        # its agents from another host's in a narrow pane.
+        (ui.truncate_middle(pane.session, width - left - 1), name_attr),
     ]
 
     # Indented to exactly where the session name starts, which is what makes the

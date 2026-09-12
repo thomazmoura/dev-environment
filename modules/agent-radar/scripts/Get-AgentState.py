@@ -20,12 +20,19 @@ want. `--cached` reads the shared snapshot published by Start-AgentRadar.py
 instead, so a consumer costs a file read no matter how many consumers there are;
 see agent_feed.py. Every binding uses --cached.
 
+Panes of ssh sessions (prefix+N) are listed too, their agent identified by the
+host they are on. `--serve <client>` is that question's other end: run over ssh
+by the asking machine's agent-radar (agent_remote.query), it prints which of
+<client>'s panes hold an agent on this machine, as JSON -- see
+agent_radar.serve.
+
 Usage:
   Get-AgentState.py                 # raw states, no smoothing -- sampled live
   Get-AgentState.py --debounce      # smoothed states, still sampled live
   Get-AgentState.py --cached        # the shared snapshot; already smoothed
   Get-AgentState.py --format=fzf --cached
   Get-AgentState.py --format=status --cached
+  Get-AgentState.py --serve <client>
 """
 
 from __future__ import annotations
@@ -39,6 +46,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import agent_feed as feed  # noqa: E402
 import agent_radar as radar  # noqa: E402
+from agent_remote import PROTOCOL  # noqa: E402
 
 # The working->idle debounce moved to agent_feed.debounce, and the move is not
 # cosmetic: it compares each sample against the previous one, so it is only
@@ -266,7 +274,17 @@ def main() -> int:
     parser.add_argument(
         "--format", choices=("tsv", "json", "fzf", "status"), default="tsv"
     )
+    parser.add_argument(
+        "--serve",
+        metavar="CLIENT",
+        help="answer a remote client: which of its ssh panes hold an agent here",
+    )
     args = parser.parse_args()
+
+    if args.serve is not None:
+        json.dump({"version": PROTOCOL, "agents": radar.serve(args.serve)}, sys.stdout)
+        sys.stdout.write("\n")
+        return 0
 
     if args.cached:
         # Already smoothed by the sampler that published it, so --debounce is

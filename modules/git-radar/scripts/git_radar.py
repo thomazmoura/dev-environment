@@ -350,8 +350,8 @@ def detect(remote=None, extra_paths=()) -> list[Repo]:
     call: `remote(target, paths)` returns {path: Repo}, or a phrase saying why
     there is no answer (UNREACHABLE and friends), which the rows then carry as
     OFFLINE. The default asks there and then (git_remote.query); the daemon
-    passes a RemotePoller instead, whose threads do the asking, so a host that
-    is slow to answer never holds up the local rows.
+    passes a RemotePoller (git_remote.poller) instead, whose threads do the
+    asking, so a host that is slow to answer never holds up the local rows.
 
     `extra_paths` are directories a *remote* client has asked this machine
     about (git_feed.serve). They come back as rows with no session, after the

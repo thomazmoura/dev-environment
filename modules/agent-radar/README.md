@@ -163,6 +163,66 @@ regardless of copy-mode. Verified: with a pane scrolled 150 lines back,
 `capture-pane -p` still returns the bottom. So you can page through an agent's
 history without changing what it reports.
 
+## ssh sessions
+
+An ssh session is a local tmux session whose panes are all ssh'd into one host
+(`prefix + N`, `modules/tmux/scripts/New-SshSession.sh`). An agent started in
+one of its panes -- by `prefix + t` then `c`, or typed by hand -- is listed in
+every consumer beside the local ones: the status bar, the picker, both feed
+panes, the notifications. The feed panes are local ones even in an ssh session
+(`prefix + t` then `r` and `A` pass `-L` to `New-ToolPane.sh`, and
+`Set-NeovimLayout.sh` builds the Agents pane with `pwsh_command`), so there is
+one feed, the same everywhere.
+
+**The screen is here; only the process is there.** Of the three layers, only
+identification cannot run locally: this machine's `ps` sees `ssh` in the pane's
+foreground, not `claude`. But the pane is relaying the host's pty, so
+`capture-pane` and the OSC title already show exactly what the agent draws --
+the snapshot, the rules, the debounce and `done` all run here, keyed by the
+local pane id, and Enter jumps to the ssh pane like to any other. The host is
+asked the one thing it alone knows:
+
+```
+local ssh pane (ssh_command in ssh-helpers.sh)
+  ssh host "export AGENT_RADAR_PANE=<this host>/%12;" 'cd <dir> && pwsh ...'
+      every process started in that pane, the agent included, inherits it
+local Start-AgentRadar.py
+  a poller thread per host, every 2s, over the session's ssh master
+    ssh -o BatchMode=yes host  sh -c '"$HOME/.modules/agent-radar/scripts/Get-AgentState.py" --serve <this host>'
+        stdout  {"version": 1, "agents": [{"pane": "%12", "agent": "claude", "marker": ...}]}
+remote Get-AgentState.py --serve       (agent_radar.serve)
+  one ps; each tty's agent, as identify() finds it; AGENT_RADAR_PANE read out
+  of its /proc/<pid>/environ; only the asking host's panes
+```
+
+So, unlike git-radar, the host runs **no daemon**: `--serve` is one `ps`, and
+nothing about it is worth keeping between asks. The hostname in the tag keeps
+two machines ssh'd into one host from both claiming `%12`.
+
+The asking happens on the poller's threads (`../tmux/scripts/radar_remote.py`,
+shared with git-radar), so a slow host costs the local rows nothing, and a
+host's answer changing wakes the sampler at once. Every 2s rather than every
+tick because it only decides that an agent has appeared or gone; its state
+still comes off the local screen once a second.
+
+**A host that cannot be asked lists no agents.** Unreachable, no
+dev-environment (`@ssh_devenv` is not yes), or a checkout that predates
+`--serve`: there is no screen-only way to tell which agent -- if any -- a pane
+holds, and a guessed ruleset would be a guessed state. The panes are simply not
+listed until the host answers.
+
+**The hook works there too.** Claude Code on the host runs the same
+`hooks/Set-AgentRadarState.sh`, which finds no `TMUX_PANE` but an
+`AGENT_RADAR_PANE`, and writes its marker to `ssh-panes/<host>_<n>.json` in the
+host's cache -- apart from `panes/`, whose sweep would take it for a pane of
+the host's own tmux. `--serve` hands it over with the agent, and removes the
+markers of panes that no longer hold one. Locally such a marker is read like
+any other, except that the screen showing work does not delete it: it is the
+host's, and the hook clears it on the agent's next move.
+
+**Both machines need this version**, and a pane needs to have been opened with
+it: the tag is set when the pane's ssh starts.
+
 ## One sampler, many readers
 
 Every consumer used to detect for itself, which broke twice over as soon as you
@@ -550,8 +610,10 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `../tmux/scripts/radar_cache.py` | shared with git-radar: publish, read, flock liveness, spawn-if-missing |
 | `../tmux/scripts/radar_ui.py` | shared with git-radar: curses palette, banding, truncation |
 | `scripts/Start-AgentRadar.py` | the one sampler; started by whichever consumer notices it is missing |
+| `scripts/agent_remote.py` | asks an ssh session's host which of its panes hold an agent (`--serve` there) |
+| `../tmux/scripts/radar_remote.py` | shared with git-radar: the ssh to a host, and the poller thread per host |
 | `scripts/agent_notify.py` | turns entering `waiting`/`done` into Telegram and desktop notifications; `--test` to try it |
-| `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status`; `--cached` reads the shared snapshot |
+| `scripts/Get-AgentState.py` | CLI. `--format` = `tsv` \| `json` \| `fzf` \| `status`; `--cached` reads the shared snapshot; `--serve` answers another machine's ssh panes |
 | `scripts/Select-Agent.sh` | the popup picker (`prefix + t`, `a`) |
 | `scripts/Watch-Agents.sh` | the live pane, fzf (`prefix + t`, `A`) |
 | `scripts/Watch-AgentFeed.py` | the live pane, curses (`prefix + t`, `r`) |
@@ -561,7 +623,7 @@ travels with the file and `Test-Fixtures.sh` needs no manifest.
 | `scripts/Test-AgentRules.py` | why each rule did or did not fire |
 | `scripts/Test-Fixtures.sh` | regression check over `fixtures/` |
 | `scripts/Install-AgentRadarHooks.sh` | registers the Claude hooks in `~/.claude/settings.json` |
-| `hooks/Set-AgentRadarState.sh` | what Claude Code runs; writes/removes one marker per pane |
+| `hooks/Set-AgentRadarState.sh` | what Claude Code runs; writes/removes one marker per pane (per ssh pane, on a host) |
 | `rules/*.toml` | one file per agent |
 
 Two presentation formats live in `Get-AgentState.py` rather than in the shell
@@ -587,6 +649,12 @@ detail which only repeats the state word -- has exactly one definition.
   screen. Inherent to screen reading; the input-box region only defends against
   text **you typed**, not against text an agent printed. The hook marker is
   unaffected.
+- ssh panes opened before `AGENT_RADAR_PANE` existed are not tagged, so their
+  agents are not listed until the pane is reopened.
+- An agent inside a tmux running *on* the host -- attached from an ssh pane --
+  is tagged with the ssh pane's id, but its tty is the host tmux's, and its
+  screen in the local pane is whatever that tmux shows. Not covered; neither
+  are agents in the host's own tmux sessions.
 - Claude Code's OSC title carries no state at the current version (it is the
   branch name behind a constant glyph), so all Claude signals come off the
   screen. Codex does set a stateful title, and its rules use it.

@@ -144,6 +144,12 @@ class Pane:
     state: str = UNKNOWN
     detail: str = ""
     rule_id: str = ""
+    # For a pane of an ssh session (prefix+N): its session's @ssh_target, whose
+    # host the agent -- if any -- is running on, and whether that host has this
+    # dev-environment and so an agent-radar to ask. Empty for a local pane.
+    # `devenv` is not published, for the same reason `attached` is not.
+    remote: str = ""
+    devenv: bool = False
 
 
 def _run(argv: list[str]) -> str:
@@ -189,13 +195,17 @@ def list_panes() -> list[Pane]:
             # Free here, and the difference between "finished" and "finished
             # while you were watching": a client count for the pane's session.
             "#{session_attached}",
+            # An ssh session's host, and whether it has an agent-radar -- see
+            # modules/tmux/scripts/ssh-helpers.sh and detect() below.
+            "#{@ssh_target}",
+            "#{@ssh_devenv}",
         ]
     )
     out = _run(["tmux", "list-panes", "-a", "-F", fmt])
     panes = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 10:
+        if len(fields) != 12:
             continue
         panes.append(
             Pane(
@@ -203,6 +213,8 @@ def list_panes() -> list[Pane]:
                 active=(fields[7] == "1" and fields[8] == "1"),
                 # A count, not a flag: several clients can share a session.
                 attached=(fields[9] not in ("", "0")),
+                remote=fields[10],
+                devenv=(fields[11] == "yes"),
             )
         )
     return panes
@@ -271,12 +283,12 @@ def _resolve_agent(proc: Process) -> str | None:
     return None
 
 
-def _env_hint(pid: int) -> str | None:
-    """Read AGENT_RADAR_AGENT out of a process's own environ.
+def _environ_value(pid: int, name: str) -> str | None:
+    """One variable out of a process's own environ, or None.
 
-    Note the direction: this reads the *target's* environment, so the hint
-    applies only to that process and cannot leak globally the way an exported
-    variable would (herdr S2.2).
+    Note the direction: this reads the *target's* environment, so a value set
+    for one process applies to that process and cannot leak globally the way
+    an exported variable would (herdr S2.2).
     """
     try:
         raw = Path(f"/proc/{pid}/environ").read_bytes()
@@ -284,10 +296,55 @@ def _env_hint(pid: int) -> str | None:
         return None
     for entry in raw.split(b"\0"):
         key, _, value = entry.partition(b"=")
-        if key.decode("utf-8", "replace") == AGENT_ENV_HINT:
-            name = value.decode("utf-8", "replace").strip()
-            return AGENT_ALIASES.get(name, name or None)
+        if key.decode("utf-8", "replace") == name:
+            return value.decode("utf-8", "replace").strip()
     return None
+
+
+def _env_hint(pid: int) -> str | None:
+    """Read AGENT_RADAR_AGENT out of a process's own environ."""
+    name = _environ_value(pid, AGENT_ENV_HINT)
+    if name is None:
+        return None
+    return AGENT_ALIASES.get(name, name or None)
+
+
+def identify_tty(procs: list[Process]) -> tuple[str | None, Process | None]:
+    """Which agent is in the foreground of one tty, and the process that says so.
+
+    The core of identify(), minus the pane: agent_radar.serve runs it over ttys
+    no tmux pane is attached to. The process comes back so the caller can read
+    its environment too; it is the agent itself when argv named one, and the
+    deepest foreground process otherwise.
+    """
+    foreground = [p for p in procs if p.foreground]
+    by_pid = {p.pid: p for p in procs}
+
+    def depth(proc: Process) -> int:
+        steps, current = 0, proc
+        seen = {current.pid}
+        while current.ppid in by_pid and current.ppid not in seen:
+            seen.add(current.ppid)
+            current = by_pid[current.ppid]
+            steps += 1
+        return steps
+
+    for proc in sorted(foreground, key=depth, reverse=True):
+        agent = _resolve_agent(proc)
+        if agent:
+            return agent, proc
+
+    # The wrapped case: a sandbox or VM shim is the foreground job and the agent
+    # is invisible to argv scanning. Ask the process itself.
+    #
+    # Only the deepest process, not every foreground one: the wrapper that hides
+    # an agent is by definition the thing closest to it, and every extra
+    # candidate is another /proc read on a path that runs for all panes on every
+    # status refresh -- most of which hold a plain shell and will never match.
+    if foreground:
+        deepest = max(foreground, key=depth)
+        return _env_hint(deepest.pid), deepest
+    return None, None
 
 
 def identify(pane: Pane, by_tty: dict[str, list[Process]]) -> str | None:
@@ -306,38 +363,9 @@ def identify(pane: Pane, by_tty: dict[str, list[Process]]) -> str | None:
     deepest one in the parent chain, because the agent is always further from
     the shell than its launcher is.
     """
-    tty = pane.tty.removeprefix("/dev/")
-    procs = by_tty.get(tty, [])
-    foreground = [p for p in procs if p.foreground]
-
-    by_pid = {p.pid: p for p in procs}
-
-    def depth(proc: Process) -> int:
-        steps, current = 0, proc
-        seen = {current.pid}
-        while current.ppid in by_pid and current.ppid not in seen:
-            seen.add(current.ppid)
-            current = by_pid[current.ppid]
-            steps += 1
-        return steps
-
-    for proc in sorted(foreground, key=depth, reverse=True):
-        agent = _resolve_agent(proc)
-        if agent:
-            return agent
-
-    # The wrapped case: a sandbox or VM shim is the foreground job and the agent
-    # is invisible to argv scanning. Ask the process itself.
-    #
-    # Only the deepest process, not every foreground one: the wrapper that hides
-    # an agent is by definition the thing closest to it, and every extra
-    # candidate is another /proc read on a path that runs for all panes on every
-    # status refresh -- most of which hold a plain shell and will never match.
-    if foreground:
-        deepest = max(foreground, key=depth)
-        hint = _env_hint(deepest.pid)
-        if hint:
-            return hint
+    agent, _ = identify_tty(by_tty.get(pane.tty.removeprefix("/dev/"), []))
+    if agent:
+        return agent
 
     # Last resort, and the only path that works if /proc is unavailable.
     return AGENT_ALIASES.get(os.path.basename(pane.current_command))
@@ -393,11 +421,7 @@ def _marker_path(pane_id: str) -> Path:
 
 def read_marker(pane_id: str) -> dict | None:
     """The pane's hook marker, or None. Never raises."""
-    try:
-        payload = json.loads(_marker_path(pane_id).read_text())
-    except (OSError, ValueError):
-        return None
-    return payload if isinstance(payload, dict) else None
+    return _read_json(_marker_path(pane_id))
 
 
 def clear_marker(pane_id: str) -> None:
@@ -432,6 +456,89 @@ def sweep_markers(live: set[str]) -> None:
                 entry.unlink()
             except OSError:
                 pass
+
+
+# --- Serving another machine's ssh panes ----------------------------------------
+# An ssh session (prefix+N) is a local tmux session whose panes are all ssh'd
+# into one host. An agent started in one of them runs *here*, on that host, and
+# the machine the panes belong to cannot see it: its `ps` shows `ssh` in the
+# foreground. What it can see is the agent's screen -- the pane is relaying this
+# host's pty -- so it captures and classifies the screen itself, and asks this
+# host only the one thing it cannot know: which of its panes holds an agent.
+#
+# That link is AGENT_RADAR_PANE, which every ssh pane exports on the way in as
+# <client>/<pane id> (ssh_command in modules/tmux/scripts/ssh-helpers.sh), and
+# which every agent started in that pane inherits. `serve` answers from one
+# `ps`, so there is no daemon here to keep up: the asking machine's
+# Start-AgentRadar.py polls (agent_remote.py), and this runs once per poll.
+#
+# The hook markers of those panes are written here too, by the same hook, but
+# into a directory of their own: sweep_markers would take them for markers of
+# panes this machine's tmux does not have, and delete them.
+
+PANE_ENV = "AGENT_RADAR_PANE"
+
+
+def ssh_markers_dir() -> Path:
+    return cache_dir() / "ssh-panes"
+
+
+def ssh_marker_name(tag: str) -> str:
+    """`laptop/%12` -> `laptop_12`, the file hooks/Set-AgentRadarState.sh
+    writes for that pane. The same transform, in bash, lives there."""
+    return tag.replace("/", "_").replace("%", "")
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        payload = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def serve(client: str) -> list[dict]:
+    """The agents running in `client`'s ssh panes on this machine.
+
+    One entry per agent: the local pane id it is in on `client`, which agent it
+    is, and its hook marker, if any -- everything but the screen, which the
+    client has and this machine does not. Only `client`'s own panes: two
+    machines ssh'd into this one both have a `%12`.
+
+    Markers of `client`'s panes that no longer hold an agent are removed on the
+    way: that is how a pane closed while its agent was blocked ends, and nothing
+    runs the clearing hook for it (see sweep_markers).
+    """
+    prefix = f"{client}/"
+    found = []
+    live = set()
+    for procs in list_processes().values():
+        agent, proc = identify_tty(procs)
+        if not agent:
+            continue
+        tag = _environ_value(proc.pid, PANE_ENV) or ""
+        if not tag.startswith(prefix) or len(tag) == len(prefix):
+            continue
+        name = ssh_marker_name(tag)
+        live.add(name)
+        found.append({
+            "pane": tag[len(prefix):],
+            "agent": agent,
+            "marker": _read_json(ssh_markers_dir() / f"{name}.json"),
+        })
+
+    mine = ssh_marker_name(prefix)
+    try:
+        entries = list(ssh_markers_dir().iterdir())
+    except OSError:
+        entries = []
+    for entry in entries:
+        if entry.suffix == ".json" and entry.stem.startswith(mine) and entry.stem not in live:
+            try:
+                entry.unlink()
+            except OSError:
+                pass
+    return found
 
 
 # --- Regions -----------------------------------------------------------------
@@ -739,19 +846,58 @@ def classify(agent: str, snapshot: str, title: str, rules: list[Rule]) -> Verdic
     return Verdict(IDLE, "", "default_idle_fallback")
 
 
-def detect() -> list[Pane]:
-    """The whole pipeline: every pane, identified, snapshotted and classified."""
+def detect(remote=None) -> list[Pane]:
+    """The whole pipeline: every pane, identified, snapshotted and classified.
+
+    A pane of an ssh session is identified by its host instead (see serve):
+    `remote(target, client)` returns {pane_id: entry} for the host's agents in
+    this machine's panes, or a phrase saying why there is no answer -- and then
+    that host's panes simply have no agent to show. The default asks there and
+    then (agent_remote.query); the daemon passes a RemotePoller's lookup, whose
+    threads do the asking, so a host that is slow to answer never holds up the
+    local rows. Everything after identification -- the capture, the rules, the
+    debounce -- is the same for both, and happens here: the screen is local.
+    """
+    if remote is None:
+        import agent_remote
+
+        remote = agent_remote.query
+
     panes = list_panes()
     by_tty = list_processes()
     cache: dict[str, list[Rule]] = {}
     sweep_markers({pane.pane_id for pane in panes})
 
-    found = []
+    # (pane, whether its marker is the host's) for every pane with an agent.
+    agents: list[tuple[Pane, bool]] = []
+    by_host: dict[str, list[Pane]] = {}
     for pane in panes:
-        agent = identify(pane, by_tty)
-        if not agent:
-            continue
-        pane.agent = agent
+        pane.agent = identify(pane, by_tty)
+        if pane.agent:
+            agents.append((pane, False))
+        elif pane.remote and pane.devenv:
+            by_host.setdefault(pane.remote, []).append(pane)
+
+    host_markers: dict[str, dict | None] = {}
+    if by_host:
+        import agent_remote
+
+        client = agent_remote.client_id()
+        for target, host_panes in by_host.items():
+            answer = remote(target, client)
+            if not isinstance(answer, dict):
+                continue
+            for pane in host_panes:
+                entry = answer.get(pane.pane_id)
+                if entry is None:
+                    continue
+                pane.agent = entry["agent"]
+                host_markers[pane.pane_id] = entry.get("marker")
+                agents.append((pane, True))
+
+    found = []
+    for pane, on_host in agents:
+        agent = pane.agent
         # Only agent panes are captured. Skipping the rest is most of the reason
         # this is cheap enough to run on the status-bar refresh path.
         pane.snapshot = capture(pane.pane_id)
@@ -759,12 +905,15 @@ def detect() -> list[Pane]:
             cache[agent] = load_rules(agent)
         verdict = classify(agent, pane.snapshot, pane.title, cache[agent])
 
-        marker = read_marker(pane.pane_id)
+        # A host's marker is the host's to clear: its hook clears it on the
+        # agent's next move, and serve once the agent is gone.
+        marker = host_markers.get(pane.pane_id) if on_host else read_marker(pane.pane_id)
         if marker is not None:
             if verdict.state == WORKING:
                 # The screen wins, and proves the marker is stale: an agent that
                 # is running a tool is not sitting on a dialog.
-                clear_marker(pane.pane_id)
+                if not on_host:
+                    clear_marker(pane.pane_id)
             elif verdict.state in (IDLE, UNKNOWN):
                 # The case this channel exists for -- a dialog whose shape no
                 # rule recognises. The agent told us itself.

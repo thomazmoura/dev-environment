@@ -301,7 +301,9 @@ Start-GitRadar.py     the daemon. One sampler for the whole machine.
                       (and request_sample, for when 3s is too long to wait);
                       serve, the other end of an ssh session's question
   git_remote.py       asks a host's git-radar about ssh sessions: query,
-                      RemotePoller, and f/p/P as ssh command lines
+                      poller, and f/p/P as ssh command lines (the ssh and
+                      the RemotePoller are tmux/scripts/radar_remote.py,
+                      shared with agent-radar)
   Get-GitState.py     presentation + CLI (table / tsv / json / fzf / status)
 Watch-GitFeed.py      the curses feed on prefix + t then R. Reads, never samples.
   Show-GitFailure.sh  the popup a named f/p/P failure opens: the message, and

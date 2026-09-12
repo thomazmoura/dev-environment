@@ -87,6 +87,9 @@ FIELDS = (
     "state",
     "detail",
     "rule_id",
+    # The @ssh_target of an ssh session's pane, whose agent runs on that host
+    # (agent_radar.serve). Empty for a local one.
+    "remote",
 )
 
 # Agents blink through an idle-looking frame between tool calls, so a consumer
@@ -111,7 +114,10 @@ PENDING_IDLE_CAP_SECONDS = 0.7
 # gets replaced. The machine would sample per consumer forever over a field
 # whose absence costs nothing: no `active` means no rail, which is what the feed
 # already shows whenever you are not focused on an agent.
-OPTIONAL_FIELDS = {"active": False}
+#
+# `remote` is optional for the same reason: a snapshot without it is one from
+# before ssh panes were listed, which had none to list.
+OPTIONAL_FIELDS = {"active": False, "remote": ""}
 
 
 def _encode(pane: radar.Pane) -> dict:
@@ -261,9 +267,13 @@ def debounce(panes: list[radar.Pane]) -> None:
     radar_cache.write_atomic(path, json.dumps(current))
 
 
-def sample() -> list[radar.Pane]:
-    """One live reading of the world, smoothed. The expensive path."""
-    panes = radar.detect()
+def sample(remote=None) -> list[radar.Pane]:
+    """One live reading of the world, smoothed. The expensive path.
+
+    `remote` is how ssh panes' hosts are asked -- see agent_radar.detect; the
+    daemon passes its agent_remote.poller()'s lookup.
+    """
+    panes = radar.detect(remote)
     debounce(panes)
     # detect() sorted by the classified state, and debounce has just changed
     # some of them -- a held working, a DONE. Sort again, or a row sits under
