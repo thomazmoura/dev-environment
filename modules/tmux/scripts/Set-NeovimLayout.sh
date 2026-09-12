@@ -7,8 +7,10 @@
 # Safe to run again on a window that already has the layout: it only creates
 # the fixed panes (Git, Agents, Terminal) that are missing and puts their sizes
 # back, so prefix+v also repairs a layout broken by a closed pane or a stray
-# resize. NeoVim is only opened on a fresh window -- after that its place is
-# the user's, and whatever is there now is left alone.
+# resize. NeoVim's size is never enforced, and neither is its presence as long
+# as something else holds its place (agent panes, say); it is only recreated
+# when nothing does -- the terminal reaching the top of the window, or the
+# radar column being all that is left.
 #
 # Usage: Set-NeovimLayout.sh [-s] [target]
 #   -s       terminals in a 20% column on the right, split in two and without
@@ -38,6 +40,8 @@ shift $((OPTIND - 1))
 
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
+
+nvim_command="$(pwsh_command "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim" no-exit)"
 
 # The setup command is the same either way: refresh git state, load the fzf
 # helpers and build the project if it needs it, then leave the shell open.
@@ -137,8 +141,7 @@ if [ -n "$side" ]; then
   column="$(new_pane "$top" "Terminal" "$(pwsh_command '')" -h -l 20%)"
   new_pane "$column" "Terminal" "$terminal_command" -v -l 50% >/dev/null
   label_pane "$top" "NeoVim"
-  tmux send-keys -t "$top" \
-    "$(pwsh_command "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim" no-exit)" C-m
+  tmux send-keys -t "$top" "$nvim_command" C-m
   tmux select-pane -t "$top"
   exit 0
 fi
@@ -178,6 +181,21 @@ if [ -z "$agents" ]; then
   mark_role "$agents" agents
 fi
 
+# A missing NeoVim is only brought back when nothing has taken its place: the
+# terminal has grown to the top of the window, or there is no pane at all
+# beside the radar column. Anything else there is the user's and stays. Plain
+# splits, no sizes: the fixed panes are fitted below and NeoVim gets the rest.
+if [ -z "$neovim" ]; then
+  if [ -n "$terminal" ]; then
+    if [ "$(tmux display-message -p -t "$terminal" '#{pane_top}')" = 0 ]; then
+      neovim="$(new_pane "$terminal" "NeoVim" "$nvim_command" -v -b)"
+    fi
+  elif [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents")" = 0 ]; then
+    neovim="$(new_pane "$git" "NeoVim" "$nvim_command" -h -f)"
+  fi
+  [ -z "$neovim" ] || mark_role "$neovim" neovim
+fi
+
 # The terminal goes under NeoVim, or, once NeoVim is gone, under the pane the
 # binding fired in -- unless that is the radar column, which has no room for it.
 if [ -z "$terminal" ]; then
@@ -201,8 +219,7 @@ fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
 [ -z "$terminal" ] || fit_pane "$terminal" -y $((window_height * terminal_height_pct / 100))
 
 if [ -n "$fresh" ]; then
-  tmux send-keys -t "$neovim" \
-    "$(pwsh_command "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim" no-exit)" C-m
+  tmux send-keys -t "$neovim" "$nvim_command" C-m
 fi
 
 # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
