@@ -362,11 +362,16 @@ class RadarCache:
             return None
         return fd
 
-    def wait_for_tick(self, remaining: float, seen: float) -> float:
+    def wait_for_tick(self, remaining: float, seen: float, also=None) -> float:
         """Sleep out the rest of a tick, unless somebody asks for a sample sooner.
 
         `seen` is the flag's mtime as of the last check and comes back updated,
         so one touch wakes exactly one tick. See `nudge_path`.
+
+        `also` is an optional threading.Event that ends the wait too -- for a
+        sampler with news arriving from its own threads (git-radar hears from
+        remote hosts that way). It is cleared on the way out, and `seen` comes
+        back unchanged, so the caller can tell it apart from a nudge.
         """
         deadline = time.monotonic() + remaining
         while True:
@@ -377,6 +382,9 @@ class RadarCache:
             stamp = self.nudge_stamp()
             if stamp != seen:
                 return stamp
+            if also is not None and also.is_set():
+                also.clear()
+                return seen
 
     def sample_cached(self, sample, interval: float | None = None) -> list:
         """What consumers call: the shared snapshot, or a live sample if there is none.

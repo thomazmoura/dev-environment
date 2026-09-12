@@ -4,7 +4,12 @@
 # Watch-GitFeed.show_failure.
 #
 # Usage, as the command of a display-popup (through Invoke-Popup.sh):
-#   Show-GitFailure.sh <verb> <session> <repo-root> <message-file>
+#   Show-GitFailure.sh <verb> <session> <repo-root> <message-file> [<ssh-target>]
+#
+# <ssh-target> is given for a row of an ssh session (prefix+N), whose repository
+# is on that host: the retry then runs there, over ssh, and the key offered is
+# the host's own -- unlocked in its shared agent the way the session's panes
+# unlock it (remote_agent_unlock in modules/tmux/scripts/ssh-helpers.sh).
 #
 # <verb> is fetch, pull or push. It names the failure in the banner and is what
 # the retry below re-runs -- a passphrase is just as likely to be what stopped a
@@ -34,6 +39,27 @@ verb=${1:?verb}
 session=${2:?session}
 root=${3:-}
 message_file=${4:-}
+target=${5:-}
+
+if [ -n "$target" ]; then
+  source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../tmux/scripts/ssh-helpers.sh"
+fi
+
+# in_repo <git-args...>
+# git in the row's repository, wherever it is. On a remote it runs under sh
+# with the host's shared agent and the same no-prompt environment
+# Watch-GitFeed's own ssh command gives it (git_remote.op_argv) -- which is
+# harmless for the probes, and what the retry needs.
+in_repo() {
+  if [ -z "$target" ]; then
+    git -C "$root" "$@"
+    return
+  fi
+  local line arg
+  line="GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes' SSH_ASKPASS_REQUIRE=never git -C $(sq "$root")"
+  for arg in "$@"; do line+=" $(sq "$arg")"; done
+  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" "sh -c $(sq "$(remote_agent_env)$line")" </dev/null
+}
 
 # The retry is the operation that failed, not always a fetch. Spelled out per
 # verb rather than assembled from the argument, so this script decides what it
@@ -47,8 +73,8 @@ case "$verb" in
   fetch) retry=(--no-optional-locks fetch --quiet) ;;
   pull)  retry=(pull --ff-only --quiet) ;;
   push)
-    if [ -n "$root" ] && ! git -C "$root" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
-      branch=$(git -C "$root" branch --show-current 2>/dev/null || true)
+    if [ -n "$root" ] && ! in_repo rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+      branch=$(in_repo branch --show-current 2>/dev/null || true)
       # An empty branch is a detached HEAD, and leaves retry empty: there is
       # nothing to name as the upstream, so there is nothing to offer a key for.
       if [ -n "$branch" ]; then
@@ -72,7 +98,7 @@ hold() { read -rsn1 -p "Press any key to close..." _ || true; }
 
 # --- What the popup says ------------------------------------------------------
 printf '\033[1;31m%s failed\033[0m  %s\n' "$verb" "$session"
-[ -n "$root" ] && printf '\033[2m%s\033[0m\n' "$root"
+[ -n "$root" ] && printf '\033[2m%s%s\033[0m\n' "${target:+$target:}" "$root"
 printf '\n%s\n\n' "${message:-$verb failed}"
 
 # --- Is this an authentication problem at all? --------------------------------
@@ -124,19 +150,67 @@ candidate_key() {
   return 1
 }
 
-key=""
+# The retry, the same way the first attempt ran. Still BatchMode: if the key
+# that was just added is not the one this remote wanted, the retry must fail
+# rather than start prompting for the next one.
+#
+# --no-optional-locks belongs to the fetch and to nothing else (see the case
+# above): it exists to keep the *sampler* from taking index.lock out from under
+# an interactive git, and pull and push are that interactive git.
+retry_op() {
+  printf '\nretrying %s...\n' "$verb"
+  if [ -n "$target" ]; then
+    in_repo "${retry[@]}"
+  else
+    GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -o BatchMode=yes" \
+      SSH_ASKPASS_REQUIRE=never \
+      git -C "$root" "${retry[@]}"
+  fi
+}
+
+finish() {
+  if retry_op; then
+    printf '\033[32m%sed\033[0m\n' "$verb"
+    exit 0
+  fi
+  printf '\033[31mstill unable to %s\033[0m\n' "$verb"
+  hold
+  exit 1
+}
+
 # No retry means no offer: unlocking a key to then do nothing with it would ask
 # for a passphrase and give nothing back.
-if [ -n "$root" ] && [ ${#retry[@]} -gt 0 ] && is_auth_failure; then
-  key=$(candidate_key) || key=""
+if [ -z "$root" ] || [ ${#retry[@]} -eq 0 ] || ! is_auth_failure; then
+  hold
+  exit 1
 fi
 
+# --- A remote row: the host's key, in the host's shared agent -----------------
+# The key a fetch on that host tries is whatever its shared agent holds, which
+# is the one the session's panes unlocked. Nothing here can see which key that
+# is -- it is on the other machine -- so the offer is simply to unlock it again,
+# which asks nothing when the agent still holds it.
+if [ -n "$target" ]; then
+  printf '\033[1mu\033[0m  unlock the key on %s and retry\n' "$target"
+  printf '\033[2many other key  close\033[0m\n'
+  read -rsn1 answer || answer=""
+  [ "$answer" = "u" ] || exit 1
+  printf '\n'
+  if ! remote_agent_unlock "$target"; then
+    printf '\n\033[31mkey not added\033[0m\n'
+    hold
+    exit 1
+  fi
+  finish
+fi
+
+# --- A local row: which key would have helped, offered -------------------------
+key=$(candidate_key) || key=""
 if [ -z "$key" ]; then
   hold
   exit 1
 fi
 
-# --- Offer the unlock ---------------------------------------------------------
 printf '\033[1mu\033[0m  unlock %s and retry\n' "${key/#$HOME/\~}"
 printf '\033[2many other key  close\033[0m\n'
 read -rsn1 answer || answer=""
@@ -152,20 +226,4 @@ if ! ssh-add "$key"; then
   exit 1
 fi
 
-printf '\nretrying %s...\n' "$verb"
-# Still BatchMode: if the key that was just added is not the one this remote
-# wanted, the retry must fail rather than start prompting for the next one.
-#
-# --no-optional-locks belongs to the fetch and to nothing else (see the case
-# above): it exists to keep the *sampler* from taking index.lock out from under
-# an interactive git, and pull and push are that interactive git.
-if GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -o BatchMode=yes" \
-    SSH_ASKPASS_REQUIRE=never \
-    git -C "$root" "${retry[@]}"; then
-  printf '\033[32m%sed\033[0m\n' "$verb"
-  exit 0
-fi
-
-printf '\033[31mstill unable to %s\033[0m\n' "$verb"
-hold
-exit 1
+finish

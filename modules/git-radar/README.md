@@ -216,13 +216,89 @@ A session whose directory is not a work tree still gets a row, dimmed, saying so
 where its branch would be. It shows no counters at all rather than zeros --
 "0 modified" would assert a clean work tree for a directory that has none.
 
+An ssh session (prefix+N) is the exception: its `session_path` is only the local
+home its ssh commands are typed from. Its directory is `@ssh_dir`, on the host in
+`@ssh_target`, and the row is asked of that host -- see the next section.
+
+## ssh sessions
+
+An ssh session is a local tmux session whose panes are all ssh'd into one host
+(`modules/tmux/scripts/New-SshSession.sh`). It gets a row in every feed, beside
+the local sessions, with the same branch and counts -- and its Git pane is a
+local one, the same feed as everywhere else. `prefix + t` then `R` passes `-L` to
+`New-ToolPane.sh`, and `Set-NeovimLayout.sh` builds the Git pane with
+`pwsh_command`, so neither follows the rest of the session onto the host. (The
+feed used to run there, where it listed the *remote's* tmux sessions -- usually
+none.)
+
+**The host's own git-radar answers.** Nothing here can run `git status` on a
+directory on another machine, but the machine can:
+
+```
+local Start-GitRadar.py
+  RemotePoller: a thread per host, once a tick, over the session's ssh master
+    ssh -o BatchMode=yes host  sh -c '"$HOME/.modules/git-radar/scripts/Get-GitState.py" --serve'
+        stdin   one @ssh_dir per line
+        stdout  {"version": 1, "rows": [...]}
+remote Get-GitState.py --serve
+  registers each directory in ~/.cache/git-radar/watched/  (a file per path; its mtime is the last ask)
+  answers from the snapshot; a directory not in it yet is sampled right there
+remote Start-GitRadar.py
+  samples its own sessions *and* every directory asked about in the last 30s
+```
+
+So the daemon does two jobs: keeps the snapshot for its own sessions, and serves
+the directories its remote clients ask about. The second needs no tmux on the
+host -- the sampler no longer exits for want of a tmux server while anything is
+still being asked about, and stops once nothing has been for `WATCH_TTL`.
+Directories it only serves are rows with no session; `git_feed.sample_cached`
+is the one place they are kept out of every list of sessions.
+
+**A slow host costs the local rows nothing.** The asking happens on the
+poller's threads, and the sampler only reads the last answer each tick, so the
+local rows keep their three seconds and a `q` keeps its tenth of one. A host's
+answer changing wakes the sampler at once rather than on its next tick, and a
+nudge (`r`, a finished fetch) asks every host again with `--fresh` -- sampled
+now, not read from a snapshot that predates the fetch.
+
+The ssh is BatchMode and `ControlMaster=no`: it rides the master connection the
+session's panes already hold, and when there is none it connects on its own and
+leaves nothing behind. (A query that *became* the master under ControlPersist
+would keep its output pipe open for ten minutes, and the poller would wait on it
+for all of them.)
+
+**A row that could not be asked is `offline`**, grey, and says why where its
+branch would be:
+
+    unreachable          ssh failed, timed out, or the last answer is >15s old
+    no git-radar         the host has no dev-environment (@ssh_devenv is not yes)
+    git-radar outdated   the host's checkout predates --serve -- pull it there
+    connecting…          the host has not answered about this directory yet
+
+Not `not a repo`: that would be a confident answer about a directory nobody
+looked at.
+
+**`f`, `F`, `p` and `P` run on the host**, over the same kind of ssh, with the
+same no-prompt environment on both ends and the host's shared agent in front of
+git (the one the session's panes unlock -- see `ssh-helpers.sh`). They nudge the
+host's sampler when they finish. A failure you asked for by name opens the same
+popup, which for a remote row offers to unlock *the host's* key in its shared
+agent (`remote_agent_unlock`) and retries there. Notes are keyed by host and
+root, so `~/code/x` here and `~/code/x` there never share a busy flag.
+
+**Both machines need this version.** The remote runs its own `~/.modules`
+checkout; until it is pulled, its rows say `git-radar outdated`.
+
 ## How it works
 
 ```
 Start-GitRadar.py     the daemon. One sampler for the whole machine.
   git_radar.py        collector: list_sessions -> repo_root -> inspect
   git_feed.py         binds the shared cache to Repo rows, at a 3s tick
-                      (and request_sample, for when 3s is too long to wait)
+                      (and request_sample, for when 3s is too long to wait);
+                      serve, the other end of an ssh session's question
+  git_remote.py       asks a host's git-radar about ssh sessions: query,
+                      RemotePoller, and f/p/P as ssh command lines
   Get-GitState.py     presentation + CLI (table / tsv / json / fzf / status)
 Watch-GitFeed.py      the curses feed on prefix + t then R. Reads, never samples.
   Show-GitFailure.sh  the popup a named f/p/P failure opens: the message, and

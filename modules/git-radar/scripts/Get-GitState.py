@@ -24,6 +24,11 @@ to grep or hand to fzf and a record that wraps stops being one.
   fzf     session TAB <padded, ANSI-coloured row>, for a picker
   status  #[fg=...] counts, for a tmux status-bar segment
 
+ssh sessions (prefix+N) are listed too, their state asked of the host they are
+on. `--serve` is that question's other end: run over ssh by the asking
+machine's git-radar (git_remote.query), it reads directories on stdin and
+prints their rows as JSON, from this machine's snapshot -- see git_feed.serve.
+
 Where the data comes from is a separate axis from how it is formatted. By
 default this samples live. `--cached` reads the shared snapshot published by
 Start-GitRadar.py instead, so a consumer costs a file read no matter how many
@@ -33,6 +38,7 @@ Usage:
   Get-GitState.py                   # sampled live, human-readable
   Get-GitState.py --cached          # the shared snapshot
   Get-GitState.py --format=json
+  Get-GitState.py --serve [--fresh] < paths
 """
 
 from __future__ import annotations
@@ -47,6 +53,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import git_feed as feed  # noqa: E402
 import git_radar as gitr  # noqa: E402
+from git_remote import PROTOCOL  # noqa: E402
 
 # Each counter is its own colour, and only appears when it is non-zero. Both
 # halves of that matter for a pane you glance at rather than read: a row of
@@ -91,6 +98,7 @@ ANSI = {
     gitr.SYNCED: "\033[36m",      # cyan: committed, just not pushed or pulled
     gitr.CLEAN: "\033[32m",
     gitr.NOREPO: "\033[90m",
+    gitr.OFFLINE: "\033[90m",
 }
 RESET = "\033[0m"
 DIM = "\033[2m"
@@ -103,6 +111,7 @@ TMUX_COLOUR = {
     gitr.SYNCED: "#89dceb",
     gitr.CLEAN: "#a6e3a1",
     gitr.NOREPO: "#6c7086",
+    gitr.OFFLINE: "#6c7086",
 }
 
 STATE_LABEL = {
@@ -112,6 +121,8 @@ STATE_LABEL = {
     gitr.SYNCED: "unpushed",
     gitr.CLEAN: "clean",
     gitr.NOREPO: "not a repo",
+    # Never shown on its own: state_label says why instead.
+    gitr.OFFLINE: "offline",
 }
 
 # The session you are in right now, marked in a gutter column of its own.
@@ -161,7 +172,20 @@ class Cell:
 
 
 def marker(repo: gitr.Repo) -> str:
-    return MARKER_NOREPO if repo.state == gitr.NOREPO else MARKER
+    return MARKER if repo.has_repo else MARKER_NOREPO
+
+
+def state_label(repo: gitr.Repo) -> str:
+    """The state in words. An OFFLINE row says why -- "unreachable", "no
+    git-radar" -- which is the only thing worth knowing about it."""
+    if repo.state == gitr.OFFLINE and repo.detail:
+        return repo.detail
+    return STATE_LABEL[repo.state]
+
+
+def detail_text(repo: gitr.Repo) -> str:
+    """The detail column, minus what state_label has already said."""
+    return "" if repo.state == gitr.OFFLINE else repo.detail
 
 
 def branch_label(repo: gitr.Repo) -> str:
@@ -171,7 +195,7 @@ def branch_label(repo: gitr.Repo) -> str:
     already say it there, and the one that does not (the feed) substitutes the
     state label itself. Saying it twice on one row is worse than either.
     """
-    if repo.state == gitr.NOREPO:
+    if not repo.has_repo:
         return ""
     if repo.branch == gitr.DETACHED:
         return DETACHED_LABEL
@@ -179,7 +203,7 @@ def branch_label(repo: gitr.Repo) -> str:
 
 
 def upstream_note(repo: gitr.Repo) -> str:
-    if repo.state == gitr.NOREPO or repo.upstream:
+    if not repo.has_repo or repo.upstream:
         return ""
     return LOCAL_NOTE
 
@@ -191,7 +215,7 @@ def counters(repo: gitr.Repo) -> list[Cell]:
     then just a name and a branch -- which is exactly what "nothing to report"
     should look like.
     """
-    if repo.state == gitr.NOREPO:
+    if not repo.has_repo:
         return []
     return [
         Cell(key, glyph, getattr(repo, key))
@@ -250,7 +274,7 @@ def render_rows(
             if note:
                 branch = f"{branch_label(repo)} {DIM}{note}{RESET}"
 
-        label = STATE_LABEL[repo.state]
+        label = state_label(repo)
         if coloured:
             label = f"{ANSI[repo.state]}{label}{RESET}"
 
@@ -258,9 +282,9 @@ def render_rows(
             0, branch_width - len(branch_label(repo)) - (len(note) + 1 if note else 0)
         )
         cells = counter_text(repo, coloured)
-        detail = ""
-        if repo.detail:
-            detail = f"  {DIM}{repo.detail}{RESET}" if coloured else f"  {repo.detail}"
+        detail = detail_text(repo)
+        if detail:
+            detail = f"  {DIM}{detail}{RESET}" if coloured else f"  {detail}"
 
         rows.append(
             f"{gutter}{glyph} {repo.session:<{session_width}}  {branch}{pad_branch}"
@@ -313,7 +337,30 @@ def main() -> int:
     parser.add_argument(
         "--format", choices=("table", "tsv", "json", "fzf", "status"), default="table"
     )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="answer a remote client: directories on stdin, their rows as JSON",
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="with --serve, sample the directories now instead of reading the snapshot",
+    )
     args = parser.parse_args()
+
+    if args.serve:
+        paths = [line for line in sys.stdin.read().splitlines() if line]
+        rows = feed.serve(paths, fresh=args.fresh)
+        json.dump(
+            {
+                "version": PROTOCOL,
+                "rows": [{field: getattr(r, field) for field in gitr.FIELDS} for r in rows],
+            },
+            sys.stdout,
+        )
+        sys.stdout.write("\n")
+        return 0
 
     repos = feed.sample_cached() if args.cached else gitr.detect()
     current = gitr.current_session()

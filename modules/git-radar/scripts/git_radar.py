@@ -51,8 +51,21 @@ DIRTY = "dirty"
 SYNCED = "synced"
 CLEAN = "clean"
 NOREPO = "norepo"
+# An ssh session's repository that could not be asked about: the host did not
+# answer, has no git-radar, or has one too old to serve. Its own state rather
+# than NOREPO, because "not a repo" would be a confident wrong answer about a
+# directory nobody looked at. The reason is in `detail`.
+OFFLINE = "offline"
 
-STATES = (CONFLICTED, DIVERGED, DIRTY, SYNCED, CLEAN, NOREPO)
+STATES = (CONFLICTED, DIVERGED, DIRTY, SYNCED, CLEAN, NOREPO, OFFLINE)
+
+# The reasons an OFFLINE row gives, in `detail`.
+UNREACHABLE = "unreachable"
+NO_RADAR = "no git-radar"
+OUTDATED = "git-radar outdated"
+# Not a failure: the host has not answered about this directory yet -- the first
+# moments of a new ssh session, before the poller's first round trip is back.
+CONNECTING = "connecting\u2026"
 
 # Only used for the optional attention-first ordering; detect() sorts by session
 # name, because this list doubles as your session list and a row that moves while
@@ -79,6 +92,14 @@ class Repo:
     conflicted: int = 0
     state: str = NOREPO
     detail: str = ""
+    # The @ssh_target of an ssh session's row -- whose repository, and whose
+    # `root`, are on that host. Empty for a local row.
+    remote: str = ""
+
+    @property
+    def has_repo(self) -> bool:
+        """Whether there is a repository behind the row to show a branch for."""
+        return self.state not in (NOREPO, OFFLINE)
 
     @property
     def tracked_changes(self) -> int:
@@ -119,8 +140,18 @@ def git(path: str, *args: str) -> tuple[int, str]:
     return _run(["git", "--no-optional-locks", "-C", path, *args])
 
 
-def list_sessions() -> list[tuple[str, str]]:
-    """Every session as (name, directory), in one tmux call.
+@dataclass
+class Session:
+    name: str
+    path: str
+    # For an ssh session (prefix+N): its @ssh_target, and whether the host has
+    # this dev-environment -- and so a git-radar to ask. Empty for a local one.
+    remote: str = ""
+    devenv: bool = False
+
+
+def list_sessions() -> list[Session]:
+    """Every session with the directory its repository is in, in one tmux call.
 
     session_path is where the session was created, which is the right answer for
     the New-CodeSession.sh workflow: one session per project directory. It is
@@ -129,11 +160,15 @@ def list_sessions() -> list[tuple[str, str]]:
     shell in pane 2 happens to be sitting. pane_current_path is the fallback for
     sessions created without an explicit -c.
 
-    Sessions opened with prefix+N (New-SshSession.sh) are left out: their
-    repository is on another machine, and the local session_path is only the
-    home directory their ssh commands are typed from.
+    Sessions opened with prefix+N (New-SshSession.sh) have their repository on
+    another machine: their local session_path is only the home directory their
+    ssh commands are typed from. Their directory is @ssh_dir instead, on the
+    host in @ssh_target, and detect() asks that host about it.
     """
-    fmt = "\t".join(["#{session_name}", "#{session_path}", "#{pane_current_path}", "#{@ssh_target}"])
+    fmt = "\t".join([
+        "#{session_name}", "#{session_path}", "#{pane_current_path}",
+        "#{@ssh_target}", "#{@ssh_dir}", "#{@ssh_devenv}",
+    ])
     code, out = _run(["tmux", "list-sessions", "-F", fmt])
     if code != 0:
         return []
@@ -141,13 +176,20 @@ def list_sessions() -> list[tuple[str, str]]:
     sessions = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 4:
+        if len(fields) != 6:
             continue
-        name, session_path, pane_path, ssh_target = fields
+        name, session_path, pane_path, ssh_target, ssh_dir, ssh_devenv = fields
+        if not name:
+            continue
+        if ssh_target:
+            if ssh_dir:
+                sessions.append(
+                    Session(name, ssh_dir, ssh_target, ssh_devenv == "yes")
+                )
+            continue
         path = session_path or pane_path
-        if not name or not path or ssh_target:
-            continue
-        sessions.append((name, os.path.normpath(path)))
+        if path:
+            sessions.append(Session(name, os.path.normpath(path)))
     return sessions
 
 
@@ -276,7 +318,25 @@ def _classify(repo: Repo) -> str:
     return CLEAN
 
 
-def detect() -> list[Repo]:
+def inspect_path(path: str) -> Repo:
+    """One directory's row, sampled here and now. What a served path costs."""
+    repo = Repo(session="", path=path)
+    repo.root = repo_root(path)
+    if not repo.root:
+        repo.state = NOREPO
+        return repo
+    return inspect(repo)
+
+
+def copy_state(repo: Repo, source: Repo) -> None:
+    """Give `repo` everything `source` knows about the repository, keeping its
+    own session, path and remote -- the three that say whose row it is."""
+    for field_name in FIELDS:
+        if field_name not in ("session", "path", "remote"):
+            setattr(repo, field_name, getattr(source, field_name))
+
+
+def detect(remote=None, extra_paths=()) -> list[Repo]:
     """Every session, with its repository's state. The expensive path.
 
     Sessions sharing a repository share its status call -- the second one is a
@@ -285,16 +345,41 @@ def detect() -> list[Repo]:
     Attention is carried by colour, not by position. (Sorting by STATE_ORDER
     instead is a one-line change; the feed anchors its cursor by session name and
     tolerates re-ordering.)
+
+    ssh sessions are asked of their host, all of one host's directories in one
+    call: `remote(target, paths)` returns {path: Repo}, or a phrase saying why
+    there is no answer (UNREACHABLE and friends), which the rows then carry as
+    OFFLINE. The default asks there and then (git_remote.query); the daemon
+    passes a RemotePoller instead, whose threads do the asking, so a host that
+    is slow to answer never holds up the local rows.
+
+    `extra_paths` are directories a *remote* client has asked this machine
+    about (git_feed.serve). They come back as rows with no session, after the
+    session rows; git_feed keeps them away from everything that lists sessions.
     """
+    if remote is None:
+        import git_remote
+
+        remote = git_remote.query
+
     by_root: dict[str, Repo] = {}
     repos = []
+    by_host: dict[str, list[Repo]] = {}
 
-    for name, path in list_sessions():
-        repo = Repo(session=name, path=path)
-        root = repo_root(path)
+    for session in list_sessions():
+        repo = Repo(session=session.name, path=session.path, remote=session.remote)
+        repos.append(repo)
+        if session.remote:
+            if session.devenv:
+                by_host.setdefault(session.remote, []).append(repo)
+            else:
+                # Nothing on that host to ask, and nothing here can look.
+                repo.state, repo.detail = OFFLINE, NO_RADAR
+            continue
+
+        root = repo_root(session.path)
         if not root:
             repo.state = NOREPO
-            repos.append(repo)
             continue
 
         repo.root = root
@@ -302,12 +387,24 @@ def detect() -> list[Repo]:
         if seen is None:
             by_root[root] = inspect(repo)
         else:
-            for field_name in FIELDS:
-                if field_name not in ("session", "path"):
-                    setattr(repo, field_name, getattr(seen, field_name))
-        repos.append(repo)
+            copy_state(repo, seen)
 
-    return sorted(repos, key=lambda repo: repo.session.lower())
+    for target, rows in by_host.items():
+        answer = remote(target, sorted({repo.path for repo in rows}))
+        for repo in rows:
+            found = answer.get(repo.path) if isinstance(answer, dict) else None
+            if found is None:
+                repo.state = OFFLINE
+                repo.detail = answer if isinstance(answer, str) else CONNECTING
+            else:
+                copy_state(repo, found)
+
+    repos.sort(key=lambda repo: repo.session.lower())
+
+    for path in extra_paths:
+        repos.append(inspect_path(path))
+
+    return repos
 
 
 # Everything a consumer needs off a Repo, and the order the CLI prints them in.
@@ -326,4 +423,5 @@ FIELDS = (
     "conflicted",
     "state",
     "detail",
+    "remote",
 )

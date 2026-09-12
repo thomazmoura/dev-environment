@@ -11,6 +11,11 @@ Nobody starts this by hand. Any consumer that finds the lock free spawns it
 (radar_cache.ensure_daemon), and it exits by itself when tmux is gone or nothing
 has read from it for a while, so it does not outlive the thing it was watching.
 
+It has a second job on a machine you ssh into: the git-radar on the machine you
+ssh from asks it about its ssh sessions' directories (git_feed.serve), and it
+samples those alongside its own sessions. That job needs no tmux here, so it
+keeps the sampler up for as long as somebody is asking.
+
   Start-GitRadar.py                 sample forever, once every three seconds
   Start-GitRadar.py --interval 10   slower ticks, for a machine with many repos
   Start-GitRadar.py --ensure        start one if none is running, then exit
@@ -29,6 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import git_feed as feed  # noqa: E402
+import git_remote  # noqa: E402
 
 # render_status lives with the other presentation in Get-GitState.py, whose name
 # has a hyphen and so cannot be imported by name -- the same load-by-path trick
@@ -82,8 +88,14 @@ def run(interval: float) -> int:
     # sampler is not this one's to answer, and the loop samples immediately.
     nudged = feed.CACHE.nudge_stamp()
 
+    # The ssh sessions' hosts are asked from threads of their own, so a host
+    # that is slow to answer never holds up this loop -- see git_remote.
+    poller = git_remote.RemotePoller(interval, feed.STALE_AFTER)
+
     while True:
-        if not tmux_is_running():
+        # No tmux is only a reason to stop when no remote client is asking
+        # either: a machine you ssh into has no tmux of its own, usually.
+        if not tmux_is_running() and not feed.watched_paths():
             return 0
         if feed.CACHE.last_read_age() > feed.IDLE_EXIT_SECONDS:
             # Everyone detached. Leave the last snapshot on disk: it is stale by
@@ -93,8 +105,11 @@ def run(interval: float) -> int:
 
         started = time.monotonic()
         try:
-            repos = feed.sample()
-            feed.CACHE.publish(repos, state_cli.render_status(repos))
+            repos = feed.sample(poller.lookup)
+            # The summary is of this machine's sessions, not of the
+            # directories it is only serving.
+            sessions = [repo for repo in repos if repo.session]
+            feed.CACHE.publish(repos, state_cli.render_status(sessions))
         except Exception as error:  # noqa: BLE001
             # Fail open, like the agent sampler does: one bad tick -- a
             # repository deleted mid-walk, a `git gc` holding a lock -- must not
@@ -106,9 +121,15 @@ def run(interval: float) -> int:
         # machine full of large repositories does not stretch the tick into two
         # -- and cut even that short if something has asked for a sample in the
         # meantime, a session killed from the feed pane being the usual reason.
-        nudged = feed.CACHE.wait_for_tick(
-            max(0.0, interval - (time.monotonic() - started)), nudged
+        stamp = feed.CACHE.wait_for_tick(
+            max(0.0, interval - (time.monotonic() - started)), nudged, poller.updated
         )
+        if stamp != nudged:
+            # Asked for a sample now -- a fetch has just moved some refs, or a
+            # session closed. The remote rows have to hear it too, and their
+            # hosts' snapshots may predate it, so they are asked freshly.
+            poller.wake()
+        nudged = stamp
 
 
 def main() -> int:

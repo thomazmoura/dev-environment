@@ -42,7 +42,9 @@ shift $((OPTIND - 1))
 top="$(current_pane "${1:-}")"
 
 # Every pane goes through pane_command, so in an ssh session (prefix+N) the
-# whole layout runs on the remote, in the session's working directory. Paths
+# whole layout runs on the remote, in the session's working directory -- all but
+# the git feed, which always runs here: it lists the ssh sessions itself, beside
+# the local ones, and asks their hosts (see modules/git-radar/README.md). Paths
 # are spelled with ~ rather than $HOME for the same reason: $HOME would be
 # expanded here, to this machine's home, while pwsh expands ~ wherever it runs.
 #
@@ -79,9 +81,10 @@ fi
 
 # The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
 # no-exit on either: closing a feed should close its pane, not leave a shell
-# sitting in a sliver of the radar column.
+# sitting in a sliver of the radar column. The git feed's command is built with
+# pwsh_command, not pane_command, for the reason above -- as prefix+t, R's -L.
 agent_feed='& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py'
-git_feed='& ~/.modules/git-radar/scripts/Watch-GitFeed.py'
+git_feed="$(pwsh_command '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
 
 # The fixed sizes, each a percentage of the window. The radar column is
 # git_width_pct wide and full height, with the agent feed taking
@@ -203,9 +206,9 @@ fi
 # already has a terminal under it.
 if [ -n "$radars" ] && [ -z "$git" ]; then
   if [ -n "$agents" ]; then
-    git="$(new_pane "$agents" "Git" "$(pane_command "$top" "$git_feed")" -v -b -l $((100 - agents_height_pct))%)"
+    git="$(new_pane "$agents" "Git" "$git_feed" -v -b -l $((100 - agents_height_pct))%)"
   else
-    git="$(new_pane "$top" "Git" "$(pane_command "$top" "$git_feed")" -h -b -f -l "$git_width_pct%")"
+    git="$(new_pane "$top" "Git" "$git_feed" -h -b -f -l "$git_width_pct%")"
   fi
   mark_role "$git" git
 fi

@@ -15,6 +15,10 @@
 #   -d <glob>     only run the command if the pane's current path contains a
 #                 directory matching <glob>; otherwise the pane just explains
 #                 what is missing and closes on the next keypress
+#   -L            always run the command here, even in an ssh session -- for a
+#                 pane about the whole machine rather than the session's
+#                 directory, like the git feed (prefix+t then R), which lists
+#                 the ssh sessions itself and asks their hosts
 #
 # Example, as used by the binding for prefix+t then C:
 #   New-ToolPane.sh -t "#{pane_id}" "Claude Code" "claude --resume"
@@ -32,8 +36,9 @@ size=()
 no_exit=""
 print_id=""
 requires=""
+local_only=""
 
-while getopts ":t:vl:kPd:" option; do
+while getopts ":t:vl:kPd:L" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     v) direction="-v" ;;
@@ -41,6 +46,7 @@ while getopts ":t:vl:kPd:" option; do
     k) no_exit="yes" ;;
     P) print_id="yes" ;;
     d) requires="$OPTARG" ;;
+    L) local_only="yes" ;;
     *) die "New-ToolPane.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -62,7 +68,11 @@ origin="$(current_pane "$target")"
 # session's working directory on the remote, so that is where the glob is
 # checked. An ssh that fails outright (255) skips the guard, and the pane is
 # left to show the connection error instead.
-line="$(pane_command "$origin" "$command" "$no_exit")"
+if [ -n "$local_only" ]; then
+  line="$(pwsh_command "$command" "$no_exit")"
+else
+  line="$(pane_command "$origin" "$command" "$no_exit")"
+fi
 if [ -n "$requires" ]; then
   remote="$(ssh_option "$origin" @ssh_target)"
   if [ -n "$remote" ]; then

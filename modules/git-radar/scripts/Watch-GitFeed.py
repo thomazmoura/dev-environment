@@ -26,6 +26,11 @@ Refreshing in every session at once is affordable because this does not sample:
 Start-GitRadar.py runs the git commands for the whole machine and this reads what
 it published (git_feed.py). Opening a second feed pane costs a file read.
 
+ssh sessions (prefix+N) are listed too, and this pane is always local, even in
+one of them: their rows are asked of their host's own git-radar (git_remote),
+and f/p/P on such a row run on the host over ssh. A host that cannot be asked
+shows its row as offline, saying why. See the README's "ssh sessions".
+
 Rows are sorted by session name, not by how much they need attention. This list
 doubles as your session list, and a row that jumps while you are reaching for
 Enter is worse than one you have to scan for -- attention is carried by colour.
@@ -107,6 +112,7 @@ sys.path.insert(0, HERE)
 
 import git_feed as feed  # noqa: E402
 import git_radar as gitr  # noqa: E402
+import git_remote  # noqa: E402
 
 sys.path.insert(0, str(gitr.SHARED_SCRIPTS))
 
@@ -140,6 +146,7 @@ STATE_COLOUR = {
     # which only exists on a 16-colour terminal. COLOR_BLACK is not a substitute
     # -- on a dark background it is invisible.
     gitr.NOREPO: curses.COLOR_WHITE,
+    gitr.OFFLINE: curses.COLOR_WHITE,
 }
 
 # Green added, yellow modified, red deleted, grey untracked: the vocabulary
@@ -179,6 +186,7 @@ STATE_EMPHASIS = {
     gitr.SYNCED: curses.A_NORMAL,
     gitr.CLEAN: curses.A_DIM,
     gitr.NOREPO: curses.A_DIM,
+    gitr.OFFLINE: curses.A_DIM,
 }
 
 EMPTY_MESSAGE = "no tmux sessions"
@@ -287,8 +295,22 @@ class Note:
     busy: bool = False
 
 
+def git_argv(repo, *args: str) -> list[str]:
+    """`git -C <root> <args>` in the row's repository, wherever that is.
+
+    A remote row's repository is on the host its ssh session is on, so the
+    command runs there, over ssh (git_remote.op_argv). It keeps every property
+    fetch_env gives a local one -- BatchMode, no prompt, no tty -- on both ends.
+    """
+    if repo.remote:
+        return git_remote.op_argv(repo.remote, repo.root, list(args))
+    return ["git", "-C", repo.root, *args]
+
+
 def fetch_argv(repo) -> list[str] | str:
     """`f` and `F`. The one command here that changes nothing locally."""
+    if repo.remote:
+        return git_argv(repo, "--no-optional-locks", "fetch", "--quiet")
     return ["git", "--no-optional-locks", "-C", repo.root, "fetch", "--quiet"]
 
 
@@ -307,7 +329,7 @@ def pull_argv(repo) -> list[str] | str:
         return "detached HEAD"
     if not repo.upstream:
         return "no upstream"
-    return ["git", "-C", repo.root, "pull", "--ff-only", "--quiet"]
+    return git_argv(repo, "pull", "--ff-only", "--quiet")
 
 
 def push_argv(repo) -> list[str] | str:
@@ -321,11 +343,10 @@ def push_argv(repo) -> list[str] | str:
     if repo.branch == gitr.DETACHED:
         return "detached HEAD"
     if not repo.upstream:
-        return [
-            "git", "-C", repo.root,
-            "push", "--set-upstream", "origin", repo.branch, "--quiet",
-        ]
-    return ["git", "-C", repo.root, "push", "--quiet"]
+        return git_argv(
+            repo, "push", "--set-upstream", "origin", repo.branch, "--quiet"
+        )
+    return git_argv(repo, "push", "--quiet")
 
 
 @dataclass(frozen=True)
@@ -375,8 +396,12 @@ def note_key(repo) -> str:
     """Fetch notes hang off the repository, falling back to the session.
 
     Two sessions in one repository share a note; a session that is not a
-    repository at all still needs somewhere to be told so.
+    repository at all still needs somewhere to be told so. A remote row's
+    repository is qualified by its host: ~/code/x here and ~/code/x there are
+    two work trees with two index.locks, and neither's busy flag is the other's.
     """
+    if repo.root and repo.remote:
+        return f"{repo.remote}:{repo.root}"
     return repo.root or f"session:{repo.session}"
 
 
@@ -463,7 +488,7 @@ def show_failure(op: Op, repo, note: Note) -> None:
                 "-w", "80%", "-h", "60%", "-x", "C", "-y", "C",
                 popup,
                 os.path.join(HERE, "Show-GitFailure.sh"),
-                op.verb, repo.session, repo.root or "", path,
+                op.verb, repo.session, repo.root or "", path, repo.remote,
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -499,6 +524,11 @@ def start_op(repo, op: Op, interactive: bool = True) -> None:
     key = note_key(repo)
     current = notes.get(key)
     if current is not None and current.busy:
+        return
+    if repo.state == gitr.OFFLINE:
+        # Nothing to run it on. The row already says why, so the note only
+        # says that the key was heard.
+        notes[key] = Note(f"cannot {op.verb}", expires=time.monotonic() + NOTE_TTL)
         return
     if not repo.root:
         notes[key] = Note("not a git repository", expires=time.monotonic() + NOTE_TTL)
@@ -812,14 +842,14 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     measured = sum(len(cell.text) + 1 for cell in cells)
     note = state_cli.upstream_note(repo)
     fetched = notes.get(note_key(repo))
-    detail = fetched.text if fetched else repo.detail
+    detail = fetched.text if fetched else state_cli.detail_text(repo)
 
     room = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - measured - 1
     if note:
         room -= len(note) + 1
     # A row with no repository has no branch, so the state label takes the slot
     # -- it is the only thing there is to say about it.
-    text = state_cli.branch_label(repo) or state_cli.STATE_LABEL[repo.state]
+    text = state_cli.branch_label(repo) or state_cli.state_label(repo)
     branch = ui.truncate(text, max(0, room))
 
     # Dim whether or not the row is selected. The second line is secondary by
@@ -923,6 +953,7 @@ def run(stdscr, interval: float) -> None:
         # to grey where the terminal has one.
         COUNTER_COLOUR["untracked"] = grey
         STATE_COLOUR[gitr.NOREPO] = grey
+        STATE_COLOUR[gitr.OFFLINE] = grey
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
