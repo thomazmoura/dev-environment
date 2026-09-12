@@ -19,9 +19,9 @@
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
-# Used by the prefix+v / prefix+V bindings and by New-CodeSession.sh, which
-# builds a session and then hands it here so a new project always opens the
-# same way.
+# Used by the prefix+v / prefix+V bindings and by New-CodeSession.sh and
+# New-SshSession.sh, which build a session and then hand it here so a new
+# project always opens the same way -- on the remote, for an ssh session.
 set -euo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
@@ -41,17 +41,47 @@ shift $((OPTIND - 1))
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
 
-nvim_command="$(pwsh_command "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim" no-exit)"
+# Every pane goes through pane_command, so in an ssh session (prefix+N) the
+# whole layout runs on the remote, in the session's working directory. Paths
+# are spelled with ~ rather than $HOME for the same reason: $HOME would be
+# expanded here, to this machine's home, while pwsh expands ~ wherever it runs.
+#
+# A remote without this dev-environment has no pwsh profile and no ~/.modules,
+# so it gets what can still work there: plain NeoVim, a login shell for the
+# terminal and no radar column.
+setup='psgit && psfzf && Build-DotnetProjectIfNeeded'
+editor='~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
+radars="yes"
+remote="$(ssh_option "$top" @ssh_target)"
+if [ -n "$remote" ] && ! ssh_is_devenv "$top"; then
+  setup=""
+  editor="nvim"
+  radars=""
+fi
 
 # The setup command is the same either way: refresh git state, load the fzf
 # helpers and build the project if it needs it, then leave the shell open.
-terminal_command="$(pwsh_command 'psgit && psfzf && Build-DotnetProjectIfNeeded' no-exit)"
+terminal_command="$(pane_command "$top" "$setup" no-exit)"
+
+# NeoVim, as a new pane runs it -- when the layout has to bring it back.
+nvim_command="$(pane_command "$top" "$editor" no-exit)"
+
+# NeoVim, as typed into the pane the layout was applied to. In an ssh session
+# that pane is either still a local shell -- the first pane of a session
+# New-SshSession.sh has just created -- which has to ssh there first, or already
+# a shell on the remote (prefix+v from a remote pane), where another ssh would
+# only nest a second connection inside the first.
+if [ -n "$remote" ] && [ "$(tmux display-message -p -t "$top" '#{pane_current_command}')" = ssh ]; then
+  editor_line="$(remote_typed_command "$top" "$editor" no-exit)"
+else
+  editor_line="$nvim_command"
+fi
 
 # The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
 # no-exit on either: closing a feed should close its pane, not leave a shell
 # sitting in a sliver of the radar column.
-agent_feed="& $HOME/.modules/agent-radar/scripts/Watch-AgentFeed.py"
-git_feed="& $HOME/.modules/git-radar/scripts/Watch-GitFeed.py"
+agent_feed='& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py'
+git_feed='& ~/.modules/git-radar/scripts/Watch-GitFeed.py'
 
 # The fixed sizes, each a percentage of the window. The radar column is
 # git_width_pct wide and full height, with the agent feed taking
@@ -75,9 +105,10 @@ mark_role() {
 #
 # Windows laid out before @layout_role existed carry labels but no roles. Only
 # when the window has no role at all are the labels trusted -- Git and Agents
-# by name at the window's left edge, NeoVim by name, Terminal as the "Terminal" pane nearest below NeoVim and
-# lined up with it, so a custom terminal beside it isn't taken -- and the panes
-# found that way get their roles stamped so later runs don't need to guess.
+# by name at the window's left edge, NeoVim by name, Terminal as the
+# "Terminal" pane nearest below NeoVim and lined up with it, so a custom
+# terminal beside it isn't taken -- and the panes found that way get their
+# roles stamped so later runs don't need to guess.
 find_layout_panes() {
   git="" agents="" terminal="" neovim=""
   local id left pane_top role label
@@ -138,10 +169,10 @@ fit_pane() {
 if [ -n "$side" ]; then
   # A 20% column on the right, halved: a bare terminal on top and the setup
   # terminal below it.
-  column="$(new_pane "$top" "Terminal" "$(pwsh_command '')" -h -l 20%)"
+  column="$(new_pane "$top" "Terminal" "$(pane_command "$top" '')" -h -l 20%)"
   new_pane "$column" "Terminal" "$terminal_command" -v -l 50% >/dev/null
   label_pane "$top" "NeoVim"
-  tmux send-keys -t "$top" "$nvim_command" C-m
+  tmux send-keys -t "$top" "$editor_line" C-m
   tmux select-pane -t "$top"
   exit 0
 fi
@@ -151,6 +182,9 @@ fi
 # feeds are part of the default layout rather than something prefix+t, r/R has
 # to open every time: they are the panes whose whole job is to be read without
 # being asked for, so they get a column of their own that NeoVim never covers.
+#
+# A remote without this dev-environment gets no radar column: there, only
+# NeoVim and the terminal are laid out and repaired.
 find_layout_panes
 
 # A window with none of the layout in it is a fresh one: the pane the binding
@@ -167,17 +201,17 @@ fi
 # column on the left and Git above Agents. `-f` makes the column span the full
 # window height whichever pane it is split from, including a NeoVim that
 # already has a terminal under it.
-if [ -z "$git" ]; then
+if [ -n "$radars" ] && [ -z "$git" ]; then
   if [ -n "$agents" ]; then
-    git="$(new_pane "$agents" "Git" "$(pwsh_command "$git_feed")" -v -b -l $((100 - agents_height_pct))%)"
+    git="$(new_pane "$agents" "Git" "$(pane_command "$top" "$git_feed")" -v -b -l $((100 - agents_height_pct))%)"
   else
-    git="$(new_pane "$top" "Git" "$(pwsh_command "$git_feed")" -h -b -f -l "$git_width_pct%")"
+    git="$(new_pane "$top" "Git" "$(pane_command "$top" "$git_feed")" -h -b -f -l "$git_width_pct%")"
   fi
   mark_role "$git" git
 fi
 
-if [ -z "$agents" ]; then
-  agents="$(new_pane "$git" "Agents" "$(pwsh_command "$agent_feed")" -v -l "$agents_height_pct%")"
+if [ -n "$radars" ] && [ -z "$agents" ]; then
+  agents="$(new_pane "$git" "Agents" "$(pane_command "$top" "$agent_feed")" -v -l "$agents_height_pct%")"
   mark_role "$agents" agents
 fi
 
@@ -190,7 +224,8 @@ if [ -z "$neovim" ]; then
     if [ "$(tmux display-message -p -t "$terminal" '#{pane_top}')" = 0 ]; then
       neovim="$(new_pane "$terminal" "NeoVim" "$nvim_command" -v -b)"
     fi
-  elif [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents")" = 0 ]; then
+  elif [ -n "$radars" ] &&
+    [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents")" = 0 ]; then
     neovim="$(new_pane "$git" "NeoVim" "$nvim_command" -h -f)"
   fi
   [ -z "$neovim" ] || mark_role "$neovim" neovim
@@ -214,16 +249,18 @@ fi
 # above Agents. The terminal's width is left alone: custom panes may share its
 # row.
 read -r window_width window_height < <(tmux display-message -p -t "$top" '#{window_width} #{window_height}')
-fit_pane "$git" -x $((window_width * git_width_pct / 100))
-fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
+if [ -n "$radars" ]; then
+  fit_pane "$git" -x $((window_width * git_width_pct / 100))
+  fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
+fi
 [ -z "$terminal" ] || fit_pane "$terminal" -y $((window_height * terminal_height_pct / 100))
 
 if [ -n "$fresh" ]; then
-  tmux send-keys -t "$neovim" "$nvim_command" C-m
+  tmux send-keys -t "$neovim" "$editor_line" C-m
 fi
 
 # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
 # panes of the radar column by most-recently-active. Touching the git feed
 # makes that C-h land on Git instead of on the agent feed.
-tmux select-pane -t "$git"
+[ -z "$git" ] || tmux select-pane -t "$git"
 tmux select-pane -t "${neovim:-$top}"

@@ -2,7 +2,8 @@
 # Opens a labelled pane running a pwsh command. The workhorse behind almost
 # every pane-creating binding in modules/tmux/common.conf -- the agent menu
 # (prefix+t), the Angular/.NET runners (prefix+a, A, T, W) and the plain
-# terminals (prefix+% and prefix+").
+# terminals (prefix+% and prefix+"). In an ssh session (prefix+N) the pane runs
+# the same command on the remote, in the session's working directory.
 #
 # Usage: New-ToolPane.sh [options] <label> <pwsh-command>
 #   -t <target>   pane the split is relative to; bindings pass "#{pane_id}"
@@ -56,14 +57,28 @@ origin="$(current_pane "$target")"
 # path from the pane the binding fired in (see new_pane's split-window -c), so
 # the guard has to be checked against that same path -- not against the cwd of
 # this script, which run-shell leaves wherever the server was started.
-pane_command="$(pwsh_command "$command" "$no_exit")"
+#
+# In an ssh session the local path means nothing: the command runs in the
+# session's working directory on the remote, so that is where the glob is
+# checked. An ssh that fails outright (255) skips the guard, and the pane is
+# left to show the connection error instead.
+line="$(pane_command "$origin" "$command" "$no_exit")"
 if [ -n "$requires" ]; then
-  path="$(tmux display-message -p -t "$origin" '#{pane_current_path}')"
-  directory_matches "$path" "$requires" ||
-    pane_command="$(notice_command "There is no $requires folder in $path")"
+  remote="$(ssh_option "$origin" @ssh_target)"
+  if [ -n "$remote" ]; then
+    path="$remote:$(ssh_option "$origin" @ssh_dir)"
+    status=0
+    remote_directory_matches "$origin" "$requires" || status=$?
+    [ "$status" -eq 0 ] || [ "$status" -eq 255 ] || missing="yes"
+  else
+    path="$(tmux display-message -p -t "$origin" '#{pane_current_path}')"
+    directory_matches "$path" "$requires" || missing="yes"
+  fi
+  [ -z "${missing:-}" ] ||
+    line="$(notice_command "There is no $requires folder in $path")"
 fi
 
-pane="$(new_pane "$origin" "$label" "$pane_command" "$direction" "${size[@]}")"
+pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
 
 if [ -n "$print_id" ]; then
   printf '%s\n' "$pane"

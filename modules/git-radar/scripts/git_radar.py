@@ -128,8 +128,12 @@ def list_sessions() -> list[tuple[str, str]]:
     inside some pane -- the session's identity is the project, not wherever the
     shell in pane 2 happens to be sitting. pane_current_path is the fallback for
     sessions created without an explicit -c.
+
+    Sessions opened with prefix+N (New-SshSession.sh) are left out: their
+    repository is on another machine, and the local session_path is only the
+    home directory their ssh commands are typed from.
     """
-    fmt = "\t".join(["#{session_name}", "#{session_path}", "#{pane_current_path}"])
+    fmt = "\t".join(["#{session_name}", "#{session_path}", "#{pane_current_path}", "#{@ssh_target}"])
     code, out = _run(["tmux", "list-sessions", "-F", fmt])
     if code != 0:
         return []
@@ -137,11 +141,11 @@ def list_sessions() -> list[tuple[str, str]]:
     sessions = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 3:
+        if len(fields) != 4:
             continue
-        name, session_path, pane_path = fields
+        name, session_path, pane_path, ssh_target = fields
         path = session_path or pane_path
-        if not name or not path:
+        if not name or not path or ssh_target:
             continue
         sessions.append((name, os.path.normpath(path)))
     return sessions
