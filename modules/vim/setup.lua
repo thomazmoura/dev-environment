@@ -71,10 +71,12 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
 
 
   -- SpotlightDimmer (dim inactive splits via the desktop overlay; no-op
-  -- outside tmux or when the plugin is not installed)
+  -- outside tmux/ssh or when the plugin is not installed). Over ssh the
+  -- navigation title in ai-settings.lua owns 'titlestring' and appends the
+  -- split itself, hence manage_title = false.
   local ok_spotlight_dimmer, spotlight_dimmer = pcall(require, "spotlight-dimmer")
   if ok_spotlight_dimmer then
-    spotlight_dimmer.setup()
+    spotlight_dimmer.setup({ manage_title = false })
   end
 
   vim.o.timeout = true

@@ -65,25 +65,35 @@ vim.api.nvim_create_autocmd('VimEnter', {
 -- Through 'title', rather than writing the escape by hand, because nvim then
 -- gives the title back when it exits or is suspended, and the shell left in
 -- the pane gets its keys again.
+--
+-- The same title carries SpotlightDimmer's focused split (sd-nvim=..., from
+-- the spotlight-dimmer plugin, set up with manage_title = false in
+-- setup.lua), so the desktop dims the other splits. It goes AFTER the ways:
+-- the bindings match nvim-nav=*h* against the whole title from its start, and
+-- the segment holds no h/j/k/l to be mistaken for a way.
 if vim.env.SSH_TTY and not vim.env.TMUX then
+  local ways = ''
   local set_navigation_title = function()
-    -- A float has no neighbours: keep what the window under it had.
-    if vim.api.nvim_win_get_config(0).relative ~= '' then
-      return
-    end
-    local ways = ''
-    for _, way in ipairs({ 'h', 'j', 'k', 'l' }) do
-      if vim.fn.winnr(way) ~= vim.fn.winnr() then
-        ways = ways .. way
+    -- A float has no neighbours: keep the ways the window under it had.
+    if vim.api.nvim_win_get_config(0).relative == '' then
+      ways = ''
+      for _, way in ipairs({ 'h', 'j', 'k', 'l' }) do
+        if vim.fn.winnr(way) ~= vim.fn.winnr() then
+          ways = ways .. way
+        end
       end
     end
-    vim.o.titlestring = 'nvim-nav=' .. ways
+    -- Empty on a float, which spotlights the whole pane
+    local ok, spotlight_dimmer = pcall(require, 'spotlight-dimmer')
+    local split = ok and spotlight_dimmer.title_segment() or ''
+    vim.o.titlestring = 'nvim-nav=' .. ways .. (split ~= '' and ' ' .. split or '')
   end
 
   vim.o.title = true
   set_navigation_title()
   -- WinClosed fires while the window is still there: look once it is gone.
-  vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter' }, {
+  -- BufWinEnter: a winbar can come or go with the buffer, moving the split.
+  vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter', 'BufWinEnter' }, {
     callback = function() vim.schedule(set_navigation_title) end,
   })
 end
