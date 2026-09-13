@@ -2,16 +2,14 @@
 # Opens an ssh session: a tmux session in which every pane is a shell on a
 # remote host, in one working directory there.
 #
-# Usage: New-SshSession.sh [user@host]
-#
 # Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
-# counterpart of prefix+C-n (New-CodeSession.sh). prefix+C-n fired from an ssh
-# session also lands here, with that session's user@host as the argument, so
-# it opens another directory on the same host. It:
+# counterpart of prefix+C-n (New-CodeSession.sh). It:
 #
-#   1. asks for user@host, unless it was given (up-arrow recalls the ones used
-#      before, kept in ~/.ssh-session-history), and connects, in the popup, so
-#      a host key or password prompt has a terminal to answer in;
+#   1. asks for user@host (up-arrow recalls the ones used before, kept in
+#      ~/.ssh-session-history) and connects, in the popup, so a host key or
+#      password prompt has a terminal to answer in. When every open ssh session
+#      is on one host, it goes there without asking, from any session; leaving
+#      the directory picker of step 2 then asks after all;
 #   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
 #      has no ~/code -- the way prefix+C-n does locally;
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
@@ -32,26 +30,26 @@ source "$scripts/tmux-helpers.sh"
 require_tools ssh timeout tmux fzf
 
 history_file="$HOME/.ssh-session-history"
-target="${1:-}"
 
-if [ -n "$target" ]; then
-  printf 'New ssh session on %s\n' "$target"
-else
+# The ControlPath sockets live in ~/.ssh (SSH_OPTS), which a fresh machine may
+# not have yet.
+mkdir -p -m 700 "$HOME/.ssh"
+
+# ask_target
+# Asks for user@host into $target. Fails when the answer is empty or the
+# question is left.
+ask_target() {
   # read -e takes its up-arrow history from the shell's history list, which a
   # script has to load by hand. Only loaded -- `set -o history` would also have
   # the list record this script's own lines, and up-arrow offer those.
   [ -f "$history_file" ] && history -r "$history_file"
 
   printf 'New ssh session\n\n'
-  read -rep 'user@host: ' target || exit 0
+  read -rep 'user@host: ' target || return 1
   # Trim surrounding whitespace; an empty answer is a change of mind.
   target="$(printf '%s' "$target" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-  [ -n "$target" ] || exit 0
-fi
-
-# The ControlPath sockets live in ~/.ssh (SSH_OPTS), which a fresh machine may
-# not have yet.
-mkdir -p -m 700 "$HOME/.ssh"
+  [ -n "$target" ]
+}
 
 # wait_cancellable <pid>
 # Waits for the background process <pid>, killing it when Esc or Ctrl+C is
@@ -78,6 +76,9 @@ wait_cancellable() {
   wait "$pid"
 }
 
+# connect
+# Connects to $target. Fails when cancelled; any other failure ends the script.
+#
 # Connecting on its own first is what makes this the connection that
 # authenticates: it becomes the ControlMaster every later ssh to this host goes
 # through (see SSH_OPTS). The listing below has its output in a pipe, which is
@@ -96,26 +97,28 @@ wait_cancellable() {
 # ask. That one has no timeout, since it may be waiting on you, but by then the
 # host has answered; Ctrl+C still ends it, as it does any password prompt.
 connect_timeout=20
-printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
-timeout "$connect_timeout" ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
-  </dev/null 2>/dev/null &
-wait_cancellable $!
-case $? in
-  0) ;;
-  130) exit 0 ;;
-  124)
-    ssh "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
-      die "No answer from $target in ${connect_timeout}s; its stale connection was closed, try again"
-    die "No answer from $target in ${connect_timeout}s" ;;
-  *)
-    ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
-esac
+connect() {
+  printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
+  timeout "$connect_timeout" ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
+    </dev/null 2>/dev/null &
+  wait_cancellable $!
+  case $? in
+    0) ;;
+    130) return 1 ;;
+    124)
+      ssh "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
+        die "No answer from $target in ${connect_timeout}s; its stale connection was closed, try again"
+      die "No answer from $target in ${connect_timeout}s" ;;
+    *)
+      ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
+  esac
 
-# Only a host that connected goes into the history: a typo should not be the
-# first thing up-arrow offers next time. Moved to the end if it was already
-# there, so the history stays one line per host, most recent last.
-{ grep -vxF -- "$target" "$history_file" 2>/dev/null; printf '%s\n' "$target"; } > "$history_file.tmp" &&
-  mv "$history_file.tmp" "$history_file"
+  # Only a host that connected goes into the history: a typo should not be the
+  # first thing up-arrow offers next time. Moved to the end if it was already
+  # there, so the history stays one line per host, most recent last.
+  { grep -vxF -- "$target" "$history_file" 2>/dev/null; printf '%s\n' "$target"; } > "$history_file.tmp" &&
+    mv "$history_file.tmp" "$history_file"
+}
 
 # One round trip for everything the picker needs, run under sh because the
 # login shell may be anything. The first line is the root the list is relative
@@ -134,6 +137,10 @@ elif command -v fdfind >/dev/null 2>&1; then fdfind --type d --follow .
 else find . -mindepth 1 \( -name ".*" -o -name node_modules -o -name bin -o -name obj \) -prune -o -type d -print
 fi'
 
+# pick [header note]
+# Fuzzy-finds a directory on $target into $dir, and whether the remote has this
+# dev-environment into $kind. Fails when nothing was picked.
+#
 # The list streams into fzf rather than being collected first, so a big tree on
 # a slow link is searchable while it is still arriving. The two header lines
 # are read off the pipe before fzf gets the rest of it.
@@ -141,16 +148,33 @@ fi'
 # fzf leaving before ssh has finished sends ssh a SIGPIPE, and pipefail makes
 # that the pipeline's status -- so the answer is judged by whether a line came
 # out, not by the exit code.
-answer="$(ssh "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
-  IFS= read -r root || exit 1
-  IFS= read -r kind || exit 1
-  picked="$(sed -u 's|^\./||' | fzf --reverse --prompt='remote> ' --header="New ssh session on $target:$root")" || exit 1
-  printf '%s\t%s\t%s' "$root" "$kind" "$picked"
-})"
-[ -n "$answer" ] || exit 0
-IFS=$'\t' read -r root kind picked <<<"$answer"
-[ -n "$picked" ] || exit 0
-dir="$root/${picked%/}"
+pick() {
+  local note="${1:-}" answer root picked
+  answer="$(ssh "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
+    IFS= read -r root || exit 1
+    IFS= read -r kind || exit 1
+    picked="$(sed -u 's|^\./||' | fzf --reverse --prompt='remote> ' --header="New ssh session on $target:$root$note")" || exit 1
+    printf '%s\t%s\t%s' "$root" "$kind" "$picked"
+  })"
+  [ -n "$answer" ] || return 1
+  IFS=$'\t' read -r root kind picked <<<"$answer"
+  [ -n "$picked" ] || return 1
+  dir="$root/${picked%/}"
+}
+
+# The host of the open ssh sessions, when they are all on one, is tried without
+# asking; several hosts are not guessed between. Leaving it -- the connection or
+# the picker -- asks for a host after all.
+hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d' | sort -u)"
+target=
+[ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
+if [ -n "$target" ]; then
+  printf 'New ssh session on %s\n' "$target"
+  connect && pick ' (Esc for another host)' || { clear; target=; }
+fi
+if [ -z "$target" ]; then
+  ask_target && connect && pick || exit 0
+fi
 
 # <host>-<directory>. The user part is left out: it is the same on every
 # session you open. Dots and colons are the separators in tmux targets
