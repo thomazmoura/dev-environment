@@ -54,6 +54,40 @@ vim.api.nvim_create_autocmd('VimEnter', {
   end,
 })
 
+-- Tmux navigation from an nvim on the other end of an ssh. The tmux there is
+-- not ours: $TMUX is unset, so vim-tmux-navigator only moves between windows,
+-- and the local tmux sees nothing but ssh on the pane's tty. So nvim puts in
+-- its title the ways it still has a window to go -- nvim-nav=hl at the left
+-- edge of a vertical split -- and the local C-h/j/k/l bindings read that from
+-- #{pane_title} (modules/tmux/common.conf): a key comes here when its letter
+-- is there and moves the tmux pane when it is not.
+--
+-- Through 'title', rather than writing the escape by hand, because nvim then
+-- gives the title back when it exits or is suspended, and the shell left in
+-- the pane gets its keys again.
+if vim.env.SSH_TTY and not vim.env.TMUX then
+  local set_navigation_title = function()
+    -- A float has no neighbours: keep what the window under it had.
+    if vim.api.nvim_win_get_config(0).relative ~= '' then
+      return
+    end
+    local ways = ''
+    for _, way in ipairs({ 'h', 'j', 'k', 'l' }) do
+      if vim.fn.winnr(way) ~= vim.fn.winnr() then
+        ways = ways .. way
+      end
+    end
+    vim.o.titlestring = 'nvim-nav=' .. ways
+  end
+
+  vim.o.title = true
+  set_navigation_title()
+  -- WinClosed fires while the window is still there: look once it is gone.
+  vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter' }, {
+    callback = function() vim.schedule(set_navigation_title) end,
+  })
+end
+
 -- Restore terminal mode when returning to a terminal buffer that was left
 -- via Ctrl+hjkl navigation. Does not affect terminals exited intentionally
 -- with <C-\><C-n>.
