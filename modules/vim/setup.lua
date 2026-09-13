@@ -70,11 +70,12 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   })
 
 
-  -- tint (fade inactive windows)
-  require("tint").setup({
-    tint = -75,
-    tint_background_colors = false
-  })
+  -- SpotlightDimmer (dim inactive splits via the desktop overlay; no-op
+  -- outside tmux or when the plugin is not installed)
+  local ok_spotlight_dimmer, spotlight_dimmer = pcall(require, "spotlight-dimmer")
+  if ok_spotlight_dimmer then
+    spotlight_dimmer.setup()
+  end
 
   vim.o.timeout = true
   vim.o.timeoutlen = 1000

@@ -74,7 +74,14 @@ Plug 'joshdick/onedark.vim'
 Plug 'rakr/vim-one'
 Plug 'folke/tokyonight.nvim', { 'branch': 'main' }
 Plug 'catppuccin/nvim'
-Plug 'levouh/tint.nvim'
+
+" SpotlightDimmer: dims every neovim split but the focused one, through the
+" desktop overlay (replaces tint.nvim). Prefers a local checkout when present.
+if isdirectory(expand('~/code/spotlight-dimmer/SpotlightDimmer.NeovimPlugin'))
+  Plug '~/code/spotlight-dimmer', { 'rtp': 'SpotlightDimmer.NeovimPlugin' }
+else
+  Plug 'thomazmoura/spotlight-dimmer', { 'rtp': 'SpotlightDimmer.NeovimPlugin' }
+endif
 
 " Highlighting
 " The master branches of both were archived in 2025 and break on NeoVim 0.11+:
