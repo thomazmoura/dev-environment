@@ -123,7 +123,7 @@ else
 syntax enable
   colorscheme tokyonight-storm
   highlight Normal guibg=none
-  highlight Inactive guibg=none
+  highlight NormalNC guibg=none
   highlight MsgArea guibg=#1a1b26
   highlight LineNr guibg=#1a1b26
   highlight LineNrAbove guifg=#777777
@@ -134,6 +134,9 @@ syntax enable
   highlight JsonCommentError guifg=#819c98
   set fillchars+=vert:│
   highlight VertSplit guibg=none guifg=#414868
+  highlight NvimTreeNormal guibg=none
+  highlight NvimTreeNormalNC guibg=none
+  highlight NvimTreeWinSeparator guibg=none guifg=#414868
 
   " Filetype detections
   autocmd BufNewFile,BufRead *.code-snippets set filetype=json
