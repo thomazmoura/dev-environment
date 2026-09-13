@@ -26,7 +26,14 @@
 # and every pane opened after it goes through that master without asking
 # again, and without a handshake's worth of delay. ControlPersist keeps the
 # master around for ten minutes after the last pane using it closes.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPersist=10m)
+#
+# ServerAlive* because a master outlives its network: after a suspend or a VPN
+# dropping it still takes requests on its socket, and every ssh through it --
+# a new pane, prefix+N's connection -- hangs waiting for a host that is no
+# longer there, until TCP gives up hours later. With them the master sees the
+# link is gone within half a minute and exits, and the next ssh connects anew.
+SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPersist=10m
+          -o ServerAliveInterval=10 -o ServerAliveCountMax=3)
 
 # The remote's ssh key, unlocked once per host rather than once per pane.
 #

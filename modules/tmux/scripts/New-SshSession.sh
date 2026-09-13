@@ -29,7 +29,7 @@ set -uo pipefail
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
 
-require_tools ssh tmux fzf
+require_tools ssh timeout tmux fzf
 
 history_file="$HOME/.ssh-session-history"
 target="${1:-}"
@@ -53,12 +53,63 @@ fi
 # not have yet.
 mkdir -p -m 700 "$HOME/.ssh"
 
-# Connecting on its own first, and with the terminal attached, is what makes
-# this the connection that authenticates: it becomes the ControlMaster every
-# later ssh to this host goes through (see SSH_OPTS). The listing below has its
-# output in a pipe, which is no place for a password prompt.
-printf '\nConnecting to %s...\n' "$target"
-ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target"
+# wait_cancellable <pid>
+# Waits for the background process <pid>, killing it when Esc or Ctrl+C is
+# pressed in the popup. Returns its exit status, or 130 when it was cancelled.
+#
+# Esc is read off the terminal; Ctrl+C comes as a SIGINT, which is trapped
+# rather than left to take this script down and the ssh running behind it.
+# (read -n turns the terminal's signal keys back on for itself, so Ctrl+C
+# cannot be read as a byte instead.) The SIGINT reaches only this script:
+# timeout runs its command in a process group of its own.
+wait_cancellable() {
+  local pid=$1 key cancelled=
+  [ -t 0 ] || { wait "$pid"; return; }
+  trap 'cancelled=1' INT
+  while [ -z "$cancelled" ] && kill -0 "$pid" 2>/dev/null; do
+    IFS= read -rsn1 -t 0.2 key && [ "$key" = $'\e' ] && cancelled=1
+  done
+  trap - INT
+  if [ -n "$cancelled" ]; then
+    kill "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null
+    return 130
+  fi
+  wait "$pid"
+}
+
+# Connecting on its own first is what makes this the connection that
+# authenticates: it becomes the ControlMaster every later ssh to this host goes
+# through (see SSH_OPTS). The listing below has its output in a pipe, which is
+# no place for a password prompt.
+#
+# It is tried first without a terminal (BatchMode), in the background, so that
+# it can be given up on: at Esc or Ctrl+C, or after connect_timeout seconds.
+# ConnectTimeout is not enough on its own. It bounds opening a connection, and
+# when a master for this host is already up -- a session on it is open, or
+# ControlPersist is keeping one -- the ssh goes through that master and opens
+# none; a master whose network went away takes the request and never answers.
+# Such a master is dropped on a timeout, so that trying again connects anew.
+#
+# Only when the batch try is turned away -- a password or a host key to
+# confirm is needed -- does the ssh run again with the terminal, where it can
+# ask. That one has no timeout, since it may be waiting on you, but by then the
+# host has answered; Ctrl+C still ends it, as it does any password prompt.
+connect_timeout=20
+printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
+timeout "$connect_timeout" ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
+  </dev/null 2>/dev/null &
+wait_cancellable $!
+case $? in
+  0) ;;
+  130) exit 0 ;;
+  124)
+    ssh "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
+      die "No answer from $target in ${connect_timeout}s; its stale connection was closed, try again"
+    die "No answer from $target in ${connect_timeout}s" ;;
+  *)
+    ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
+esac
 
 # Only a host that connected goes into the history: a typo should not be the
 # first thing up-arrow offers next time. Moved to the end if it was already
