@@ -94,7 +94,39 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
       },
       cache_enabled = 0,
     }
-  elseif os.getenv('TMUX') then
+  elseif os.getenv('SSH_CONNECTION') and not os.getenv('WAYLAND_DISPLAY') then
+    -- Over ssh (prefix+N) "+y goes to the clipboard of the machine you are
+    -- ssh'ing from, as an OSC 52 escape the local tmux forwards to the
+    -- terminal. SSH_CONNECTION rather than SSH_TTY because tmux's default
+    -- update-environment carries it into a tmux started on the remote.
+    --
+    -- Paste gives back what this NeoVim last copied rather than asking the
+    -- terminal for its clipboard, which blocks until it times out when nothing
+    -- answers; paste from the local clipboard with the terminal's own paste.
+    local osc52 = require('vim.ui.clipboard.osc52')
+    local last = {}
+    local function copy(reg)
+      local send = osc52.copy(reg)
+      return function(lines, regtype)
+        last[reg] = { lines, regtype }
+        send(lines, regtype)
+      end
+    end
+    local function paste(reg)
+      return function()
+        return last[reg] or { {}, 'v' }
+      end
+    end
+    vim.g.clipboard = {
+      name = 'OSC 52',
+      copy = { ['+'] = copy('+'), ['*'] = copy('*') },
+      paste = { ['+'] = paste('+'), ['*'] = paste('*') },
+    }
+  end
+
+  -- Separate from the chain above so a tmux on an ssh remote also syncs its
+  -- buffers with registers; WSL has never used it
+  if os.getenv('TMUX') and not os.getenv('WSLENV') then
     require("tmux").setup({
       copy_sync = {
         -- Without this the whole copy_sync block is inert

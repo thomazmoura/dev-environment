@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# Usage: wl-copy [OPTIONS] [TEXT...]
+#
+# Stands in for wl-copy in an ssh login, where there is no Wayland display for
+# the real one to talk to. It copies to the clipboard of the machine you are
+# ssh'ing from instead, through yank (modules/bin-tools/yank): an OSC 52 escape
+# written to the terminal, which the local tmux takes up (set-clipboard on, see
+# modules/tmux/common.conf) and hands to the local terminal.
+#
+# Only on PATH over ssh without a Wayland display -- linux-profile.ps1 puts
+# this directory in front of /usr/bin then -- so everywhere else wl-copy is the
+# real one.
+#
+# Like wl-copy, TEXT is what gets copied when given, stdin otherwise. Options
+# (--primary, --type, ...) mean nothing to OSC 52 and are ignored; yank always
+# drops trailing newlines, so -n comes for free.
+
+yank="$(dirname "$(readlink -f "$0")")/../bin-tools/yank"
+
+while [ $# -gt 0 ]; do
+  case $1 in
+    --) shift; break ;;
+    -*) shift ;;
+    *) break ;;
+  esac
+done
+
+if [ $# -gt 0 ]; then
+  printf %s "$*" | sh "$yank"
+else
+  sh "$yank"
+fi

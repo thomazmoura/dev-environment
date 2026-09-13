@@ -6,6 +6,14 @@ $env:DOTNET_ENVIRONMENT="Development"
 $env:NVS_HOME="$env:HOME/.nvs"
 $env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 
+# Over ssh there is no Wayland display: wl-copy -- and the clip alias built on
+# it in kernel-profile.ps1 -- goes through OSC 52 to the clipboard of the
+# machine you are ssh'ing from instead (see modules/clipboard/wl-copy). In front
+# of PATH, since the host's own /usr/bin/wl-copy would win otherwise.
+if ($env:SSH_CONNECTION -and -not $env:WAYLAND_DISPLAY -and (Test-Path "$HOME/.modules/clipboard")) {
+  $env:PATH = "$HOME/.modules/clipboard:$($env:PATH)"
+}
+
 # MSBuild reads any property a project does not define itself from the
 # environment, so these disable analyzer execution for local builds without
 # touching a single .csproj. Analyzers are the largest slice of Csc time on a

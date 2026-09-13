@@ -4,10 +4,12 @@
 #
 # Copies the contents of the given files (or stdin, if no files are given) to
 # the terminal that runs this program.  If this program is run inside tmux(1),
-# then it also copies the given contents into tmux's current clipboard buffer.
+# then tmux also keeps the given contents as a paste buffer (set-clipboard on).
 # If this program is run inside X11, then it also copies to the X11 clipboard.
 #
 # This is achieved by writing an OSC 52 escape sequence to the said terminal.
+# Over ssh that terminal is the local one, so this copies to the clipboard of
+# the machine you are ssh'ing from.
 # The maximum length of an OSC 52 escape sequence is 100_000 bytes, of which
 # 7 bytes are occupied by a "\033]52;c;" header, 1 byte by a "\a" footer, and
 # 99_992 bytes by the base64-encoded result of 74_994 bytes of copyable text.
@@ -30,21 +32,24 @@ known() { command -v "$1" >/dev/null ;}
 maybe() { known "$1" && input | "$@" ;}
 alive() { known "$1" && "$@" >/dev/null 2>&1 ;}
 
-# copy to tmux
-test -n "$TMUX" && maybe tmux load-buffer -
-
 # copy via X11
 test -n "$DISPLAY" && alive xhost && {
   maybe xsel -i -b || maybe xclip -sel c
 }
 
 # copy via OSC 52
-printf_escape() {
-  esc=$1
-  esc="\033Ptmux;\033$esc\033\\"
-  printf "$esc"
-}
+#
+# A plain sequence, not wrapped in tmux's DCS passthrough: tmux has
+# set-clipboard on (modules/tmux/common.conf), so it takes the sequence itself,
+# keeps it as a paste buffer and forwards it to the terminal -- including when
+# it arrives from a remote over ssh (prefix+N). Outside tmux the terminal reads
+# it directly, which the wrapped form never worked for.
+#
+# Written to the terminal even when stdout is not one (`yank < file > log`, or
+# a caller that captures output), so the copy still lands.
+out=/dev/stdout
+test -t 1 || out=/dev/tty
 len=$( input | wc -c ) max=74994
 test $len -gt $max && echo "$0: input is $(( len - max )) bytes too long" >&2
-printf_escape "\033]52;c;$( input | head -c $max | base64 | tr -d '\r\n' )\a"
+printf "\033]52;c;%s\a" "$( input | head -c $max | base64 | tr -d '\r\n' )" > "$out"
 
