@@ -73,8 +73,8 @@ usually does.
 
 Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
-it and `P` pushes it, `q` kills the selected session after asking, `Ctrl-C`
-closes the pane.
+it and `P` pushes it, `q` or `d` kills the selected session after asking,
+`Ctrl-C` closes the pane.
 
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the

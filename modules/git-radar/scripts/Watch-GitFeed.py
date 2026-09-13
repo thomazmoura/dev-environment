@@ -37,7 +37,7 @@ Enter is worse than one you have to scan for -- attention is carried by colour.
 
 Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
-it, q kills the selected session after asking, Ctrl-C closes the pane.
+it, q or d kills the selected session after asking, Ctrl-C closes the pane.
 
 p and P exist because the two counters this pane spends most of its time showing
 -- behind and ahead -- were the two it could do nothing about: it would tell you
@@ -764,7 +764,7 @@ def kill(session: str) -> None:
     )
 
 
-# The question q asks before kill() runs. Short words on their own lines: the
+# The question q/d asks before kill() runs. Short words on their own lines: the
 # feed's column is 12% of the window in the default layout, so anything phrased
 # as a sentence would be truncated into nonsense.
 CONFIRM_TITLE = "kill session"
@@ -1096,9 +1096,10 @@ def run(stdscr, interval: float) -> None:
             elif key == ord("P"):
                 if repos:
                     start_op(repos[selected], PUSH)
-            elif key == ord("q"):
-                # Reads as "quit" and used to mean it, which is exactly why it
-                # asks before doing anything -- see draw_confirm.
+            elif key in (ord("q"), ord("d")):
+                # q reads as "quit" and used to mean it, which is exactly why it
+                # asks before doing anything -- see draw_confirm. d is the same
+                # key under the name it has elsewhere ("delete"), and asks too.
                 if repos:
                     pending = repos[selected].session
                     redraw = True
