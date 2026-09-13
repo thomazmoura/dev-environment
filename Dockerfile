@@ -48,9 +48,15 @@ COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
 ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
 RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
-# Claude Code agent skill for driving tmux, vendored here because tmux cannot
-# generate one the way herdr does (see modules/herdr/Install-Herdr.ps1)
-RUN mkdir -p /home/developer/.claude/skills && ln -sfn /home/developer/.modules/tmux/skill /home/developer/.claude/skills/tmux
+
+# Claude Code skills: every folder in modules/skills is linked into
+# ~/.claude/skills under its own name (herdr generates its own instead, see
+# modules/herdr/Install-Herdr.ps1)
+COPY --chown=developer:developer modules/skills /home/developer/.modules/skills
+RUN mkdir -p /home/developer/.claude/skills \
+ && for skill in /home/developer/.modules/skills/*/; do \
+      skill="${skill%/}"; ln -sfn "$skill" "/home/developer/.claude/skills/$(basename "$skill")"; \
+    done
 
 # Dotnet tools instalation script
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
