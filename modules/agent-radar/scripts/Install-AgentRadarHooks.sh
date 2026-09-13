@@ -9,7 +9,7 @@
 # Editing ~/.claude/settings.json is not this repo's business to do quietly, so:
 # it backs the file up first, only ever touches entries whose command mentions
 # Set-AgentRadarState.sh, and prints the diff summary. Other tools' hooks on the
-# same events (demux, herdr, notifications) are left exactly where they are --
+# same events (herdr, notifications) are left exactly where they are --
 # Claude runs every hook registered for an event.
 #
 # Usage: Install-AgentRadarHooks.sh [--uninstall] [--settings PATH]

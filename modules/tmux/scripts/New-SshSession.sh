@@ -16,8 +16,9 @@
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
 #   4. creates a session named <host>-<directory>, records the host and the
-#      directory on it (see ssh-helpers.sh), switches to it and applies the
-#      standard layout, every pane of which runs over ssh.
+#      directory on it (see ssh-helpers.sh), gives it the ssh theme colour
+#      (Set-SshTheme.sh), switches to it and applies the standard layout, every
+#      pane of which runs over ssh.
 #
 # From then on every pane binding -- prefix+a, %, ", v, the prefix+t agents --
 # opens a new ssh into that directory and runs its usual command there, through
@@ -227,6 +228,10 @@ tmux set-option -t "=$name:" @ssh_target "$target"
 tmux set-option -t "=$name:" @ssh_dir "$dir"
 tmux set-option -t "=$name:" @ssh_devenv "$([ "$kind" = devenv ] && echo yes || echo no)"
 record_agent
+
+# Themed before the switch rather than left to the client-session-changed hook,
+# which runs in the background and would show the local colours first.
+"$scripts/Set-SshTheme.sh" "$name"
 
 tmux switch-client -t "=$name"
 "$scripts/Set-NeovimLayout.sh" "$name:"

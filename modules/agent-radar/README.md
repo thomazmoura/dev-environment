@@ -352,7 +352,7 @@ scripts/Install-AgentRadarHooks.sh              # idempotent; --uninstall revers
 It backs `~/.claude/settings.json` up to `settings.json.bak-agent-radar`, only
 touches entries whose command names `Set-AgentRadarState.sh`, and leaves other
 tools' hooks on the same events alone -- Claude runs every hook registered for
-an event, so demux and herdr keep working. To paste it by hand instead:
+an event, so herdr and the rest keep working. To paste it by hand instead:
 
 ```json
 {
