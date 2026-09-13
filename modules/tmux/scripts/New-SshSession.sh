@@ -2,12 +2,16 @@
 # Opens an ssh session: a tmux session in which every pane is a shell on a
 # remote host, in one working directory there.
 #
-# Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
-# counterpart of prefix+C-n (New-CodeSession.sh). It:
+# Usage: New-SshSession.sh [user@host]
 #
-#   1. asks for user@host (up-arrow recalls the ones used before, kept in
-#      ~/.ssh-session-history) and connects, in the popup, so a host key or
-#      password prompt has a terminal to answer in;
+# Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
+# counterpart of prefix+C-n (New-CodeSession.sh). prefix+C-n fired from an ssh
+# session also lands here, with that session's user@host as the argument, so
+# it opens another directory on the same host. It:
+#
+#   1. asks for user@host, unless it was given (up-arrow recalls the ones used
+#      before, kept in ~/.ssh-session-history), and connects, in the popup, so
+#      a host key or password prompt has a terminal to answer in;
 #   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
 #      has no ~/code -- the way prefix+C-n does locally;
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
@@ -27,17 +31,23 @@ source "$scripts/tmux-helpers.sh"
 
 require_tools ssh tmux fzf
 
-# read -e takes its up-arrow history from the shell's history list, which a
-# script has to load by hand. Only loaded -- `set -o history` would also have
-# the list record this script's own lines, and up-arrow offer those.
 history_file="$HOME/.ssh-session-history"
-[ -f "$history_file" ] && history -r "$history_file"
+target="${1:-}"
 
-printf 'New ssh session\n\n'
-read -rep 'user@host: ' target || exit 0
-# Trim surrounding whitespace; an empty answer is a change of mind.
-target="$(printf '%s' "$target" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-[ -n "$target" ] || exit 0
+if [ -n "$target" ]; then
+  printf 'New ssh session on %s\n' "$target"
+else
+  # read -e takes its up-arrow history from the shell's history list, which a
+  # script has to load by hand. Only loaded -- `set -o history` would also have
+  # the list record this script's own lines, and up-arrow offer those.
+  [ -f "$history_file" ] && history -r "$history_file"
+
+  printf 'New ssh session\n\n'
+  read -rep 'user@host: ' target || exit 0
+  # Trim surrounding whitespace; an empty answer is a change of mind.
+  target="$(printf '%s' "$target" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  [ -n "$target" ] || exit 0
+fi
 
 # The ControlPath sockets live in ~/.ssh (SSH_OPTS), which a fresh machine may
 # not have yet.

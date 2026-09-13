@@ -2,7 +2,9 @@
 # Opens a session for a project under ~/code, with the standard NeoVim layout.
 #
 # Usage: New-CodeSession.sh [directory]
-#   no argument - fuzzy-find a directory under ~/code (bound to prefix+C-n)
+#   no argument - fuzzy-find a directory under ~/code (bound to prefix+C-n);
+#                 in an ssh session, hand over to New-SshSession.sh with that
+#                 session's user@host, so the directory is picked on that host
 #   directory   - use that directory directly (bound to prefix+C-c for ~/code)
 #
 # Bound as popup commands in modules/tmux/common.conf. The session is created
@@ -20,6 +22,12 @@ code="$HOME/code"
 
 directory="${1:-}"
 if [ -z "$directory" ]; then
+  # The session the popup was opened over. Read here rather than passed in by
+  # the binding: #{@ssh_target} expands to nothing in a display-popup command.
+  current="$(tmux display-message -p '#{session_name}')"
+  remote="$(ssh_option "=$current:" @ssh_target)"
+  [ -n "$remote" ] && exec "$scripts/New-SshSession.sh" "$remote"
+
   require_tools tmux fzf fd
   location="$(fd --type d . --base-directory "$code" | fzf --reverse --prompt='project> ' --header='New session from ~/code')" || exit 0
   [ -n "$location" ] || exit 0
