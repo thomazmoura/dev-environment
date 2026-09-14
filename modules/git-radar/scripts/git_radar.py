@@ -215,6 +215,24 @@ def current_session() -> str:
     return out.strip()
 
 
+def current_host() -> str:
+    """The host the caller's session is ssh'd into, or "" for a local one.
+
+    The same thing a row carries as `Repo.remote` -- the session's @ssh_target
+    -- so a consumer can tell which rows live where it does. Resolved from
+    $TMUX_PANE for the same reasons as current_session, and asked of tmux rather
+    than read off the pane's own row so it is right before that row has been
+    published: a session opened seconds ago is not in the snapshot yet.
+    """
+    pane = os.environ.get("TMUX_PANE")
+    if not pane:
+        return ""
+    code, out = _run(["tmux", "display-message", "-p", "-t", pane, "#{@ssh_target}"])
+    if code != 0:
+        return ""
+    return out.strip()
+
+
 def repo_root(path: str) -> str:
     """The work tree containing `path`, or "" if there is not one.
 

@@ -172,6 +172,13 @@ COUNTER_COLOUR = {
 # are.
 RAIL_COLOUR = curses.COLOR_BLUE
 
+# The colour of a session name whose row lives on another host than this pane's
+# session: ssh rows from a local pane, and local rows (and other hosts') from an
+# ssh one. Only the name recedes -- the marker and the counters keep their
+# channels, since the state is still what the eye should land on. Resolved to
+# grey at startup; None falls back to A_DIM where the terminal has no grey.
+FOREIGN_NAME_COLOUR: int | None = None
+
 # Counters drawn in grey rather than their own hue: untracked files are the one
 # count that is usually noise, so it recedes.
 GREY_COUNTERS = ("untracked",)
@@ -804,7 +811,7 @@ def draw_confirm(stdscr, session: str, use_colour: bool, palette) -> None:
 
 
 def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band,
-                  current: str):
+                  current: str, home: str):
     """The two lines of one entry, as (text, attribute) segments.
 
     Widths are decided per row rather than per column: the counters are measured
@@ -820,6 +827,13 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         if not use_colour:
             return body
         return palette.attr(colour, chosen) | (body & curses.A_REVERSE)
+
+    # A row on another host than this pane's session: see FOREIGN_NAME_COLOUR.
+    if repo.remote != home:
+        if use_colour and FOREIGN_NAME_COLOUR is not None:
+            name_attr = coloured(FOREIGN_NAME_COLOUR) | (name_attr & curses.A_BOLD)
+        else:
+            name_attr |= curses.A_DIM
 
     marker_attr = coloured(STATE_COLOUR[repo.state]) if use_colour else body
     marker_attr |= STATE_EMPHASIS[repo.state]
@@ -881,7 +895,7 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
 
 def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
-         focused: bool, current: str, pending: str = "") -> None:
+         focused: bool, current: str, home: str, pending: str = "") -> None:
     if pending:
         draw_confirm(stdscr, pending, use_colour, palette)
         return
@@ -902,7 +916,7 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
         chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(
-            repo, chosen, width, palette, use_colour, band, current
+            repo, chosen, width, palette, use_colour, band, current, home
         )
         fill = band if chosen else None
         ui.draw_line(stdscr, line, width, top, fill)
@@ -933,6 +947,7 @@ def index_of(repos: list, session: str, fallback: int) -> int:
 
 
 def run(stdscr, interval: float) -> None:
+    global FOREIGN_NAME_COLOUR
     curses.curs_set(0)
 
     # Ctrl-C is the only way out, and it has to close the *pane*. Catching
@@ -957,6 +972,7 @@ def run(stdscr, interval: float) -> None:
         COUNTER_COLOUR["untracked"] = grey
         STATE_COLOUR[gitr.NOREPO] = grey
         STATE_COLOUR[gitr.OFFLINE] = grey
+        FOREIGN_NAME_COLOUR = grey
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
@@ -972,6 +988,8 @@ def run(stdscr, interval: float) -> None:
     # Resolved once: a pane does not change session, and this must not become a
     # tmux call on the draw path.
     current = gitr.current_session()
+    # The host that session is on, "" for local: rows elsewhere get a grey name.
+    home = gitr.current_host()
 
     repos = sample()
     # On this pane's own row, not on row 0. Every session has a feed of its own,
@@ -995,7 +1013,7 @@ def run(stdscr, interval: float) -> None:
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
     draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current,
-         pending)
+         home, pending)
 
     try:
         while True:
@@ -1143,7 +1161,7 @@ def run(stdscr, interval: float) -> None:
 
             if redraw:
                 draw(stdscr, repos, selected, use_colour, palette, band,
-                     focus.focused, current, pending)
+                     focus.focused, current, home, pending)
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read

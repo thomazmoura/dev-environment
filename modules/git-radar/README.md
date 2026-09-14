@@ -234,6 +234,14 @@ local one, the same feed as everywhere else. `prefix + t` then `R` passes `-L` t
 feed used to run there, where it listed the *remote's* tmux sessions -- usually
 none.)
 
+**A session on another host has a grey name.** Which rows that is depends on
+where the pane is: from a local session the ssh rows are grey, from an ssh
+session the local rows -- and any other host's -- are, and the rows on its own
+host are not. Only the name recedes: the marker and the counters keep their
+channels, so a conflicted repository on another machine is still a red dot. The
+host is the session's `@ssh_target`, resolved once at startup like the rail's
+session (`git_radar.current_host`).
+
 **The host's own git-radar answers.** Nothing here can run `git status` on a
 directory on another machine, but the machine can:
 
