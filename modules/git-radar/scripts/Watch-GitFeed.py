@@ -172,18 +172,26 @@ COUNTER_COLOUR = {
 # are.
 RAIL_COLOUR = curses.COLOR_BLUE
 
-# The colour of a session name whose row lives on another host than this pane's
+# The colours of a row whose session lives on another host than this pane's
 # session: ssh rows from a local pane, and local rows (and other hosts') from an
-# ssh one. Only the name recedes -- the marker and the counters keep their
-# channels, since the state is still what the eye should land on.
+# ssh one. Only the name and the branch recede -- the marker and the counters
+# keep their channels, since the state is still what the eye should land on.
 #
-# A light grey, not the bright-black the untracked counter uses: that one is
-# meant to vanish, and a session name still has to be read. Resolved at startup
-# -- 250 on a 256-colour terminal, plain white (a light grey in most themes, and
-# not the default foreground) below that; None, where there is no colour at all,
-# falls back to A_DIM.
+# The name is a light grey, not the bright-black the untracked counter uses:
+# that one is meant to vanish, and a session name still has to be read.
+# Resolved at startup -- 250 on a 256-colour terminal, plain white (a light
+# grey in most themes, and not the default foreground) below that; None, where
+# there is no colour at all, falls back to A_DIM.
 FOREIGN_NAME_GREY = 250
 FOREIGN_NAME_COLOUR: int | None = None
+
+# The branch goes a step further, to a dark grey, so the two lines of the row
+# still read as name over detail. 242 on a 256-colour terminal rather than
+# bright-black: the feed is usually an unfocused pane, drawn on window-style's
+# #3c425e, where bright-black can all but vanish. Bright-black on 16 colours;
+# None falls back to the A_DIM every branch gets.
+FOREIGN_BRANCH_GREY = 242
+FOREIGN_BRANCH_COLOUR: int | None = None
 
 # Counters drawn in grey rather than their own hue: untracked files are the one
 # count that is usually noise, so it recedes.
@@ -834,12 +842,20 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
             return body
         return palette.attr(colour, chosen) | (body & curses.A_REVERSE)
 
+    # Dim whether or not the row is selected. The second line is secondary by
+    # definition, and un-dimming it on selection made the highlight shout twice
+    # -- once with the band, once by brightening text -- in a pane that is
+    # usually not even focused.
+    branch_attr = body | curses.A_DIM
+
     # A row on another host than this pane's session: see FOREIGN_NAME_COLOUR.
     if repo.remote != home:
         if use_colour and FOREIGN_NAME_COLOUR is not None:
             name_attr = coloured(FOREIGN_NAME_COLOUR) | (name_attr & curses.A_BOLD)
         else:
             name_attr |= curses.A_DIM
+        if use_colour and FOREIGN_BRANCH_COLOUR is not None:
+            branch_attr = coloured(FOREIGN_BRANCH_COLOUR)
 
     marker_attr = coloured(STATE_COLOUR[repo.state]) if use_colour else body
     marker_attr |= STATE_EMPHASIS[repo.state]
@@ -875,14 +891,10 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     text = state_cli.branch_label(repo) or state_cli.state_label(repo)
     branch = ui.truncate(text, max(0, room))
 
-    # Dim whether or not the row is selected. The second line is secondary by
-    # definition, and un-dimming it on selection made the highlight shout twice
-    # -- once with the band, once by brightening text -- in a pane that is
-    # usually not even focused.
     second = [
         (gutter, rail_attr),
         (ui.INDENT, body),
-        (branch, body | curses.A_DIM),
+        (branch, branch_attr),
     ]
     if note:
         second.append((f" {note}", body | curses.A_DIM))
@@ -953,7 +965,7 @@ def index_of(repos: list, session: str, fallback: int) -> int:
 
 
 def run(stdscr, interval: float) -> None:
-    global FOREIGN_NAME_COLOUR
+    global FOREIGN_NAME_COLOUR, FOREIGN_BRANCH_COLOUR
     curses.curs_set(0)
 
     # Ctrl-C is the only way out, and it has to close the *pane*. The pane
@@ -980,6 +992,9 @@ def run(stdscr, interval: float) -> None:
         FOREIGN_NAME_COLOUR = (
             FOREIGN_NAME_GREY if curses.COLORS >= 256 else curses.COLOR_WHITE
         )
+        FOREIGN_BRANCH_COLOUR = (
+            FOREIGN_BRANCH_GREY if curses.COLORS >= 256 else grey
+        )
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
@@ -995,7 +1010,8 @@ def run(stdscr, interval: float) -> None:
     # Resolved once: a pane does not change session, and this must not become a
     # tmux call on the draw path.
     current = gitr.current_session()
-    # The host that session is on, "" for local: rows elsewhere get a light grey name.
+    # The host that session is on, "" for local: rows elsewhere get a light grey name
+    # and a dark grey branch.
     home = gitr.current_host()
 
     repos = sample()
