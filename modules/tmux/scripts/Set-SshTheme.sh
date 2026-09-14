@@ -51,7 +51,7 @@ mapfile -t values < <(tmux "${read_globals[@]}" 2>/dev/null)
 
 from="${values[-1]}"
 to="$(tmux show-options -gqv @ssh_theme_colour)"
-to="${to:-#ff7f50}"
+to="${to:-#9370db}"
 [[ $from == \#* ]] || exit 0
 
 # Written in one call as well, so the status line never shows a half-swapped
