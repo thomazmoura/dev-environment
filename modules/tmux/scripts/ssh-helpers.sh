@@ -194,7 +194,7 @@ remote_agent_env() {
     "$a" "$a" "$a"
 }
 
-# remote_agent_unlock <target>
+# remote_agent_unlock <target> [<key>]
 # Makes sure the host's shared agent is running and holding the key, asking
 # for the password when it is not. Needs a terminal -- ssh-add reads the
 # password from it -- so it runs in New-SshSession.sh's popup, through the
@@ -213,18 +213,26 @@ remote_agent_env() {
 # means there is nothing to ask. A socket nobody answers on is what an agent
 # that died leaves behind, and ssh-agent will not bind over it, so it goes.
 #
+# <key>, a path on the remote, replaces that default key and its condition:
+# git-radar's failure popup names the key the host's git would have tried for
+# one repository's remote (Show-GitFailure.sh), and that is often not id_rsa --
+# GitHub may only know the host's id_ed25519. Asked for by a keypress, so
+# ~/.skip-ssh, which is about panes asking on their own, does not apply.
+#
 # Exits with ssh-add's status: non-zero when the password was never given.
 remote_agent_unlock() {
-  local target=$1 script
+  local target=$1 key=${2:-} script
   script="a=\"$REMOTE_AGENT_DIR\""'
-key="$HOME/.ssh/id_rsa"
-[ -f "$key.pub" ] && [ ! -e "$HOME/.skip-ssh" ] || exit 0
+key="${2:-$HOME/.ssh/id_rsa}"
+[ -n "$2" ] || { [ -f "$key.pub" ] && [ ! -e "$HOME/.skip-ssh" ]; } || exit 0
 command -v ssh-agent >/dev/null 2>&1 || exit 0
 umask 077
 mkdir -p "$a" && chmod 700 "$a" || exit 1
 SSH_AUTH_SOCK="$a/agent.sock"; export SSH_AUTH_SOCK
-id="$(cut -d" " -f1,2 "$key.pub")"
-ssh-add -L 2>/dev/null | grep -qF "$id" && exit 0
+if [ -f "$key.pub" ]; then
+  id="$(cut -d" " -f1,2 "$key.pub")"
+  ssh-add -L 2>/dev/null | grep -qF "$id" && exit 0
+fi
 ssh-add -l >/dev/null 2>&1
 if [ $? -eq 2 ]; then
   rm -f "$a/agent.sock" "$a/agent.pid"
@@ -233,7 +241,8 @@ if [ $? -eq 2 ]; then
   echo "$SSH_AGENT_PID" > "$a/agent.pid"
 fi
 ssh-add "$key"'
-  ssh "${SSH_OPTS[@]}" -q -t "$target" "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME")"
+  ssh "${SSH_OPTS[@]}" -q -t "$target" \
+    "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME") $(sq "$key")"
 }
 
 # remote_agent_kill <target>

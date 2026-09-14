@@ -8,8 +8,9 @@
 #
 # <ssh-target> is given for a row of an ssh session (prefix+N), whose repository
 # is on that host: the retry then runs there, over ssh, and the key offered is
-# the host's own -- unlocked in its shared agent the way the session's panes
-# unlock it (remote_agent_unlock in modules/tmux/scripts/ssh-helpers.sh).
+# the host's own -- the one the host would try for that remote, unlocked in its
+# shared agent the way the session's panes unlock theirs (remote_agent_unlock in
+# modules/tmux/scripts/ssh-helpers.sh).
 #
 # <verb> is fetch, pull or push. It names the failure in the banner and is what
 # the retry below re-runs -- a passphrase is just as likely to be what stopped a
@@ -115,39 +116,75 @@ is_auth_failure() {
 # ~/.ssh/id_*. A candidate is one of those that exists on disk and whose
 # fingerprint the agent does not already hold: a key already loaded plainly did
 # not work, so re-adding it would just cost a passphrase for nothing.
-remote_host() {
-  local url
-  url=$(git --no-optional-locks -C "$root" remote get-url origin 2>/dev/null) || return 1
-  case "$url" in
-    ssh://*) url=${url#ssh://}; url=${url%%/*}; printf '%s' "${url##*@}" ;;
-    *://*)   return 1 ;;                      # https and friends: no key to add
-    *:*)     url=${url%%:*}; printf '%s' "${url##*@}" ;;
-    *)       return 1 ;;
-  esac
-}
+#
+# Of the candidates, the one offered is the first the server says it would
+# accept. Being first in ssh's list is not enough: GitHub may know only a
+# host's id_ed25519 while id_rsa comes first, and unlocking id_rsa would cost a
+# passphrase and still fail the retry. So the probe makes one connection with
+# the agent out of the way, in which ssh offers each key's public half; the
+# server answers "accepts key" for the ones it knows, and BatchMode stops ssh
+# there, when it would need the passphrase to go on. The accepted keys are
+# picked out by fingerprint -- the one field every OpenSSH's -v prints on its
+# "Offering public key" line. A server that saw the keys and accepts none of the
+# candidates gets no offer at all; only when the connection never got as far as
+# offering one (an older ssh, a network hiccup) is the first candidate offered,
+# as before.
+#
+# The same question for a remote row has to be asked *on the host*: its keys,
+# its ~/.ssh/config and its shared agent are all over there. So the probe is a
+# POSIX sh script, run here for a local row and over ssh for a remote one, and
+# the two can never disagree about which key to offer. It takes the repository
+# as $1 and compares against the agent in SSH_AUTH_SOCK, and prints the key, or
+# nothing when no key would help.
+#
+# The .pub file is fingerprinted first: reading the private key works for
+# OpenSSH-format keys but is the path that could ask for a passphrase, which is
+# the one thing this probe must never do. https and friends have no key to add.
+key_probe='
+url=$(git --no-optional-locks -C "$1" remote get-url origin 2>/dev/null) || exit 1
+case $url in
+  ssh://*) dest=${url#ssh://}; dest="ssh://${dest%%/*}" ;;
+  *://*)   exit 1 ;;
+  *:*)     dest=${url%%:*} ;;
+  *)       exit 1 ;;
+esac
+loaded=$(ssh-add -l 2>/dev/null)
+candidates=$(ssh -G "$dest" 2>/dev/null | sed -n "s/^identityfile //p" |
+while IFS= read -r file; do
+  case $file in "~"/*) file="$HOME/${file#"~/"}" ;; esac
+  [ -f "$file" ] || continue
+  fp=$({ ssh-keygen -lf "$file.pub" 2>/dev/null || ssh-keygen -lf "$file" 2>/dev/null; } | cut -d" " -f2)
+  [ -n "$fp" ] || continue
+  case $loaded in *"$fp"*) continue ;; esac
+  printf "%s %s\n" "$fp" "$file"
+done)
+[ -n "$candidates" ] || exit 1
+log=$(SSH_AUTH_SOCK= ssh -v -o BatchMode=yes -o IdentitiesOnly=yes \
+  -o PreferredAuthentications=publickey -o ConnectTimeout=5 "$dest" true </dev/null 2>&1)
+case $log in
+  *"Offering public key"*) ;;
+  *) printf "%s\n" "$candidates" | head -n 1 | cut -d" " -f2-; exit 0 ;;
+esac
+accepted=$(printf "%s\n" "$log" |
+  awk "/Offering public key/ { offer = \$0 } /Server accepts key/ { print offer }")
+printf "%s\n" "$candidates" | while read -r fp file; do
+  case $accepted in *"$fp"*) printf "%s" "$file"; break ;; esac
+done'
 
-fingerprint() {
-  # The .pub file first: reading the private key works for OpenSSH-format keys
-  # but is the path that could ask for a passphrase, which is the one thing this
-  # probe must never do.
-  ssh-keygen -lf "$1.pub" 2>/dev/null || ssh-keygen -lf "$1" 2>/dev/null || true
-}
-
+# A missing agent is its own problem here: there is nowhere to put the key.
 candidate_key() {
-  local host loaded file expanded fp
-  host=$(remote_host) || return 1
-  # A missing agent is its own problem: there is nowhere to put the key.
-  loaded=$(ssh-add -l 2>/dev/null) || return 1
-  while read -r _ file; do
-    expanded=${file/#\~/$HOME}
-    [ -f "$expanded" ] || continue
-    fp=$(fingerprint "$expanded" | awk '{print $2}')
-    [ -n "$fp" ] || continue
-    grep -qF -- "$fp" <<<"$loaded" && continue
-    printf '%s' "$expanded"
-    return 0
-  done < <(ssh -G "git@$host" 2>/dev/null | grep '^identityfile ')
-  return 1
+  local status=0
+  ssh-add -l >/dev/null 2>&1 || status=$?
+  [ "$status" -ne 2 ] || return 1
+  sh -c "$key_probe" sh "$root"
+}
+
+# On the host the shared agent is the one to compare against, and a missing
+# one is not a problem: remote_agent_unlock starts it.
+remote_candidate_key() {
+  local probe="SSH_AUTH_SOCK=\"$REMOTE_AGENT_DIR/agent.sock\"; export SSH_AUTH_SOCK; $key_probe"
+  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" \
+    "sh -c $(sq "$probe") sh $(sq "$root")" </dev/null
 }
 
 # The retry, the same way the first attempt ran. Still BatchMode: if the key
@@ -186,17 +223,24 @@ if [ -z "$root" ] || [ ${#retry[@]} -eq 0 ] || ! is_auth_failure; then
 fi
 
 # --- A remote row: the host's key, in the host's shared agent -----------------
-# The key a fetch on that host tries is whatever its shared agent holds, which
-# is the one the session's panes unlocked. Nothing here can see which key that
-# is -- it is on the other machine -- so the offer is simply to unlock it again,
-# which asks nothing when the agent still holds it.
+# A fetch on that host tries whatever its shared agent holds, and the panes only
+# ever put id_rsa there. The key this remote wants may be another one entirely,
+# so it is found the way a local row's is, only on the host (key_probe), and
+# goes into that same shared agent. The host is recorded like Unlock-RemoteKey.sh
+# records it, so an agent started here dies with the host's last session.
 if [ -n "$target" ]; then
-  printf '\033[1mu\033[0m  unlock the key on %s and retry\n' "$target"
+  key=$(remote_candidate_key) || key=""
+  if [ -z "$key" ]; then
+    hold
+    exit 1
+  fi
+  printf '\033[1mu\033[0m  unlock %s on %s and retry\n' "$key" "$target"
   printf '\033[2many other key  close\033[0m\n'
   read -rsn1 answer || answer=""
   [ "$answer" = "u" ] || exit 1
   printf '\n'
-  if ! remote_agent_unlock "$target"; then
+  add_agent_target "$target"
+  if ! remote_agent_unlock "$target" "$key"; then
     printf '\n\033[31mkey not added\033[0m\n'
     hold
     exit 1

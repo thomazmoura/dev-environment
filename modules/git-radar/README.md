@@ -294,8 +294,11 @@ same no-prompt environment on both ends and the host's shared agent in front of
 git (the one the session's panes unlock -- see `ssh-helpers.sh`). They nudge the
 host's sampler when they finish. A failure you asked for by name opens the same
 popup, which for a remote row offers to unlock *the host's* key in its shared
-agent (`remote_agent_unlock`) and retries there. Notes are keyed by host and
-root, so `~/code/x` here and `~/code/x` there never share a busy flag.
+agent (`remote_agent_unlock`) and retries there. The key is picked on the host
+the same way a local row's is -- what its `ssh -G` would try for that remote and
+its shared agent does not hold -- so a GitHub that only knows the host's
+`id_ed25519` gets that key, not the `id_rsa` the panes unlock. Notes are keyed
+by host and root, so `~/code/x` here and `~/code/x` there never share a busy flag.
 
 **Both machines need this version.** The remote runs its own `~/.modules`
 checkout; until it is pulled, its rows say `git-radar outdated`.
