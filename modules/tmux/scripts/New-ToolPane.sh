@@ -69,7 +69,7 @@ origin="$(current_pane "$target")"
 # checked. An ssh that fails outright (255) skips the guard, and the pane is
 # left to show the connection error instead.
 if [ -n "$local_only" ]; then
-  line="$(pwsh_command "$command" "$no_exit")"
+  line="$(pwsh_invocation "$command" "$no_exit")"
 else
   line="$(pane_command "$origin" "$command" "$no_exit")"
 fi

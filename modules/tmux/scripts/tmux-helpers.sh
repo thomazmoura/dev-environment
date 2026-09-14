@@ -68,12 +68,12 @@ shell_quote() {
 }
 
 # notice_command <message>
-# A pane command that shows <message>, waits for a single keypress and then
-# closes the pane by exiting its shell. Used in place of the real tool command
+# A pane command that shows <message> and waits for a single keypress; the pane
+# closes with it, as every new_pane does. Used in place of the real tool command
 # when a directory guard fails: the message needs to stay on screen (a status
 # line one is gone in seconds), but the pane has no reason to outlive it.
 notice_command() {
-  printf 'clear; echo; echo %s; echo; read -rsn1 -p %s _; exit' \
+  printf 'clear; echo; echo %s; echo; read -rsn1 -p %s _' \
     "$(shell_quote "$1")" "$(shell_quote 'Press any key to close...')"
 }
 
@@ -87,23 +87,14 @@ label_pane() {
   tmux set -p -t "$1" @pane_label "$2"
 }
 
-# pwsh_command <command> [no-exit]
-# Builds the pwsh invocation the bindings send. Without the second argument the
-# pane runs the command and closes with it; with it, pwsh stays interactive
-# afterwards. An empty command opens a plain interactive pwsh -- that is what
-# the prefix+% and prefix+" terminal splits want.
-#
-# All three forms end in `&& exit` so the pane closes when the shell does, but
-# only on success: a failing command leaves the pane up with its error on
-# screen instead of taking the evidence with it.
-pwsh_command() {
-  printf '%s && exit' "$(pwsh_invocation "$@")"
-}
-
 # pwsh_invocation <command> [no-exit]
-# pwsh_command without the `&& exit`: just the pwsh call. An ssh session runs
-# this on the remote and puts the `&& exit` after the ssh instead (see
-# ssh-helpers.sh).
+# Builds the pwsh invocation the bindings send. Without the second argument
+# pwsh runs the command and exits with it; with it, pwsh stays interactive
+# afterwards. An empty command opens a plain interactive pwsh -- that is what
+# the prefix+% and prefix+" terminal splits want. An ssh session runs the same
+# call on the remote (see ssh-helpers.sh).
+#
+# Either way the pane closes when pwsh does: new_pane sees to that.
 pwsh_invocation() {
   local command=$1 no_exit=${2:-}
   if [ -z "$command" ]; then
@@ -116,7 +107,7 @@ pwsh_invocation() {
 }
 
 # pane_command <pane> <command> [no-exit]
-# What a new pane split off <pane> should run: pwsh_command, or the same thing
+# What a new pane split off <pane> should run: pwsh_invocation, or the same thing
 # over ssh when <pane> belongs to a session opened with prefix+N. Every
 # pane-creating script builds its command through here, which is what lets the
 # bindings in common.conf stay unaware of ssh sessions.
@@ -124,24 +115,39 @@ pane_command() {
   if [ -n "$(ssh_option "$1" @ssh_target)" ]; then
     ssh_command "$@"
   else
-    pwsh_command "${@:2}"
+    pwsh_invocation "${@:2}"
   fi
+}
+
+# closing_line <command>
+# The line to type into a pane's shell so the pane runs <command> and then
+# closes, whatever way <command> ends: success, failure, or a Ctrl-C.
+#
+# The shell execs a bash that runs <command>, so no interactive shell is left
+# for the pane to fall back to -- when <command> is over, the pane's process is
+# gone and tmux closes it. This used to be `<command> && exit`, which left a
+# bare shell behind on any failure, and on a cancel: an interactive bash drops
+# the rest of the line when a job dies of SIGINT, so not even `; exit` would
+# have run. A lone command, like the plain pwsh calls, is exec'd by that bash in
+# turn, so there is no extra process between the pane and pwsh.
+closing_line() {
+  printf 'exec bash -c %s' "$(sq "$1")"
 }
 
 # new_pane <target> <label> <command> [split-window args...]
 # Splits <target>'s window, labels the new pane, starts <command> in it and
-# prints the new pane id.
+# prints the new pane id. The pane closes when <command> ends (closing_line).
 #
 # The command is typed into the pane with send-keys rather than handed to
-# split-window as its shell-command because the pane must keep a real shell:
-# that is what makes `&& exit` above -- and the user's own Ctrl-C -- behave.
+# split-window as its shell-command so it starts from the user's interactive
+# shell, with everything that shell's profile puts in the environment.
 new_pane() {
   local target=$1 label=$2 command=$3
   shift 3
   local pane
   pane="$(tmux split-window -t "$target" -c '#{pane_current_path}' -P -F '#{pane_id}' "$@")"
   label_pane "$pane" "$label"
-  tmux send-keys -t "$pane" "$command" C-m
+  tmux send-keys -t "$pane" "$(closing_line "$command")" C-m
   printf '%s' "$pane"
 }
 

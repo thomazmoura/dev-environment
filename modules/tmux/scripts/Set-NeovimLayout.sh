@@ -77,15 +77,16 @@ nvim_command="$(pane_command "$top" "$editor" no-exit)"
 if [ -n "$remote" ] && [ "$(tmux display-message -p -t "$top" '#{pane_current_command}')" = ssh ]; then
   editor_line="$(remote_typed_command "$top" "$editor" no-exit)"
 else
-  editor_line="$nvim_command"
+  editor_line="$(closing_line "$nvim_command")"
 fi
 
 # The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
-# no-exit on either: closing a feed should close its pane, not leave a shell
-# sitting in a sliver of the radar column. Both are built with pwsh_command, not
-# pane_command, for the reason above -- as prefix+t, r's and R's -L.
-agent_feed="$(pwsh_command '& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py')"
-git_feed="$(pwsh_command '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
+# no-exit on either: closing a feed should close its pane, not leave a pwsh
+# prompt sitting in a sliver of the radar column. Both are built with
+# pwsh_invocation, not pane_command, for the reason above -- as prefix+t, r's
+# and R's -L.
+agent_feed="$(pwsh_invocation '& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py')"
+git_feed="$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
 
 # The fixed sizes, each a percentage of the window. The radar column is
 # git_width_pct wide and full height, with the agent feed taking

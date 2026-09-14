@@ -351,13 +351,11 @@ def index_of(panes: list, pane_id: str, fallback: int) -> int:
 def run(stdscr, interval: float) -> None:
     curses.curs_set(0)
 
-    # Ctrl-C is the only way out, and it has to close the *pane*. Catching
-    # KeyboardInterrupt cannot achieve that -- by the time Python sees it the
-    # damage is done elsewhere. The pane is `pwsh -Command "& this" && exit`
-    # typed into a shell (tmux-helpers.sh:pwsh_command), so it closes on a clean
-    # exit status; SIGINT goes to the whole foreground process group, so pwsh
-    # takes it too, dies on the spot and the `&& exit` never runs. That is the
-    # shell prompt you are left looking at.
+    # Ctrl-C is the only way out, and it has to close the *pane*. The pane
+    # closes whenever pwsh ends (tmux-helpers.sh:closing_line), but a SIGINT
+    # goes to the whole foreground process group: pwsh would die mid-cleanup,
+    # before curses has put the terminal back, and catching KeyboardInterrupt
+    # here cannot stop that.
     #
     # raw() turns off ISIG, so the interrupt, quit and suspend characters stop
     # being signals and arrive as ordinary bytes -- Ctrl-C is just key 3 below.

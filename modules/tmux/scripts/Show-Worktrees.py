@@ -362,8 +362,8 @@ CTRL_C = 3
 def run(stdscr) -> None:
     curses.curs_set(0)
     # As in the feeds: Ctrl-C has to arrive as a key, not as SIGINT, or pwsh --
-    # the pane's parent, see tmux-helpers.sh:pwsh_command -- dies with it and
-    # leaves a shell behind instead of closing the pane.
+    # the pane's parent, see tmux-helpers.sh:closing_line -- dies with it
+    # before this has had the chance to restore the terminal.
     curses.raw()
     stdscr.keypad(True)
 

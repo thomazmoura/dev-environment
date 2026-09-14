@@ -110,9 +110,8 @@ remote_run() {
 
 # ssh_command <pane> <command> [no-exit]
 # The line typed into a new local pane of <pane>'s session: ssh to the host,
-# cd into the working directory and run the command there. `&& exit` works as
-# it does in pwsh_command -- ssh exits with the remote command's status -- so a
-# command that fails keeps its pane, and its error, on screen.
+# cd into the working directory and run the command there. The pane closes when
+# the ssh ends, however it ends (see closing_line in tmux-helpers.sh).
 #
 # On a dev-environment remote the ssh comes after Unlock-RemoteKey.sh, which
 # puts the key back in the host's shared agent when it is not there, so a pane
@@ -142,7 +141,7 @@ ssh_command() {
     unlock="$(printf '%q %q; ' "$(dirname "${BASH_SOURCE[0]}")/Unlock-RemoteKey.sh" "$target")"
     tag=" \"export AGENT_RADAR_PANE=$(hostname)/\$TMUX_PANE;\""
   fi
-  printf '%s%s %q%s %q && exit' "$unlock" "$line" "$target" "$tag" "$remote"
+  printf '%s%s %q%s %q' "$unlock" "$line" "$target" "$tag" "$remote"
 }
 
 # remote_typed_command <pane> <command> [no-exit]
