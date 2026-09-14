@@ -182,7 +182,7 @@ RAIL_COLOUR = curses.COLOR_BLUE
 # Resolved at startup -- 250 on a 256-colour terminal, plain white (a light
 # grey in most themes, and not the default foreground) below that; None, where
 # there is no colour at all, falls back to A_DIM.
-FOREIGN_NAME_GREY = 250
+FOREIGN_NAME_GREY = 248
 FOREIGN_NAME_COLOUR: int | None = None
 
 # The branch goes a step further, to a dark grey, so the two lines of the row
