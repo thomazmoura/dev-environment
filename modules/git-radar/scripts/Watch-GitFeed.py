@@ -175,8 +175,14 @@ RAIL_COLOUR = curses.COLOR_BLUE
 # The colour of a session name whose row lives on another host than this pane's
 # session: ssh rows from a local pane, and local rows (and other hosts') from an
 # ssh one. Only the name recedes -- the marker and the counters keep their
-# channels, since the state is still what the eye should land on. Resolved to
-# grey at startup; None falls back to A_DIM where the terminal has no grey.
+# channels, since the state is still what the eye should land on.
+#
+# A light grey, not the bright-black the untracked counter uses: that one is
+# meant to vanish, and a session name still has to be read. Resolved at startup
+# -- 250 on a 256-colour terminal, plain white (a light grey in most themes, and
+# not the default foreground) below that; None, where there is no colour at all,
+# falls back to A_DIM.
+FOREIGN_NAME_GREY = 250
 FOREIGN_NAME_COLOUR: int | None = None
 
 # Counters drawn in grey rather than their own hue: untracked files are the one
@@ -972,7 +978,10 @@ def run(stdscr, interval: float) -> None:
         COUNTER_COLOUR["untracked"] = grey
         STATE_COLOUR[gitr.NOREPO] = grey
         STATE_COLOUR[gitr.OFFLINE] = grey
-        FOREIGN_NAME_COLOUR = grey
+    if use_colour:
+        FOREIGN_NAME_COLOUR = (
+            FOREIGN_NAME_GREY if curses.COLORS >= 256 else curses.COLOR_WHITE
+        )
 
     # Short enough that keys feel instant, so one loop serves both the timer and
     # the keyboard without a second thread.
@@ -988,7 +997,7 @@ def run(stdscr, interval: float) -> None:
     # Resolved once: a pane does not change session, and this must not become a
     # tmux call on the draw path.
     current = gitr.current_session()
-    # The host that session is on, "" for local: rows elsewhere get a grey name.
+    # The host that session is on, "" for local: rows elsewhere get a light grey name.
     home = gitr.current_host()
 
     repos = sample()
