@@ -154,7 +154,10 @@ pwsh -Command claude     <- what tmux names
 ```
 
 So the detector walks the tty's process list and prefers the deepest foreground
-process, falling back to scanning argv for runtime-hosted agents (`node …`), then
+process. Each one is matched by its `comm` and by its argv0: Node renames its
+main thread to `MainThread`, so a `copilot` typed at a prompt has neither
+`copilot` nor `node` as its `comm`, and only argv0 still names it. After that it
+falls back to scanning argv for runtime-hosted agents (`node …`), then
 to an `AGENT_RADAR_AGENT` hint read out of the process's own environ for
 sandbox wrappers, then to tmux's answer.
 

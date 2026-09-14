@@ -272,6 +272,13 @@ def _resolve_agent(proc: Process) -> str | None:
     name = os.path.basename(proc.comm)
     if name in AGENT_ALIASES:
         return AGENT_ALIASES[name]
+    # comm is only a thread name -- 15 characters, and renamable with prctl.
+    # Node calls its main thread "MainThread", so a `copilot` typed at a prompt
+    # shows up as two MainThreads (the node loader and the native binary it
+    # execs) and neither is recognised. argv0 is what was actually exec'd.
+    argv0 = os.path.basename(proc.args.split(maxsplit=1)[0]) if proc.args else ""
+    if argv0 in AGENT_ALIASES:
+        return AGENT_ALIASES[argv0]
     if name not in RUNTIMES:
         return None
     # A runtime hosting the agent: `node /path/to/opencode`, or the pwsh wrapper
