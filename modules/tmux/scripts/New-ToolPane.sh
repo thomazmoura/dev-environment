@@ -2,8 +2,9 @@
 # Opens a labelled pane running a pwsh command. The workhorse behind almost
 # every pane-creating binding in modules/tmux/common.conf -- the agent menu
 # (prefix+t), the Angular/.NET runners (prefix+a, A, T, W) and the plain
-# terminals (prefix+% and prefix+"). In an ssh session (prefix+N) the pane runs
-# the same command on the remote, in the session's working directory.
+# terminals (prefix+% and prefix+"), plus their below-the-pane twins behind a
+# - (prefix+t then - then c, prefix+- then a). In an ssh session (prefix+N) the
+# pane runs the same command on the remote, in the session's working directory.
 #
 # Usage: New-ToolPane.sh [options] <label> <pwsh-command>
 #   -t <target>   pane the split is relative to; bindings pass "#{pane_id}"
