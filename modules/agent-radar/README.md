@@ -507,9 +507,12 @@ The sampler inherits these variables from tmux's global environment
 (`tmux show-environment -g`), not from your current shell. If you change them,
 restart the sampler.
 
+Notifications fire even while the pane is on screen. The radar itself never
+shows `done` for a pane you watched finish -- it lands straight in `idle` -- so
+the notifier treats a confirmed `working` → `idle` as the `done` it would
+otherwise have been.
+
 **When a notification is not sent**:
-- **The pane is on screen.** This is the same test that stops `done` from being
-  created: if a client is displaying the pane, you watched it happen.
 - **An agent was already in that state when the notifier first started.** The
   first sample is a baseline, so switching notifications on does not send one
   message per agent that is already waiting.

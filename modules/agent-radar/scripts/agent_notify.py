@@ -234,15 +234,21 @@ class Notifier:
             entry = (previous or {}).get(pane.pane_id, {})
             sent_state, sent_at = entry.get("sent_state"), entry.get("sent_at", 0.0)
 
-            entered = pane.state in ATTENTION and entry.get("state") != pane.state
-            # The same "you watched it happen" test debounce uses to decide
-            # between DONE and IDLE, so waiting and done are silenced alike.
-            seen = pane.active and pane.attached
-            repeat = sent_state == pane.state and now - sent_at < REPEAT_AFTER
+            # Fires whether or not the pane is on screen. debounce never
+            # publishes DONE for a pane you watched finish -- it lands as IDLE
+            # -- so a confirmed working -> idle is read as the done it would
+            # otherwise have been.
+            state = pane.state
+            if state == radar.IDLE and entry.get("state") == radar.WORKING:
+                state = radar.DONE
+            entered = state in ATTENTION and entry.get("state") != state
+            repeat = sent_state == state and now - sent_at < REPEAT_AFTER
 
-            if previous is not None and entered and not seen and not repeat:
-                events.append(Event.from_pane(pane))
-                sent_state, sent_at = pane.state, now
+            if previous is not None and entered and not repeat:
+                event = Event.from_pane(pane)
+                event.state = state
+                events.append(event)
+                sent_state, sent_at = state, now
 
             current[pane.pane_id] = {
                 "state": pane.state,
