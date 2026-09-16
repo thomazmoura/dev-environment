@@ -83,7 +83,7 @@ if vim.env.SSH_TTY and not vim.env.TMUX then
         end
       end
     end
-    -- Empty on a float, which spotlights the whole pane
+    -- Empty on a float or a search, which spotlights the whole pane
     local ok, spotlight_dimmer = pcall(require, 'spotlight-dimmer')
     local split = ok and spotlight_dimmer.title_segment() or ''
     vim.o.titlestring = 'nvim-nav=' .. ways .. (split ~= '' and ' ' .. split or '')
@@ -93,9 +93,14 @@ if vim.env.SSH_TTY and not vim.env.TMUX then
   set_navigation_title()
   -- WinClosed fires while the window is still there: look once it is gone.
   -- BufWinEnter: a winbar can come or go with the buffer, moving the split.
-  -- Cmdline*: the split segment is empty while typing on the command line.
+  -- Cmdline*: the command line takes the spotlight while it is open.
   vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter', 'BufWinEnter', 'CmdlineEnter', 'CmdlineLeave' }, {
     callback = function() vim.schedule(set_navigation_title) end,
+  })
+  -- The split moved without any of those (noice drawing its command line)
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'SpotlightDimmer',
+    callback = set_navigation_title,
   })
 end
 
