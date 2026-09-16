@@ -38,6 +38,7 @@ Usage:
   Get-GitState.py                   # sampled live, human-readable
   Get-GitState.py --cached          # the shared snapshot
   Get-GitState.py --format=json
+  Get-GitState.py --format=fzf --sort=changes   # dirty, then unpushed, then unpulled, then clean
   Get-GitState.py --serve [--fresh] < paths
 """
 
@@ -245,6 +246,26 @@ def rail(repo: gitr.Repo, current: str, coloured: bool = True) -> str:
     return f"{RAIL_ANSI}{CURRENT_RAIL}{RESET}" if coloured else CURRENT_RAIL
 
 
+def change_rank(repo: gitr.Repo) -> int:
+    """Where a row sorts under --sort=changes: what is left to do in it first.
+
+      0  uncommitted changes (including conflicts)
+      1  a clean tree with commits to push (diverged ones too)
+      2  a clean tree with commits to pull
+      3  clean and in sync
+      4  no repository, or a host that could not be asked
+    """
+    if not repo.has_repo:
+        return 4
+    if repo.added or repo.modified or repo.deleted or repo.untracked or repo.conflicted:
+        return 0
+    if repo.ahead:
+        return 1
+    if repo.behind:
+        return 2
+    return 3
+
+
 def render_rows(
     repos: list[gitr.Repo], coloured: bool = True, current: str = ""
 ) -> list[str]:
@@ -347,6 +368,12 @@ def main() -> int:
         action="store_true",
         help="with --serve, sample the directories now instead of reading the snapshot",
     )
+    parser.add_argument(
+        "--sort",
+        choices=("session", "changes"),
+        default="session",
+        help="session order (the default), or rows with the most to do first",
+    )
     args = parser.parse_args()
 
     if args.serve:
@@ -364,6 +391,9 @@ def main() -> int:
 
     repos = feed.sample_cached() if args.cached else gitr.detect()
     current = gitr.current_session()
+    if args.sort == "changes":
+        # Stable, so sessions keep their usual order within a group.
+        repos.sort(key=change_rank)
 
     if args.format == "fzf":
         for row in render_fzf(repos, current):

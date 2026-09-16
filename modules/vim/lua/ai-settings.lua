@@ -93,7 +93,8 @@ if vim.env.SSH_TTY and not vim.env.TMUX then
   set_navigation_title()
   -- WinClosed fires while the window is still there: look once it is gone.
   -- BufWinEnter: a winbar can come or go with the buffer, moving the split.
-  vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter', 'BufWinEnter' }, {
+  -- Cmdline*: the split segment is empty while typing on the command line.
+  vim.api.nvim_create_autocmd({ 'VimEnter', 'WinEnter', 'WinClosed', 'WinResized', 'VimResized', 'TabEnter', 'BufWinEnter', 'CmdlineEnter', 'CmdlineLeave' }, {
     callback = function() vim.schedule(set_navigation_title) end,
   })
 end
