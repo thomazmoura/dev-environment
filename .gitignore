@@ -18,3 +18,7 @@ modules/ghostty/background.conf
 # Python bytecode (the radars import shared modules, so this appears next to them)
 __pycache__/
 *.pyc
+
+# Local scripts. Anything hidden in the scripts library belongs to this machine
+# alone; the picker (prefix + t then s) lists them like any other script.
+modules/scripts/library/.*

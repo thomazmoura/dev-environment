@@ -133,6 +133,11 @@ chmod +x $HOME/.modules/agent-radar/scripts/* $HOME/.modules/agent-radar/hooks/*
 # modules/tmux/scripts/radar_cache.py.
 chmod +x $HOME/.modules/git-radar/scripts/*
 
+# scripts (your own scripts, picked from a popup with prefix + t then s). No
+# installer either: the picker and the library run in place out of
+# $HOME/.modules, so a committed script is live without re-running this.
+chmod +x $HOME/.modules/scripts/scripts/* $HOME/.modules/scripts/library/*
+
 # Tmux plugins installation
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
 chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh

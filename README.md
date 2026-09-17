@@ -81,6 +81,7 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `powershell-install/` | Standalone PowerShell installer (used in Docker base) |
 | `qmk/` | QMK firmware build scripts |
 | `rust/` | Rust toolchain installer |
+| `scripts/` | Your own scripts, versioned and run from a picker (`prefix + t` then `s`) |
 | `shell/` | Bash config, git config, global gitignore, inputrc |
 | `tmux/` | tmux config and TPM (Tmux Plugin Manager) setup |
 | `universal-ctags/` | ctags installer |

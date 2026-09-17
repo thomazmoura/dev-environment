@@ -43,6 +43,12 @@ RUN chmod +x /home/developer/.modules/agent-radar/scripts/* /home/developer/.mod
 COPY --chown=developer:developer modules/git-radar /home/developer/.modules/git-radar
 RUN chmod +x /home/developer/.modules/git-radar/scripts/*
 
+# scripts (your own scripts, picked from a popup with prefix + t then s).
+# Nothing to install -- the picker is bash plus fzf, and what it runs is
+# whatever modules/scripts/library holds.
+COPY --chown=developer:developer modules/scripts /home/developer/.modules/scripts
+RUN chmod +x /home/developer/.modules/scripts/scripts/* /home/developer/.modules/scripts/library/*
+
 # Tmux plugins installation
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
