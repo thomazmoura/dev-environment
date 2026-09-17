@@ -14,7 +14,9 @@ cascades:
   2. snapshot       -- what is on its screen? (tmux capture-pane)
   3. classification -- what does that screen mean? (rules/*.toml)
 
-Identification picks the ruleset and nothing else; it never decides state.
+Identification picks the ruleset and nothing else; it never decides state --
+with one exception it also owns, a headless `copilot -p` run, whose screen
+cannot say what argv does (see NONINTERACTIVE_ARGS).
 """
 
 from __future__ import annotations
@@ -102,6 +104,29 @@ RUNTIMES = {"node", "nodejs", "bun", "deno", "python", "python3", "pwsh", "bash"
 # argv scanning will find the agent underneath it.
 AGENT_ENV_HINT = "AGENT_RADAR_AGENT"
 
+# --- Layer 1b: non-interactive runs ------------------------------------------
+# `copilot -p "..."` is not the same program as `copilot`. It draws no input box
+# and no key-hint footer, prints its transcript and exits -- so every rule in
+# rules/copilot.toml misses (they all gate on footer hints, which is the right
+# way to write them) and the pane falls through to the idle default while the
+# agent is very much running.
+#
+# No rule can fix that, because the screen genuinely does not say it: a finished
+# run and a run mid-tool-call both look like plain output. What says it is argv.
+# This is the one fact identification is allowed to decide, and it is allowed
+# because in this mode the state space collapses: there is nobody to block and
+# no prompt to be idle at, so a live process IS working and the run ends by the
+# process exiting -- at which point the pane has no agent at all and drops off
+# the list on its own. Nothing here can go stale the way a hook marker can.
+#
+# Keyed by agent, so a tool whose non-interactive flag means something else is
+# simply not listed. Long and short forms both, and `--prompt=x` as well as
+# `--prompt x`, because only the exact token is matched -- a prompt whose *text*
+# happens to contain `-p` must not count.
+NONINTERACTIVE_ARGS = {
+    "copilot": {"-p", "--prompt"},
+}
+
 
 @dataclass
 class Process:
@@ -140,6 +165,10 @@ class Pane:
     # the state, so no consumer has to learn a second field to get the answer.
     attached: bool = False
     agent: str | None = None
+    # A one-shot `copilot -p "..."` rather than the interactive UI. Decided from
+    # argv, not from the screen -- see NONINTERACTIVE_ARGS. Not published: it is
+    # not a state, it is the reason a pane whose screen says nothing is working.
+    noninteractive: bool = False
     snapshot: str = ""
     state: str = UNKNOWN
     detail: str = ""
@@ -290,6 +319,19 @@ def _resolve_agent(proc: Process) -> str | None:
     return None
 
 
+
+def _noninteractive(agent: str, proc: Process) -> bool:
+    """Whether this process was started as a one-shot, headless run."""
+    flags = NONINTERACTIVE_ARGS.get(agent)
+    if not flags:
+        return False
+    # Skip argv0: an agent installed at ~/bin/-p is not a flag, and the path is
+    # the one token that is never one.
+    for token in proc.args.split()[1:]:
+        if token in flags or token.split("=", 1)[0] in flags:
+            return True
+    return False
+
 def _environ_value(pid: int, name: str) -> str | None:
     """One variable out of a process's own environ, or None.
 
@@ -354,8 +396,8 @@ def identify_tty(procs: list[Process]) -> tuple[str | None, Process | None]:
     return None, None
 
 
-def identify(pane: Pane, by_tty: dict[str, list[Process]]) -> str | None:
-    """Which agent is running in this pane, if any.
+def identify(pane: Pane, by_tty: dict[str, list[Process]]) -> tuple[str | None, bool]:
+    """Which agent is running in this pane, if any, and whether headlessly.
 
     #{pane_current_command} is not good enough here and the reason is structural:
     New-ToolPane.sh launches agents as `pwsh -Command claude`, so the pane's
@@ -370,12 +412,14 @@ def identify(pane: Pane, by_tty: dict[str, list[Process]]) -> str | None:
     deepest one in the parent chain, because the agent is always further from
     the shell than its launcher is.
     """
-    agent, _ = identify_tty(by_tty.get(pane.tty.removeprefix("/dev/"), []))
+    agent, proc = identify_tty(by_tty.get(pane.tty.removeprefix("/dev/"), []))
     if agent:
-        return agent
+        return agent, (proc is not None and _noninteractive(agent, proc))
 
-    # Last resort, and the only path that works if /proc is unavailable.
-    return AGENT_ALIASES.get(os.path.basename(pane.current_command))
+    # Last resort, and the only path that works if /proc is unavailable. tmux
+    # gives a command name and no argv, so a headless run reached only this way
+    # reads as interactive -- the old behaviour, which is the right fallback.
+    return AGENT_ALIASES.get(os.path.basename(pane.current_command)), False
 
 
 # --- Layer 2: the snapshot ---------------------------------------------------
@@ -531,6 +575,10 @@ def serve(client: str) -> list[dict]:
         found.append({
             "pane": tag[len(prefix):],
             "agent": agent,
+            # The other thing only this machine can know: the agent's argv. An
+            # older host omits the key and its headless runs read as interactive
+            # there, which is why this is an addition and not a protocol bump.
+            "noninteractive": _noninteractive(agent, proc),
             "marker": _read_json(ssh_markers_dir() / f"{name}.json"),
         })
 
@@ -879,7 +927,7 @@ def detect(remote=None) -> list[Pane]:
     agents: list[tuple[Pane, bool]] = []
     by_host: dict[str, list[Pane]] = {}
     for pane in panes:
-        pane.agent = identify(pane, by_tty)
+        pane.agent, pane.noninteractive = identify(pane, by_tty)
         if pane.agent:
             agents.append((pane, False))
         elif pane.remote and pane.devenv:
@@ -899,6 +947,7 @@ def detect(remote=None) -> list[Pane]:
                 if entry is None:
                     continue
                 pane.agent = entry["agent"]
+                pane.noninteractive = bool(entry.get("noninteractive"))
                 host_markers[pane.pane_id] = entry.get("marker")
                 agents.append((pane, True))
 
@@ -927,6 +976,18 @@ def detect(remote=None) -> list[Pane]:
                 verdict = Verdict(
                     BLOCKED, str(marker.get("detail") or "waiting"), "hook_marker"
                 )
+
+        if pane.noninteractive and verdict.state in (IDLE, UNKNOWN):
+            # A headless run has no prompt to be idle at, so idle here only ever
+            # means "no rule matched" -- the transcript it prints looks like any
+            # other text. The process being alive is the state.
+            #
+            # Last, so it only ever replaces a non-answer: a rule that found
+            # working keeps its own detail, a blocker still wins (a run started
+            # without --allow-all-tools can stop on an approval prompt, and that
+            # screen does carry the footer selection_blocker reads), and a hook
+            # marker above keeps the agent's own word for it.
+            verdict = Verdict(WORKING, "running non-interactively", "noninteractive")
 
         pane.state, pane.detail, pane.rule_id = (
             verdict.state,

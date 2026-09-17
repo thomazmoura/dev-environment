@@ -59,8 +59,8 @@ def client_id() -> str:
 def query(target: str, client: str | None = None, fresh: bool = False) -> dict | str:
     """{pane_id: entry} for `client`'s panes holding an agent on `target`.
 
-    Each entry is what agent_radar.serve returns: the pane, the agent and its
-    hook marker. Otherwise the phrase for why there is no answer. `fresh` is
+    Each entry is what agent_radar.serve returns: the pane, the agent, whether
+    it is a headless run, and its hook marker. Otherwise the phrase for why there is no answer. `fresh` is
     accepted for the poller's sake and means nothing here: the host keeps no
     snapshot that could predate the question.
     """
@@ -94,6 +94,8 @@ def query(target: str, client: str | None = None, fresh: bool = False) -> dict |
         return {
             entry["pane"]: {
                 "agent": str(entry["agent"]),
+                # Absent from a host that predates it -- see agent_radar.serve.
+                "noninteractive": bool(entry.get("noninteractive")),
                 "marker": entry.get("marker") if isinstance(entry.get("marker"), dict) else None,
             }
             for entry in payload["agents"]

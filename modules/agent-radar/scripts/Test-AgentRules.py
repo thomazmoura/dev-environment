@@ -68,7 +68,9 @@ def main() -> int:
         if pane is None:
             print(f"no such pane: {args.pane}", file=sys.stderr)
             return 1
-        agent = args.agent or radar.identify(pane, radar.list_processes())
+        # The headless flag is dropped: this explains what the RULES say about a
+        # screen, and NONINTERACTIVE_ARGS is decided after them, off argv.
+        agent = args.agent or radar.identify(pane, radar.list_processes())[0]
         if not agent:
             print(f"no agent identified in {args.pane}", file=sys.stderr)
             return 1

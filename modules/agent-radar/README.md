@@ -138,7 +138,8 @@ source comments point there).
 | snapshot | what is on its screen? | `tmux capture-pane -p` |
 | classification | what does that screen mean? | `rules/<agent>.toml` |
 
-Identification picks the ruleset and nothing more; it never decides state.
+Identification picks the ruleset and nothing more; it never decides state --
+with one exception, the headless run described below.
 
 A fourth, optional and agent-specific input sits beside these -- the hook marker
 described below -- which can add `blocked` but never overrules what the screen
@@ -160,6 +161,29 @@ main thread to `MainThread`, so a `copilot` typed at a prompt has neither
 falls back to scanning argv for runtime-hosted agents (`node …`), then
 to an `AGENT_RADAR_AGENT` hint read out of the process's own environ for
 sandbox wrappers, then to tmux's answer.
+
+**The one thing the screen cannot say: a headless run.** `copilot -p "…"` is
+not the same program as `copilot`. It draws no input box and no key-hint footer,
+prints its transcript and exits -- and every rule in `rules/copilot.toml` gates
+on a footer hint, which is the right way to write them. So nothing matched and
+the pane fell through to `idle` while the agent was running.
+
+No rule can fix that, because the screen genuinely does not carry it: a finished
+run and a run mid-tool-call both look like plain output. argv does carry it, so
+identification reads it there (`NONINTERACTIVE_ARGS`, one flag set per agent --
+`-p`/`--prompt` for copilot, and nothing for a tool whose `-p` means something
+else). In this mode the state space collapses: there is nobody to block and no
+prompt to be idle at, so a live process **is** `working`, and the run ends by the
+process exiting -- at which point the pane holds no agent and drops off the list
+on its own. Unlike a hook marker, this cannot outlive what it describes.
+
+It is applied last and only over a non-answer, so it never hides anything: a
+working rule keeps its own detail, a hook marker keeps the agent's own word, and
+a blocker still wins -- a run started without `--allow-all-tools` can stop on an
+approval prompt, and that screen *does* carry the footer `selection_blocker`
+reads. For an ssh pane the host reports the flag alongside the agent, since argv
+is the other thing only the host can see; a host running an older agent-radar
+omits it and its headless runs read as interactive there, as they did before.
 
 **Why `capture-pane` is safe to read.** It returns the pane's live screen
 regardless of copy-mode. Verified: with a pane scrolled 150 lines back,
@@ -392,7 +416,9 @@ between waiting for approval and waiting for a prompt is already carried by
 `blocked` vs `idle`.
 
 An agent that is identified but whose screen matches no rule falls back to
-`idle`, never to a guessed `blocked`. The direction is the point: a false idle
+`idle`, never to a guessed `blocked` -- except for a headless run, where `idle`
+is not a state the agent has and the fallback is `working` (see
+[How it works](#how-it-works)). The direction is the point: a false idle
 costs a stale row, a false blocked sends you to a pane that did not need you,
 and a display that cries wolf stops being read.
 
@@ -643,7 +669,10 @@ detail which only repeats the state word -- has exactly one definition.
 
 - Only `rules/claude.toml` has been validated against real screens. The codex,
   copilot and opencode files are transcribed from the herdr reference and need a
-  pass with `Show-AgentSnapshot.sh` against live sessions.
+  pass with `Show-AgentSnapshot.sh` against live sessions. The same is true of
+  the headless-run flags: `copilot -p` is from the CLI's documented programmatic
+  mode, not from a captured pane, and no fixture pins it down (there is nothing
+  on the screen for a fixture to hold -- the evidence is argv).
 - `blocked` fixtures exist only for Claude, and only for question dialogs
   (`claude-blocked-question`, and the same with plan mode's extra banner box --
   the pair that pins down the rule-line counting this once got wrong). A real
