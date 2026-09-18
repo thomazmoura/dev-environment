@@ -37,7 +37,15 @@ Enter is worse than one you have to scan for -- attention is carried by colour.
 
 Keys: j/k/g/G move, Enter switches to the session, r refreshes now, f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
-it, q or d kills the selected session after asking, Ctrl-C closes the pane.
+it, c commits it, q or d kills the selected session after asking, Ctrl-C
+closes the pane.
+
+c opens a popup with the repository's `git status` and asks: y stages
+everything and commits, with $EDITOR opening in the popup for the message, and
+any other key closes it having touched nothing. A popup because the commit
+needs an editor, and an editor needs a tty and room that this pane has neither
+of -- see Show-GitCommit.sh. It asks because "everything" is whatever the
+status says, untracked files included.
 
 p and P exist because the two counters this pane spends most of its time showing
 -- behind and ahead -- were the two it could do nothing about: it would tell you
@@ -618,6 +626,61 @@ def start_op(repo, op: Op, interactive: bool = True) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
+def start_commit(repo) -> None:
+    """`c`. Stage everything and commit, in a popup that shows the status and asks.
+
+    Not an Op: those run with no tty by construction, and a commit wants the
+    one thing they are denied -- an editor. So the whole of it happens in
+    Show-GitCommit.sh, in a popup, which is its own pty (see show_failure for
+    why nothing interactive may touch this pane).
+
+    The row is marked busy for as long as the popup is open, so an f, p or P
+    pressed meanwhile is refused rather than racing the commit for index.lock.
+    On a thread because display-popup blocks until the popup closes, and the
+    feed keeps drawing underneath it. Clearing the note afterwards is what makes
+    the loop resample, so the row moves from dirty to ahead as the popup closes.
+    """
+    key = note_key(repo)
+    current = notes.get(key)
+    if current is not None and current.busy:
+        return
+    refusal = ""
+    if repo.state == gitr.OFFLINE:
+        refusal = "cannot commit"
+    elif not repo.root:
+        refusal = "not a git repository"
+    elif repo.conflicted:
+        refusal = "conflicted"
+    elif not (repo.added or repo.modified or repo.deleted or repo.untracked):
+        refusal = "nothing to commit"
+    if refusal:
+        notes[key] = Note(refusal, expires=time.monotonic() + NOTE_TTL)
+        return
+
+    notes[key] = Note("committing…", busy=True)
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitCommit.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        notes.pop(key, None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def start_fetch(repo, interactive: bool = True) -> None:
     """f and F, which are start_op(FETCH) and nothing else."""
     start_op(repo, FETCH, interactive)
@@ -1137,6 +1200,9 @@ def run(stdscr, interval: float) -> None:
             elif key == ord("P"):
                 if repos:
                     start_op(repos[selected], PUSH)
+            elif key == ord("c"):
+                if repos:
+                    start_commit(repos[selected])
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same
