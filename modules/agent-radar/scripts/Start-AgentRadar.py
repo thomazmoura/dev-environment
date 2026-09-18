@@ -59,6 +59,13 @@ _spec = importlib.util.spec_from_file_location(
     "get_agent_state", os.path.join(HERE, "Get-AgentState.py")
 )
 state_cli = importlib.util.module_from_spec(_spec)
+# Registered, not just exec'd, so that RadarCache.source_files can see it: the
+# reload guard discovers the code this sampler holds by walking sys.modules, and
+# a module loaded by path is invisible there unless it is put there. (git-radar's
+# loader already does this, for the unrelated @dataclass reason noted in
+# Start-GitRadar.py.) Without it an edit to the one file that renders the status
+# bar would be the only radar change that never deployed.
+sys.modules[_spec.name] = state_cli
 _spec.loader.exec_module(state_cli)
 
 
@@ -101,6 +108,11 @@ def run(interval: float) -> int:
     # sampler is not this one's to answer, and the loop samples immediately.
     nudged = feed.nudge_stamp()
 
+    # What this sampler's code looked like at launch. It holds that code for as
+    # long as it lives, so an edit is invisible until it hands over -- see
+    # RadarCache.restart_daemon.
+    source = feed.CACHE.source_baseline()
+
     # Constructed here, after the lock, so a sampler that lost the race never
     # reads the environment or starts worker threads.
     notifier = agent_notify.Notifier()
@@ -112,6 +124,12 @@ def run(interval: float) -> int:
     while True:
         if not tmux_is_running():
             return 0
+        if feed.CACHE.source_changed(source):
+            # An edit landed. Hand the lock to a sampler running it: exiting
+            # instead would stop notifications dead whenever nobody is attached,
+            # which is the case they exist for.
+            print("agent-radar: code changed, restarting", file=sys.stderr, flush=True)
+            feed.CACHE.restart_daemon(lock, interval)
         if not notifier.active and feed.last_read_age() > feed.IDLE_EXIT_SECONDS:
             # Everyone detached. Leave the last snapshot on disk: it is stale by
             # definition and every reader checks the age, so it cannot be

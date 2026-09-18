@@ -280,6 +280,8 @@ Start-AgentRadar.py ── detect + debounce, once a second ──> ~/.cache/age
 Nobody starts the sampler. The first consumer that finds the lock free spawns it
 (`agent_feed.ensure_daemon`), and it exits on its own once tmux is gone or
 nothing has read from it for 90 seconds -- so it never outlives what it watches.
+It also replaces itself, in place and without exiting, when its own code changes
+on disk; see "deploys itself" below.
 The lock **is** the liveness check: the kernel releases it however the process
 dies, which a pidfile cannot promise.
 
@@ -511,9 +513,14 @@ down there. `AGENT_256`, `AGENT_BASIC` and `AGENT_ANSI` live in
 `Get-AgentState.py` beside the state colours, so the picker and the feed cannot
 drift apart.
 
-Restarting the sampler is what deploys a change to any of this
-(`pkill -f Start-AgentRadar.py`; the next consumer respawns it). A running
-daemon has the old code in memory and keeps holding the lock.
+A change to any of this deploys itself. The sampler holds the code it imported
+at launch, so it used to need `pkill -f Start-AgentRadar.py` and a consumer to
+respawn it -- and forgetting that was silent, because a stale daemon still holds
+the lock and still publishes, so every consumer reads its old answers in
+preference to sampling. It now notices: it fingerprints the files it imported
+and `exec`s itself when one changes (`RadarCache.restart_daemon`). Rules files
+are not in that set and do not need to be -- `detect()` re-reads its TOML every
+tick.
 
 ## Notifications
 

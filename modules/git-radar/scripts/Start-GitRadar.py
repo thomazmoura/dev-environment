@@ -88,6 +88,11 @@ def run(interval: float) -> int:
     # sampler is not this one's to answer, and the loop samples immediately.
     nudged = feed.CACHE.nudge_stamp()
 
+    # What this sampler's code looked like at launch. It holds that code for as
+    # long as it lives, so an edit is invisible until it hands over -- see
+    # RadarCache.restart_daemon.
+    source = feed.CACHE.source_baseline()
+
     # The ssh sessions' hosts are asked from threads of their own, so a host
     # that is slow to answer never holds up this loop -- see git_remote.
     poller = git_remote.poller(interval, feed.STALE_AFTER)
@@ -97,6 +102,12 @@ def run(interval: float) -> int:
         # either: a machine you ssh into has no tmux of its own, usually.
         if not tmux_is_running() and not feed.watched_paths():
             return 0
+        if feed.CACHE.source_changed(source):
+            # An edit landed. Hand the lock to a sampler running it: exiting
+            # instead would stop serving remote clients on a machine with no
+            # tmux of its own, where nothing here would ever respawn us.
+            print("git-radar: code changed, restarting", file=sys.stderr, flush=True)
+            feed.CACHE.restart_daemon(lock, interval)
         if feed.CACHE.last_read_age() > feed.IDLE_EXIT_SECONDS:
             # Everyone detached. Leave the last snapshot on disk: it is stale by
             # definition and every reader checks the age, so it cannot be

@@ -328,6 +328,12 @@ has read from it for 90 seconds. A consumer whose read comes back stale samples
 live instead, so a dead or slow daemon degrades to the old cost rather than to
 an empty list.
 
+It also deploys its own code: it fingerprints the modules it imported at launch
+and `exec`s itself when one of them changes, so an edit here needs no restart
+by hand. That matters more than it sounds -- a sampler running old code keeps
+the lock and keeps publishing, so without this a change tests correct when run
+directly and is wrong everywhere it is shown. See `RadarCache.restart_daemon`.
+
 The machinery behind that -- cache directory, atomic publish, flock liveness,
 heartbeat, staleness rules -- is **shared with agent-radar** and lives in
 [`modules/tmux/scripts/radar_cache.py`](../tmux/scripts/radar_cache.py). So is

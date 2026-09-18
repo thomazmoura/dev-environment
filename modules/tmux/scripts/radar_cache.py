@@ -20,8 +20,9 @@ the hard way (see modules/agent-radar/scripts/agent_feed.py):
 So: exactly one process samples, on one timer, and publishes; everyone else
 reads the published snapshot, which costs a file read however many readers there
 are. Nobody starts the sampler by hand -- the first consumer that finds the lock
-free spawns it (`ensure_daemon`), and it exits on its own once nothing has read
-from it for a while. A read that comes back stale falls back to sampling live,
+free spawns it (`ensure_daemon`), it replaces itself when its own code changes
+(`restart_daemon`), and it exits on its own once nothing has read from it for a
+while. A read that comes back stale falls back to sampling live,
 which is what makes the daemon an optimisation rather than a dependency.
 
 This module owns only the generic half of that: the cache directory, the atomic
@@ -31,6 +32,8 @@ row *is*, how it is sampled and any cross-sample smoothing stay with each radar.
     RadarCache("git-radar", daemon, encode, decode)   bind a radar to a cache
     cache.publish(rows, status)                        what the daemon writes
     cache.read() / cache.sample_cached(sample)         what consumers call
+    cache.source_baseline() / source_changed()         has the code been edited?
+    cache.restart_daemon(lock, interval)               hand over to that code
 
 It lives under modules/tmux/scripts rather than inside either radar because it
 belongs to neither. Both radars are tmux consumers and both already reach into
@@ -88,6 +91,20 @@ def write_atomic(path: Path, text: str) -> None:
         temp.replace(path)
     except OSError:
         pass
+
+
+def source_root(daemon_script: Path) -> Path | None:
+    """The tree a radar's code lives in, given its daemon: `modules/`.
+
+    Every radar sits at `modules/<radar>/scripts/Start-*.py`, so the daemon
+    script is three levels down from the root shared with `modules/tmux/scripts`
+    -- which is where this file lives, and so is part of every radar's code.
+    """
+    try:
+        parents = daemon_script.resolve().parents
+    except OSError:
+        return None
+    return parents[2] if len(parents) > 2 else None
 
 
 @dataclass
@@ -361,6 +378,125 @@ class RadarCache:
             os.close(fd)
             return None
         return fd
+
+    # --- Reloading its own code ---------------------------------------------
+    # A sampler imports its code once and then runs for days. An edit reaches
+    # every consumer at once, because consumers are short-lived -- and never
+    # reaches the daemon, whose snapshot those consumers read in preference to
+    # sampling for themselves (`sample_cached`). So a change tests correct by
+    # hand and is wrong everywhere it is actually shown, with nothing on screen
+    # saying why. Worse, the self-recycling below cannot save it: `idle_exit`
+    # needs nobody to be reading, and a status bar reads every tick, so on a
+    # machine in use the daemon that is holding stale code is exactly the one
+    # that never ages out.
+    #
+    # The source is discovered rather than listed: whatever this process has
+    # already imported from under `modules/`, which is precisely the set it
+    # could be holding stale. A hand-maintained list would be one more thing to
+    # forget to update, and forgetting is the whole bug.
+    #
+    # Rules files are deliberately not included. agent_radar.detect() re-reads
+    # its TOML every tick, so those already deploy live and watching them would
+    # buy nothing but restarts.
+
+    def source_files(self) -> list[Path]:
+        """Every already-imported module file under this radar's tree."""
+        root = source_root(self.daemon_script)
+        if root is None:
+            return []
+        found = set()
+        # A copy: importing during iteration is possible and mutating
+        # sys.modules under a live view of it raises.
+        for module in list(sys.modules.values()):
+            path = getattr(module, "__file__", None)
+            if not path:
+                continue
+            try:
+                resolved = Path(path).resolve()
+                resolved.relative_to(root)
+                real = resolved.is_file()
+            except (OSError, ValueError):
+                # ValueError is the common case and means "outside the tree":
+                # the stdlib, and anything pip put in site-packages.
+                continue
+            if not real:
+                # `__file__` is not always a file: a module exec'd from stdin or
+                # a string carries something like "<stdin>", which resolves to a
+                # plausible path under the tree that has never existed. Watching
+                # it would be harmless but permanent noise in the baseline.
+                continue
+            found.add(resolved)
+        return sorted(found)
+
+    def source_baseline(self) -> dict[str, tuple[int, int]]:
+        """What this sampler's code looked like when it started.
+
+        Taken once, and re-stat'd against the same keys afterwards, so a module
+        imported lazily later reads as what it is -- a new file, not a changed
+        one -- and cannot trigger a restart on its own.
+        """
+        return self._stat_sources(self.source_files())
+
+    @staticmethod
+    def _stat_sources(paths) -> dict[str, tuple[int, int]]:
+        marks: dict[str, tuple[int, int]] = {}
+        for path in paths:
+            try:
+                info = Path(path).stat()
+            except OSError:
+                # Deleted, or caught mid-rename. Recorded as a value of its own
+                # rather than skipped, so a file going missing reads as a change
+                # instead of silently shrinking the set being compared.
+                marks[str(path)] = (-1, -1)
+            else:
+                marks[str(path)] = (info.st_mtime_ns, info.st_size)
+        return marks
+
+    def source_changed(self, baseline: dict[str, tuple[int, int]]) -> bool:
+        """Whether any of that code has been edited since.
+
+        Size as well as mtime, because `git checkout` between two branches can
+        land a file with the mtime it had before.
+        """
+        return self._stat_sources(baseline) != baseline
+
+    def restart_daemon(self, lock: int | None, interval: float) -> None:
+        """Replace this sampler with one running the current code. Never returns.
+
+        exec, rather than exiting and letting a consumer respawn us, because
+        there may be no consumer: agent-radar keeps sampling with everybody
+        detached while notifications are on, and git-radar keeps sampling for
+        remote clients on a machine with no tmux of its own. Both are precisely
+        the cases where nothing would call `ensure_daemon`, so an exit there is
+        not a restart, it is a stop.
+
+        exec also keeps the daemon's stdout and stderr, which are the log file
+        `ensure_daemon` opened, so the replacement goes on writing where this
+        one left off.
+        """
+        if lock is not None:
+            # Dropped deliberately, and only here: the replacement claims it
+            # back microseconds later. A consumer ticking inside that window can
+            # spawn a second sampler, which is the race `ensure_daemon` already
+            # documents and already survives -- the loser exits the moment
+            # `take_lock` fails.
+            try:
+                os.close(lock)
+            except OSError:
+                pass
+        try:
+            os.execv(
+                sys.executable,
+                [sys.executable, str(self.daemon_script), "--interval", str(interval)],
+            )
+        except OSError as error:
+            # The interpreter or the script is unreadable -- a tree mid-checkout,
+            # say. The lock is already gone, so exit and let the next consumer
+            # tick spawn a replacement; sampling on with half the code reloaded
+            # is not an option, since exec is all-or-nothing and this is the
+            # branch where it was nothing.
+            print(f"{self.name}: restart failed: {error!r}", file=sys.stderr, flush=True)
+            os._exit(0)
 
     def wait_for_tick(self, remaining: float, seen: float, also=None) -> float:
         """Sleep out the rest of a tick, unless somebody asks for a sample sooner.
