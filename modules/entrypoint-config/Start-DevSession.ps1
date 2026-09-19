@@ -119,6 +119,54 @@ function Setup-DotFiles {
     New-Item -Type SymbolicLink -Path $SpotlightDimmerFolder -Target "$HOME/.config/SpotlightDimmer"
   }
 
+  # The AI agents keep their settings next to credentials, caches, logs and
+  # session history, so linking their whole folder would bury the settings in
+  # the <Leader>, picker. Each agent gets a folder of its own instead, holding
+  # links to just the files you would edit. The instruction files are created
+  # empty when missing -- that changes nothing for the agent -- because fd
+  # skips a link whose target does not exist, and they are the files you most
+  # want to find; the rest only show up once the agent or you create them.
+  $AgentFiles = [ordered]@{
+    "claude" = @(
+      "$HOME/.claude/CLAUDE.md"
+      "$HOME/.claude/settings.json"
+      "$HOME/.claude/keybindings.json"
+      "$HOME/.claude/agents"
+      "$HOME/.claude/commands"
+      "$HOME/.claude/skills"
+    )
+    "copilot" = @(
+      "$HOME/.copilot/copilot-instructions.md"
+      "$HOME/.copilot/config.json"
+      "$HOME/.copilot/mcp-config.json"
+      "$HOME/.copilot/agents"
+    )
+    "codex" = @(
+      "$HOME/.codex/AGENTS.md"
+      "$HOME/.codex/config.toml"
+      "$HOME/.codex/rules"
+    )
+  }
+  foreach( $Agent in $AgentFiles.Keys ) {
+    $AgentFolder = "$DotFilesFolder/ai-$Agent"
+    if( !(Test-Path $AgentFolder) ) {
+      Write-Information "Creating $Agent dotfiles folder"
+      New-Item -Type Directory -Path $AgentFolder | Out-Null
+    }
+
+    foreach( $Target in $AgentFiles[$Agent] ) {
+      if( $Target.EndsWith(".md") -and !(Test-Path $Target) ) {
+        New-Item -Force -Type File -Path $Target | Out-Null
+      }
+
+      $Link = "$AgentFolder/$(Split-Path -Leaf $Target)"
+      if( !(Get-Item -Force -ErrorAction SilentlyContinue $Link) ) {
+        Write-Information "Creating $Agent $(Split-Path -Leaf $Target) SymbolicLink"
+        New-Item -Type SymbolicLink -Path $Link -Target $Target | Out-Null
+      }
+    }
+  }
+
 }
 
 function Setup-Copilot {
