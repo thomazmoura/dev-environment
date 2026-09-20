@@ -2,27 +2,33 @@
 """List, open and delete git worktrees, in a pane.
 
 Bound to prefix+t then W (see modules/tmux/common.conf), which opens it through
-New-ToolPane.sh in the pane's current path. It is the manager for the worktrees
-prefix+t then w creates (New-Worktree.sh); the shell side of all of it --
-registry, naming, removal -- is worktree-helpers.sh, and this defers to it for
-anything that changes something.
+New-ToolPane.sh with -L, in the pane's current path. It is the manager for the
+worktrees prefix+t then w creates (New-Worktree.sh); the shell side of all of it
+-- registry, naming, removal -- is worktree-helpers.sh, and this defers to it
+for anything that changes something.
+
+The -L is what keeps it here in an ssh session (prefix+N), where every other
+pane runs on the remote: the registry it manages, and the sessions it opens and
+kills, belong to this tmux server. A worktree on another machine is asked about
+over ssh instead, the way the radar feeds ask a host about its own panes.
 
 Two scopes:
   repo  the default: every worktree of the repository this pane is in, as git
         itself lists them -- the main one, the ones prefix+t, w made, and any
-        made some other way (Claude's --worktree, a plain `git worktree add`)
-  all   every worktree in the registry (~/.worktrees), across repositories,
-        plus the current repository's own list
+        made some other way (Claude's --worktree, a plain `git worktree add`).
+        In an ssh session that is the repository the session is on, over there.
+  all   every worktree in the registry (~/.worktrees), across repositories and
+        across machines, plus the current repository's own list
 
 Two lines per worktree, drawn with the same scaffolding as the radar feeds
 (radar_ui.py): a marker coloured by state, the folder name and a dot when a
 session is open on it; then its branch, its state and, in the all scope, the
-repository it belongs to.
+repository it belongs to and the host when it is not this machine.
 
     blue    the main worktree
     green   clean
     yellow  uncommitted changes
-    red     the folder is gone
+    red     the folder is gone, or its host could not be reached
 
 It does not refresh on a timer. A worktree's state changes when you change it,
 and every action here reloads the list afterwards; r reloads by hand.
@@ -31,7 +37,7 @@ Keys: j/k or the arrows move, g/G jump to the ends, / filters, a switches scope,
 r reloads, Enter opens (switches to its session, or creates one with the
 standard layout), d deletes after asking, q, Esc or Ctrl-C closes the pane.
 
-The filter is a case-insensitive substring match on name, branch and path.
+The filter is a case-insensitive substring match on name, branch, path and host.
 While typing, Enter keeps it and Esc drops it; with a filter set and no prompt
 open, Esc clears it before it would close the pane.
 
@@ -47,6 +53,7 @@ from __future__ import annotations
 
 import curses
 import os
+import shlex
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -55,9 +62,10 @@ from dataclasses import dataclass
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import radar_remote  # noqa: E402
 import radar_ui as ui  # noqa: E402
 
-NEW_SESSION = os.path.join(HERE, "New-CodeSession.sh")
+NEW_SESSION = os.path.join(HERE, "Open-WorktreeSession.sh")
 REMOVE = os.path.join(HERE, "Remove-Worktree.sh")
 
 # Same default and override as worktree-helpers.sh.
@@ -70,12 +78,17 @@ MAIN = "main"
 CLEAN = "clean"
 DIRTY = "dirty"
 MISSING = "missing"
+# A worktree on a host that would not answer. Kept apart from MISSING on
+# purpose, here as in worktree_state: a host that is asleep is not a folder that
+# has gone, and nothing may act on a row in this state.
+UNREACHABLE = "unreachable"
 
 STATE_COLOUR = {
     MAIN: curses.COLOR_BLUE,
     CLEAN: curses.COLOR_GREEN,
     DIRTY: curses.COLOR_YELLOW,
     MISSING: curses.COLOR_RED,
+    UNREACHABLE: curses.COLOR_RED,
 }
 
 HINTS = "enter open · d delete · / filter · a scope · q quit"
@@ -87,6 +100,9 @@ class Worktree:
     repo: str
     branch: str
     main: bool
+    # The ssh target the path is on, empty for this machine. Everything below
+    # passes it to git rather than asking which machine it is on.
+    target: str = ""
     state: str = CLEAN
     session: bool = False
 
@@ -94,14 +110,54 @@ class Worktree:
     def name(self) -> str:
         return os.path.basename(self.path)
 
+    @property
+    def host(self) -> str:
+        return self.target.split("@")[-1]
+
+    @property
+    def key(self) -> tuple[str, str]:
+        """What makes a row unique: two machines can hold the same path."""
+        return (self.path, self.target)
+
     def matches(self, needle: str) -> bool:
         needle = needle.lower()
-        return any(needle in field.lower() for field in (self.name, self.branch, self.path))
+        return any(needle in field.lower()
+                   for field in (self.name, self.branch, self.path, self.host))
 
 
 # --- Reading ------------------------------------------------------------------
 
-def git(*argv: str, cwd: str | None = None) -> tuple[int, str]:
+def run_sh(script: str, *args: str, target: str = "") -> tuple[int, str]:
+    """A POSIX shell `script` here, or on `target`, with `args` as $1, $2...
+
+    The remote half is radar_remote's, which is the pattern every radar already
+    uses to ask a host about an ssh session: its SSH_OPTS mirror ssh-helpers.sh
+    but with ControlMaster=no and BatchMode, both of which are exactly what a
+    curses pane wants -- it must never become the master (see that module's
+    header for the hang that causes), and it has nowhere to type a password.
+    """
+    if target:
+        argv = radar_remote.remote_argv(target, script)
+        argv[-1] += " sh " + " ".join(shlex.quote(a) for a in args)
+    else:
+        argv = ["sh", "-c", script, "sh", *args]
+    try:
+        result = subprocess.run(
+            argv,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return 1, ""
+    return result.returncode, result.stdout
+
+
+def git(*argv: str, cwd: str | None = None, target: str = "") -> tuple[int, str]:
+    if target:
+        return run_sh("git " + " ".join(shlex.quote(a) for a in argv), target=target)
     try:
         result = subprocess.run(
             ["git", *argv],
@@ -116,14 +172,16 @@ def git(*argv: str, cwd: str | None = None) -> tuple[int, str]:
     return result.returncode, result.stdout
 
 
-def repo_root(directory: str) -> str:
+def repo_root(directory: str, target: str = "") -> str:
     """The main working tree of the repository `directory` is in, or "".
 
     The same question worktree-helpers.sh's repo_root answers, the same way: the
     parent of the shared .git directory, so a pane inside a worktree still
-    resolves to the repository it came from.
+    resolves to the repository it came from. With a target, the question is put
+    to that host about its own `directory`.
     """
-    code, out = git("-C", directory, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    code, out = git("-C", directory, "rev-parse", "--path-format=absolute",
+                    "--git-common-dir", target=target)
     common = out.strip()
     if code != 0 or not common:
         return ""
@@ -135,10 +193,15 @@ def session_name(tree: Worktree) -> str:
     name = os.path.basename(tree.path)
     if not tree.main:
         name = f"{os.path.basename(tree.repo)}_{name}"
-    return name.replace(".", "_")
+    name = name.replace(".", "_")
+    if tree.target:
+        host = tree.host.replace(".", "_").replace(":", "_")
+        name = f"{host}-{name}"
+    return name
 
 
-def read_registry() -> list[tuple[str, str]]:
+def read_registry() -> list[tuple[str, str, str]]:
+    """The registry's rows. A row with no third field is on this machine."""
     try:
         with open(REGISTRY, encoding="utf-8") as handle:
             lines = handle.read().splitlines()
@@ -146,15 +209,16 @@ def read_registry() -> list[tuple[str, str]]:
         return []
     rows = []
     for line in lines:
-        path, _, repo = line.partition("\t")
+        path, _, rest = line.partition("\t")
+        repo, _, target = rest.partition("\t")
         if path:
-            rows.append((path, repo))
+            rows.append((path, repo, target))
     return rows
 
 
-def git_worktrees(repo: str) -> list[Worktree]:
+def git_worktrees(repo: str, target: str = "") -> list[Worktree]:
     """`git worktree list --porcelain`, main worktree first as git prints it."""
-    code, out = git("-C", repo, "worktree", "list", "--porcelain")
+    code, out = git("-C", repo, "worktree", "list", "--porcelain", target=target)
     if code != 0:
         return []
     found: list[Worktree] = []
@@ -170,13 +234,8 @@ def git_worktrees(repo: str) -> list[Worktree]:
             elif key == "bare":
                 bare = True
         if path and not bare:
-            found.append(Worktree(path, repo, branch, main=not found))
+            found.append(Worktree(path, repo, branch, main=not found, target=target))
     return found
-
-
-def branch_of(path: str) -> str:
-    code, out = git("-C", path, "symbolic-ref", "--quiet", "--short", "HEAD")
-    return out.strip() if code == 0 else ""
 
 
 def open_sessions() -> set[str]:
@@ -193,42 +252,87 @@ def open_sessions() -> set[str]:
     return set(result.stdout.splitlines()) if result.returncode == 0 else set()
 
 
+def tmux_option(option: str) -> str:
+    """A session option of the session this pane is in, or "".
+
+    ssh_option in ssh-helpers.sh, asked from python. TMUX_PANE is what tmux puts
+    in every pane's environment, and the @ssh_* options are the session's, so it
+    resolves to the right session with nothing passed in from the binding.
+    """
+    pane = os.environ.get("TMUX_PANE", "")
+    if not pane:
+        return ""
+    try:
+        result = subprocess.run(
+            ["tmux", "show-options", "-qv", "-t", pane, option],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+# Is the folder there, what is checked out in it and has it anything to lose --
+# in one shell script, so a worktree on another machine costs one round trip
+# rather than three. The same three questions, and the same words for the
+# answers, as worktree_state in worktree-helpers.sh.
+STATE_SCRIPT = '''
+[ -d "$1" ] || { echo missing; exit 0; }
+git -C "$1" symbolic-ref --quiet --short HEAD 2>/dev/null || echo
+git -C "$1" status --porcelain 2>/dev/null | head -n1 | grep -q . && echo dirty || echo clean
+'''
+
+
 def settle(tree: Worktree) -> Worktree:
     """Fill in what needs git to answer: state, and the branch of registry-only rows."""
-    if not os.path.isdir(tree.path):
+    code, out = run_sh(STATE_SCRIPT, tree.path, target=tree.target)
+    lines = out.splitlines()
+    if code != 0 or not lines:
+        # Locally sh always answers, so this is a host that would not: nothing
+        # about the worktree itself is known, and nothing may act on it.
+        tree.state = UNREACHABLE if tree.target else MISSING
+        return tree
+    if lines[0] == "missing":
         tree.state = MISSING
         return tree
     if not tree.branch:
-        tree.branch = branch_of(tree.path)
-    code, out = git("-C", tree.path, "status", "--porcelain")
-    if code == 0 and out.strip():
+        tree.branch = lines[0].strip()
+    if lines[-1] == "dirty":
         tree.state = DIRTY
     else:
         tree.state = MAIN if tree.main else CLEAN
     return tree
 
 
-def load(repo: str, everything: bool) -> list[Worktree]:
-    trees: dict[str, Worktree] = {}
+def load(repo: str, everything: bool, target: str = "") -> list[Worktree]:
+    trees: dict[tuple[str, str], Worktree] = {}
     if repo:
-        for tree in git_worktrees(repo):
-            trees[tree.path] = tree
-    for path, owner in read_registry():
-        if path in trees or not (everything or owner == repo):
+        for tree in git_worktrees(repo, target):
+            trees[tree.key] = tree
+    for path, owner, row_target in read_registry():
+        row = Worktree(path, owner, "", main=False, target=row_target)
+        if row.key in trees or not (everything or (owner == repo and row_target == target)):
             continue
-        trees[path] = Worktree(path, owner, "", main=False)
+        trees[row.key] = row
 
     # One `git status` per row, which on a large repository is the slow part;
     # in parallel, so a dozen worktrees cost about as much as the slowest one.
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    # A remote row is one ssh, multiplexed over the master its host's session
+    # already holds, so it costs about what a local `git status` does.
+    with ThreadPoolExecutor(max_workers=12) as pool:
         settled = list(pool.map(settle, trees.values()))
 
     sessions = open_sessions()
     for tree in settled:
         tree.session = session_name(tree) in sessions
 
-    # Grouped by repository, the main worktree leading its group, then by name.
-    return sorted(settled, key=lambda t: (t.repo, not t.main, t.name.lower()))
+    # Grouped by machine and repository, the main worktree leading its group,
+    # then by name. This machine's own worktrees come first: the empty target
+    # sorts before any host.
+    return sorted(settled, key=lambda t: (t.target, t.repo, not t.main, t.name.lower()))
 
 
 # --- Acting -------------------------------------------------------------------
@@ -236,12 +340,18 @@ def load(repo: str, everything: bool) -> list[Worktree]:
 def open_worktree(tree: Worktree) -> None:
     """Switch to the worktree's session, creating it with the layout if needed.
 
-    New-CodeSession.sh already does exactly that, including the switch-client
-    that works from inside a pane. stdin is closed so that its die(), which
-    waits for a keypress, cannot sit reading this pane's keyboard.
+    Open-WorktreeSession.sh already does exactly that -- a local session for a
+    local worktree, an ssh session for one on another machine -- including the
+    switch-client that works from inside a pane. stdin is closed so that its
+    die(), which waits for a keypress, cannot sit reading this pane's keyboard.
     """
+    argv = [NEW_SESSION]
+    if tree.target:
+        argv += ["-t", tree.target]
+    if tree.repo:
+        argv += ["-r", tree.repo]
     subprocess.run(
-        [NEW_SESSION, tree.path],
+        [*argv, tree.path],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -250,8 +360,16 @@ def open_worktree(tree: Worktree) -> None:
 
 
 def delete_worktree(tree: Worktree) -> str:
-    """Run Remove-Worktree.sh and return what it said, on one line."""
-    argv = [REMOVE, "--force", tree.path] if tree.state == DIRTY else [REMOVE, tree.path]
+    """Run Remove-Worktree.sh and return what it said, on one line.
+
+    --target for a row the registry has no line for -- one this machine's git
+    listed, or one made by hand on the remote -- where remove_worktree would
+    otherwise have nowhere to read the host from.
+    """
+    argv = [REMOVE, "--force"] if tree.state == DIRTY else [REMOVE]
+    if tree.target:
+        argv += ["--target", tree.target]
+    argv.append(tree.path)
     try:
         result = subprocess.run(
             argv,
@@ -320,6 +438,10 @@ class View:
                            if tree.state != CLEAN else self.dim(chosen)))
             if everything:
                 second.append((" · " + os.path.basename(tree.repo), self.dim(chosen)))
+            # Which machine, whenever it is not this one -- in either scope: a
+            # row the repo scope shows is remote exactly when the session is.
+            if tree.target:
+                second.append((" · " + tree.host, self.colour(curses.COLOR_CYAN, chosen)))
             ui.draw_line(self.stdscr, row + 1, width, second, fill)
 
     def footer(self, row: int, width: int, text: str, attr: int) -> None:
@@ -341,6 +463,8 @@ class View:
             lines.append(("uncommitted changes will be lost", red))
         if tree.state == MISSING:
             lines.append(("folder is gone -- only its records go", curses.A_NORMAL))
+        if tree.target:
+            lines.append((f"on {tree.host}", curses.A_NORMAL))
         if tree.session:
             lines.append(("its session will be killed", self.colour(curses.COLOR_YELLOW)))
         lines += [("", curses.A_NORMAL), ("y  delete", red), ("n  cancel", curses.A_NORMAL)]
@@ -367,11 +491,19 @@ def run(stdscr) -> None:
     curses.raw()
     stdscr.keypad(True)
 
-    repo = repo_root(os.getcwd())
+    # Which repository "this repo" means. In an ssh session the pane is here
+    # (the binding's -L) but the work is not: the session says where, in the
+    # same two options every pane binding reads, so the repo scope is the
+    # remote repository this session is on.
+    target = tmux_option("@ssh_target")
+    if target:
+        repo = repo_root(tmux_option("@ssh_dir"), target)
+    else:
+        repo = repo_root(os.getcwd())
     view = View(stdscr, repo)
     # With no repository under this pane there is nothing to scope to.
     everything = not repo
-    trees = load(repo, everything)
+    trees = load(repo, everything, target)
     selected = 0
     needle = ""
     typing = False
@@ -383,7 +515,7 @@ def run(stdscr) -> None:
 
     def reload(anchor: str = "") -> None:
         nonlocal trees, selected
-        trees = load(repo, everything)
+        trees = load(repo, everything, target)
         rows = shown()
         paths = [t.path for t in rows]
         if anchor in paths:
@@ -471,6 +603,8 @@ def run(stdscr) -> None:
                     tree = rows[selected]
                     if tree.state == MISSING:
                         note = f"{tree.name}: folder is gone -- d drops it"
+                    elif tree.state == UNREACHABLE:
+                        note = f"{tree.name}: {tree.host} did not answer -- r to try again"
                     else:
                         open_worktree(tree)
                         reload(tree.path)
@@ -479,6 +613,10 @@ def run(stdscr) -> None:
                     tree = rows[selected]
                     if tree.main:
                         note = "the main worktree cannot be deleted"
+                    elif tree.state == UNREACHABLE:
+                        # Nothing is known about it, so nothing may be thrown
+                        # away on its behalf.
+                        note = f"{tree.name}: {tree.host} did not answer -- r to try again"
                     else:
                         pending = tree
             elif key == ESC:

@@ -23,14 +23,43 @@
 # From then on every pane binding -- prefix+a, %, ", v, the prefix+t agents --
 # opens a new ssh into that directory and runs its usual command there, through
 # pane_command in tmux-helpers.sh.
+#
+# Usage: New-SshSession.sh [-t user@host -d /remote/dir [-n session name]]
+#   no options  ask both questions, as prefix+N does
+#   -t and -d   skip both and build the session for that host and directory.
+#               How a worktree made on a remote opens its session
+#               (Open-WorktreeSession.sh): the host and the directory are
+#               already known, and only the half of this script below the
+#               questions is wanted. -n overrides the <host>-<directory> name,
+#               which a worktree spells its own way (session_name_for in
+#               worktree-helpers.sh).
 set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
 
-require_tools ssh timeout tmux fzf
-
 history_file="$HOME/.ssh-session-history"
+
+target=""
+dir=""
+name_override=""
+while getopts ":t:d:n:" option; do
+  case "$option" in
+    t) target="$OPTARG" ;;
+    d) dir="$OPTARG" ;;
+    n) name_override="$OPTARG" ;;
+    *) die "New-SshSession.sh: unknown option -$OPTARG" ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [ -n "$dir$target" ] && { [ -z "$dir" ] || [ -z "$target" ]; }; then
+  die "New-SshSession.sh: -t and -d go together"
+fi
+
+# fzf only for the path that picks a directory; the -t/-d path has one.
+require_tools ssh timeout tmux
+[ -n "$dir" ] || require_tools fzf
 
 # The ControlPath sockets live in ~/.ssh (SSH_OPTS), which a fresh machine may
 # not have yet.
@@ -121,18 +150,31 @@ connect() {
     mv "$history_file.tmp" "$history_file"
 }
 
+# Whether the remote has this dev-environment -- the check ssh_is_devenv relies
+# on later, through @ssh_devenv. Named once and spliced into both the listing
+# below and probe_kind, so the path that asks for a directory and the path that
+# is handed one cannot drift apart on the answer.
+devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi'
+
+# probe_kind
+# The same question, for the -t/-d path, which has no listing to answer it as a
+# side effect. One round trip over the master connection just made.
+probe_kind() {
+  ssh "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$devenv_test")" </dev/null 2>/dev/null
+}
+
 # One round trip for everything the picker needs, run under sh because the
 # login shell may be anything. The first line is the root the list is relative
-# to, the second whether the remote has this dev-environment (the same check
-# ssh_is_devenv relies on later), and the rest the directories. fd -- or
-# Debian's fdfind -- when there is one, so .gitignore is honoured as it is by
-# prefix+C-n; otherwise find, skipping hidden folders and build output.
+# to, the second whether the remote has this dev-environment, and the rest the
+# directories. fd -- or Debian's fdfind -- when there is one, so .gitignore is
+# honoured as it is by prefix+C-n; otherwise find, skipping hidden folders and
+# build output.
 listing='
 root="$HOME/code"
 [ -d "$root" ] || root="$HOME"
 cd "$root" || exit 1
 pwd
-if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi
+'"$devenv_test"'
 if command -v fd >/dev/null 2>&1; then fd --type d --follow .
 elif command -v fdfind >/dev/null 2>&1; then fdfind --type d --follow .
 else find . -mindepth 1 \( -name ".*" -o -name node_modules -o -name bin -o -name obj \) -prune -o -type d -print
@@ -163,25 +205,37 @@ pick() {
   dir="$root/${picked%/}"
 }
 
-# The host of the open ssh sessions, when they are all on one, is tried without
-# asking; several hosts are not guessed between. Leaving it -- the connection or
-# the picker -- asks for a host after all.
-hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d' | sort -u)"
-target=
-[ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
-if [ -n "$target" ]; then
-  printf 'New ssh session on %s\n' "$target"
-  connect && pick ' (Esc for another host)' || { clear; target=; }
-fi
-if [ -z "$target" ]; then
-  ask_target && connect && pick || exit 0
+# Handed a host and a directory (-t/-d), there is nothing to ask: connect --
+# which is a no-op when the session it came from already holds the master, and
+# the cancellable prompt-capable path when that master has gone -- and ask the
+# host the one question the picker would have answered on the way past.
+#
+# Otherwise: the host of the open ssh sessions, when they are all on one, is
+# tried without asking; several hosts are not guessed between. Leaving it --
+# the connection or the picker -- asks for a host after all.
+if [ -n "$dir" ]; then
+  connect || exit 0
+  kind="$(probe_kind)"
+  [ "$kind" = devenv ] || kind=plain
+else
+  hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d' | sort -u)"
+  target=
+  [ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
+  if [ -n "$target" ]; then
+    printf 'New ssh session on %s\n' "$target"
+    connect && pick ' (Esc for another host)' || { clear; target=; }
+  fi
+  if [ -z "$target" ]; then
+    ask_target && connect && pick || exit 0
+  fi
 fi
 
 # <host>-<directory>. The user part is left out: it is the same on every
 # session you open. Dots and colons are the separators in tmux targets
 # (session:window.pane), so a host like dev.example.com becomes dev_example_com.
+# A caller with a name of its own (-n) has already spelled it that way.
 host="${target##*@}"
-name="$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')"
+name="${name_override:-$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')}"
 
 # The remote's key, unlocked here once so that no pane has to ask for it (see
 # the shared agent in ssh-helpers.sh). Only on a dev-environment remote: that is

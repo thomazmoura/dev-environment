@@ -13,6 +13,15 @@
 #                          session is not a reason to throw work away
 #   - clean                asks, in a popup on the client that is still around
 #                          (see Remove-Worktree.sh --ask)
+#   - host out of reach    kept, and said so. A worktree on another machine
+#                          (prefix+t, w in an ssh session) is asked about over
+#                          ssh, and a host that cannot answer must not be read
+#                          as a folder that has gone -- that would prune a
+#                          worktree that is still there. In BatchMode: a hook
+#                          has no terminal, so an ssh that stopped to ask for a
+#                          password would hang holding nothing. It rarely needs
+#                          to: the session has only just closed, so
+#                          ControlPersist is still holding the master.
 #
 # The question is a popup rather than tmux's own confirm-before: confirm-before
 # only works from a key binding, where tmux knows which client pressed the key
@@ -42,15 +51,22 @@ client="$(tmux list-clients -F '#{client_activity} #{client_name}' 2>/dev/null |
 while IFS= read -r path; do
   [ -n "$path" ] || continue
 
-  if [ ! -d "$path" ]; then
-    remove_worktree "$path" >/dev/null 2>&1
-    continue
-  fi
+  target="$(registry_target "$path")"
 
-  if ! worktree_is_clean "$path"; then
-    tmux display-message "worktree $(basename "$path") has changes -- kept" 2>/dev/null
-    continue
-  fi
+  case "$(worktree_state "$path" "$target")" in
+    missing)
+      remove_worktree "$path" >/dev/null 2>&1
+      continue ;;
+    dirty)
+      tmux display-message "worktree $(basename "$path") has changes -- kept" 2>/dev/null
+      continue ;;
+    unreachable)
+      tmux display-message "worktree $(basename "$path") on ${target##*@} could not be reached -- kept" 2>/dev/null
+      continue ;;
+    unknown)
+      tmux display-message "worktree $(basename "$path") could not be read -- kept" 2>/dev/null
+      continue ;;
+  esac
 
   [ -n "$client" ] || continue
 

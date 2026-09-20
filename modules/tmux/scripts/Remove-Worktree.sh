@@ -3,12 +3,16 @@
 # it is merged -- its branch. See remove_worktree in worktree-helpers.sh for the
 # order and the reasons for it.
 #
-# Usage: Remove-Worktree.sh [--ask] [--force] <path>
-#   --ask     ask first, and hold the result on screen until a key is pressed.
-#             How Close-WorktreeSession.sh runs it, in a popup on the client
-#             that just lost the worktree's session.
-#   --force   remove even with uncommitted changes. Only Show-Worktrees.py
-#             passes it, after asking in its own pane.
+# Usage: Remove-Worktree.sh [--ask] [--force] [--target <user@host>] <path>
+#   --ask      ask first, and hold the result on screen until a key is pressed.
+#              How Close-WorktreeSession.sh runs it, in a popup on the client
+#              that just lost the worktree's session.
+#   --force    remove even with uncommitted changes. Only Show-Worktrees.py
+#              passes it, after asking in its own pane.
+#   --target   the host the worktree is on. Normally left off: remove_worktree
+#              reads it out of the registry. Show-Worktrees.py passes it for a
+#              worktree it found through git rather than through the registry,
+#              which has no row to read it from.
 #
 # Without --force a dirty worktree is refused by git itself, so the question
 # --ask puts is only ever about a clean one -- the hook checks before asking,
@@ -21,10 +25,12 @@ source "$scripts/worktree-helpers.sh"
 
 ask=""
 force=""
+target=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --ask) ask="yes" ;;
     --force) force="yes" ;;
+    --target) shift; target="${1:-}" ;;
     --) shift; break ;;
     -*) printf 'Remove-Worktree.sh: unknown option %s\n' "$1" >&2; exit 2 ;;
     *) break ;;
@@ -32,18 +38,21 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-[ $# -eq 1 ] || { printf 'usage: Remove-Worktree.sh [--ask] [--force] <path>\n' >&2; exit 2; }
+[ $# -eq 1 ] || { printf 'usage: Remove-Worktree.sh [--ask] [--force] [--target <user@host>] <path>\n' >&2; exit 2; }
 path=$1
 
 if [ -z "$ask" ]; then
-  remove_worktree "$path" "$force"
+  remove_worktree "$path" "$force" "$target"
   exit $?
 fi
 
-branch="$(worktree_branch "$path")"
+[ -n "$target" ] || target="$(registry_target "$path")"
+branch="$(worktree_branch "$path" "$target")"
 printf 'The session for worktree %s has closed.\n' "$(basename "$path")"
 printf 'It has no uncommitted changes.\n\n'
 printf '  %s\n' "$path"
+# Which machine's worktree is about to go, when it is not this one.
+[ -n "$target" ] && printf '  on %s\n' "${target##*@}"
 [ -n "$branch" ] && printf '  branch %s (deleted only if merged)\n' "$branch"
 printf '\n'
 read -rsn1 -p 'Remove it? [y/N] ' answer
@@ -55,7 +64,7 @@ if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
   exit 0
 fi
 
-remove_worktree "$path" "$force"
+remove_worktree "$path" "$force" "$target"
 status=$?
 printf '\n'
 read -rsn1 -p 'Press any key to close...' _
