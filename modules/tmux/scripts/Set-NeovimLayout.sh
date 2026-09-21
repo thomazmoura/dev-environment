@@ -5,23 +5,24 @@
 # below it.
 #
 # Safe to run again on a window that already has the layout: it only creates
-# the fixed panes (Git, Agents, Terminal) that are missing and puts their sizes
-# back, so prefix+v also repairs a layout broken by a closed pane or a stray
-# resize. NeoVim's size is never enforced, and neither is its presence as long
-# as something else holds its place (agent panes, say); it is only recreated
-# when nothing does -- the terminal reaching the top of the window, or the
-# radar column being all that is left.
+# the radar panes (Git, Agents) that are missing and puts the fixed sizes back,
+# so prefix+v also repairs a layout broken by a closed pane or a stray resize.
+# A missing terminal row is left missing -- an existing one is only resized --
+# unless -f asks for it. NeoVim's size is never enforced, and without -f neither
+# is its presence as long as something else holds its place (agent panes, say);
+# it is only recreated when nothing does -- the terminal reaching the top of
+# the window, or the radar column being all that is left.
 #
-# Usage: Set-NeovimLayout.sh [-s] [target]
-#   -s       terminals in a 20% column on the right, split in two and without
-#            the radar column (prefix+V), instead of the default layout. Not
-#            idempotent: it always adds the column.
+# Usage: Set-NeovimLayout.sh [-f] [target]
+#   -f       force the full layout (prefix+V): also create a missing terminal
+#            row under NeoVim, and a missing NeoVim right beside the radar
+#            column even when other panes have taken its place.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
 # Used by the prefix+v / prefix+V bindings and by New-CodeSession.sh and
-# New-SshSession.sh, which build a session and then hand it here so a new
-# project always opens the same way -- on the remote, for an ssh session.
+# New-SshSession.sh, which build a session and then hand it here with -f so a
+# new project always opens the same way -- on the remote, for an ssh session.
 set -euo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
@@ -29,10 +30,10 @@ source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
 # This runs from `run-shell -b`, which has no popup to write a failure to.
 die() { warn "$@"; }
 
-side=""
-while getopts ":s" option; do
+force=""
+while getopts ":f" option; do
   case "$option" in
-    s) side="yes" ;;
+    f) force="yes" ;;
     *) die "Set-NeovimLayout.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -171,17 +172,6 @@ fit_pane() {
     tmux resize-pane -t "$pane" "$flag" "$cells"
 }
 
-if [ -n "$side" ]; then
-  # A 20% column on the right, halved: a bare terminal on top and the setup
-  # terminal below it.
-  column="$(new_pane "$top" "Terminal" "$(pane_command "$top" '')" -h -l 20%)"
-  new_pane "$column" "Terminal" "$terminal_command" -v -l 50% >/dev/null
-  label_pane "$top" "NeoVim"
-  tmux send-keys -t "$top" "$editor_line" C-m
-  tmux select-pane -t "$top"
-  exit 0
-fi
-
 # The default layout: a radar column down the left edge -- git feed on top,
 # agent feed under it -- and NeoVim over a terminal row in what is left. The
 # feeds are part of the default layout rather than something prefix+t, r/R has
@@ -233,15 +223,32 @@ if [ -z "$neovim" ]; then
     [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents")" = 0 ]; then
     neovim="$(new_pane "$git" "NeoVim" "$nvim_command" -h -f)"
   fi
+  # -f wants NeoVim back whatever took its place: it goes right beside the
+  # radar column, split off the left of the top pane there, so the user's panes
+  # move right rather than going anywhere. -f alone would put it at the far
+  # edge of the window instead. Without the column, it goes left of the pane
+  # the binding fired in.
+  if [ -z "$neovim" ] && [ -n "$force" ]; then
+    beside=$top
+    if [ -n "$radars" ]; then
+      column_right="$(tmux display-message -p -t "$git" '#{pane_right}')"
+      beside="$(tmux list-panes -t "$top" -F '#{pane_id} #{pane_left} #{pane_top}' |
+        awk -v left=$((column_right + 2)) '$2 == left && $3 == 0 { print $1; exit }')"
+    fi
+    if [ -n "$beside" ]; then
+      neovim="$(new_pane "$beside" "NeoVim" "$nvim_command" -h -b)"
+    fi
+  fi
   [ -z "$neovim" ] || mark_role "$neovim" neovim
 fi
 
-# The terminal goes under NeoVim, or, once NeoVim is gone, under the pane the
-# binding fired in -- unless that is the radar column, which has no room for it.
-if [ -z "$terminal" ]; then
+# Only -f (prefix+V) brings a missing terminal back; prefix+v leaves it closed.
+# It goes under NeoVim, or, once NeoVim is gone, under the pane the binding
+# fired in -- unless that is the radar column, which has no room for it.
+if [ -z "$terminal" ] && [ -n "$force" ]; then
   anchor=${neovim:-$top}
   if [ "$anchor" = "$git" ] || [ "$anchor" = "$agents" ]; then
-    tmux display-message "No NeoVim pane: run prefix+v from the pane the terminal should go under"
+    tmux display-message "No NeoVim pane: run prefix+V from the pane the terminal should go under"
   else
     terminal="$(new_pane "$anchor" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%")"
     mark_role "$terminal" terminal
