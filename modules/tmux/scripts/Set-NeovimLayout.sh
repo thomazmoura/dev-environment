@@ -227,7 +227,9 @@ if [ -z "$neovim" ]; then
   # radar column, split off the left of the top pane there, so the user's panes
   # move right rather than going anywhere. -f alone would put it at the far
   # edge of the window instead. Without the column, it goes left of the pane
-  # the binding fired in.
+  # the binding fired in. A terminal that is missing too is split off first, so
+  # the row runs under both NeoVim and the pane it pushes aside rather than
+  # under NeoVim alone.
   if [ -z "$neovim" ] && [ -n "$force" ]; then
     beside=$top
     if [ -n "$radars" ]; then
@@ -236,6 +238,10 @@ if [ -z "$neovim" ]; then
         awk -v left=$((column_right + 2)) '$2 == left && $3 == 0 { print $1; exit }')"
     fi
     if [ -n "$beside" ]; then
+      if [ -z "$terminal" ]; then
+        terminal="$(new_pane "$beside" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%")"
+        mark_role "$terminal" terminal
+      fi
       neovim="$(new_pane "$beside" "NeoVim" "$nvim_command" -h -b)"
     fi
   fi
