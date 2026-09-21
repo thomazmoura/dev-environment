@@ -18,7 +18,8 @@
 #   4. creates a session named <host>-<directory>, records the host and the
 #      directory on it (see ssh-helpers.sh), gives it the ssh theme colour
 #      (Set-SshTheme.sh), switches to it and applies the standard layout, every
-#      pane of which runs over ssh.
+#      pane of which runs over ssh -- all but the feeds and the picker, which
+#      run here and hand what is picked to the remote.
 #
 # From then on every pane binding -- prefix+a, %, ", v, the prefix+t agents --
 # opens a new ssh into that directory and runs its usual command there, through
@@ -288,5 +289,5 @@ record_agent
 "$scripts/Set-SshTheme.sh" "$name"
 
 tmux switch-client -t "=$name"
-"$scripts/Set-NeovimLayout.sh" -f "$name:"
+"$scripts/Set-NeovimLayout.sh" "$name:"
 exit 0

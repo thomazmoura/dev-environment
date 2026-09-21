@@ -158,7 +158,7 @@ function New-VerticalTmuxSession {
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
 		$size = $Host.UI.RawUI.WindowSize
 		tmux new-session -d -s $currentDirectory -c $location -x $size.Width -y $size.Height
-		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -f "${currentDirectory}:"
+		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" "${currentDirectory}:"
 		tmux attach-session -t $currentDirectory
 		return
 	}

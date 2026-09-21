@@ -151,6 +151,52 @@ new_pane() {
   printf '%s' "$pane"
 }
 
+# --- Pane kinds ----------------------------------------------------------------
+# What the picker pane of the default layout offers (Select-PaneKind.sh), in
+# the order it lists them: the first is what Enter picks straight away.
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code")
+
+# pane_kind <pane> <kind>
+# Sets kind_command and kind_no_exit to what a pane of <kind> runs, ready for
+# pane_command. The one place these commands are spelled for the layout
+# (Set-NeovimLayout.sh), the picker and prefix+e -- the prefix+t bindings in
+# common.conf use the same strings.
+#
+# A remote without this dev-environment has no pwsh profile and no ~/.modules,
+# so NeoVim is plain nvim there and the terminal a plain login shell.
+pane_kind() {
+  local pane=$1 kind=$2 bare=""
+  if [ -n "$(ssh_option "$pane" @ssh_target)" ] && ! ssh_is_devenv "$pane"; then
+    bare="yes"
+  fi
+  kind_no_exit=""
+  case "$kind" in
+    NeoVim)
+      kind_no_exit="no-exit"
+      if [ -n "$bare" ]; then
+        kind_command="nvim"
+      else
+        kind_command='~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
+      fi
+      ;;
+    Terminal)
+      # Refresh git state, load the fzf helpers and build the project if it
+      # needs it, then leave the shell open.
+      kind_no_exit="no-exit"
+      if [ -n "$bare" ]; then
+        kind_command=""
+      else
+        kind_command='psgit && psfzf && Build-DotnetProjectIfNeeded'
+      fi
+      ;;
+    "Claude Code") kind_command="claude" ;;
+    Copilot) kind_command="copilot --max-ai-credits 500" ;;
+    Codex) kind_command="codex" ;;
+    "Open Code") kind_command="nvs use latest && opencode" ;;
+    *) return 1 ;;
+  esac
+}
+
 # current_pane [target]
 # Resolves a binding's target to a concrete pane id, so nothing downstream
 # depends on pane indexes or on which client is attached. Bindings pass

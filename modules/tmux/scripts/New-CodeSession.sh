@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Opens a session for a project under ~/code, with the standard NeoVim layout.
+# Opens a session for a project under ~/code, with the standard layout: Git,
+# Agents and a picker pane (see Set-NeovimLayout.sh).
 #
 # Usage: New-CodeSession.sh [directory]
 #   no argument - fuzzy-find a directory under ~/code (bound to prefix+C-n)
@@ -42,5 +43,5 @@ if ! tmux has-session -t "=$name" 2>/dev/null; then
 fi
 
 tmux switch-client -t "=$name"
-[ -n "${layout:-}" ] && "$scripts/Set-NeovimLayout.sh" -f "$name:"
+[ -n "${layout:-}" ] && "$scripts/Set-NeovimLayout.sh" "$name:"
 exit 0
