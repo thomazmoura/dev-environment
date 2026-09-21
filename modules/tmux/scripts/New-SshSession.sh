@@ -289,5 +289,5 @@ record_agent
 "$scripts/Set-SshTheme.sh" "$name"
 
 tmux switch-client -t "=$name"
-"$scripts/Set-NeovimLayout.sh" "$name:"
+"$scripts/Set-NeovimLayout.sh" -n "$name:"
 exit 0

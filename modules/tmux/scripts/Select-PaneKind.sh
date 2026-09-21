@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The picker pane of the default layout, and the pane opener behind prefix+e.
+# The picker pane of the default layout, and the pane opener behind prefix+e
+# and prefix+E.
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents), and
@@ -10,6 +11,10 @@
 #
 # With a kind it splits a new pane off -t running that kind, the way
 # New-ToolPane.sh does -- prefix+e and prefix+- then e open NeoVim that way.
+# The kind Picker splits off a new pane that asks, the way the layout's picker
+# does -- prefix+E and prefix+- then E. A new pane is the only way to get one
+# outside a new session: nothing types the picker into a pane that is already
+# there.
 #
 # In an ssh session (prefix+N) the picker itself runs here, where fzf is, and
 # the chosen tool runs on the remote like every other pane (pane_command).
@@ -18,7 +23,8 @@
 #   -t <target>   with a kind: the pane the split is relative to; bindings pass
 #                 "#{pane_id}". Without one: the pane to turn (default $TMUX_PANE)
 #   -v            with a kind: split below instead of to the right
-#   kind          one of PANE_KINDS; omitted, the pane asks
+#   kind          one of PANE_KINDS, or Picker for a new pane that asks;
+#                 omitted, this pane asks
 set -euo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
@@ -40,6 +46,12 @@ kind="${1:-}"
 # go to the status line.
 if [ -n "$kind" ]; then
   origin="$(current_pane "$target")"
+  # Always local, like the layout's picker: fzf runs here, and the pane hands
+  # what it becomes to pane_command itself.
+  if [ "$kind" = Picker ]; then
+    new_pane "$origin" "Picker" "bash ~/.modules/tmux/scripts/Select-PaneKind.sh" "$direction" >/dev/null
+    exit 0
+  fi
   pane_kind "$origin" "$kind" || warn "Select-PaneKind.sh: unknown kind $kind"
   new_pane "$origin" "$kind" "$(pane_command "$origin" "$kind_command" "$kind_no_exit")" "$direction" >/dev/null
   exit 0

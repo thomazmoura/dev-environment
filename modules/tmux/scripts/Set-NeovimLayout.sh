@@ -16,17 +16,28 @@
 # -- the terminal reaching the top of the window, or the radar column being all
 # that is left -- and then as a picker, or as NeoVim with -f.
 #
-# Usage: Set-NeovimLayout.sh [-f] [target]
+# Nothing is ever typed into a pane this script did not create, unless -n says
+# the caller has just created it: the pane a binding fires in may be running
+# anything -- an agent, an editor, a half-typed command -- and a window laid
+# out before @layout_role existed looks just like a fresh one. Without -n that
+# pane is left alone and the layout is built around it; prefix+E opens a new
+# picker pane when one is wanted.
+#
+# Usage: Set-NeovimLayout.sh [-f] [-n] [target]
 #   -f       force the NeoVim layout (prefix+V): NeoVim instead of the picker,
 #            plus a missing terminal row under NeoVim, and a missing NeoVim
 #            right beside the radar column even when other panes have taken
 #            its place.
+#   -n       the target is the only pane of a window the caller has just
+#            created, still an idle shell: it becomes the picker (NeoVim with
+#            -f) rather than being built around.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
-# Used by the prefix+v / prefix+V bindings and by New-CodeSession.sh and
-# New-SshSession.sh, which build a session and then hand it here so a new
-# project always opens the same way -- on the remote, for an ssh session.
+# Used by the prefix+v / prefix+V bindings and, with -n, by New-CodeSession.sh,
+# New-SshSession.sh and vtmux (linux-profile.ps1), which build a session and
+# then hand it here so a new project always opens the same way -- on the
+# remote, for an ssh session.
 set -euo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
@@ -35,9 +46,11 @@ source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
 die() { warn "$@"; }
 
 force=""
-while getopts ":f" option; do
+new_window=""
+while getopts ":fn" option; do
   case "$option" in
     f) force="yes" ;;
+    n) new_window="yes" ;;
     *) die "Set-NeovimLayout.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -76,20 +89,11 @@ nvim_command="$(pane_command "$top" "$editor" "$kind_no_exit")"
 # The picker, as a new pane runs it. Always local: fzf runs here.
 picker_command="bash ~/.modules/tmux/scripts/Select-PaneKind.sh"
 
-# What is typed into the pane the layout was applied to, on a fresh window. In
-# an ssh session that pane is either still a local shell -- the first pane of a
-# session New-SshSession.sh has just created -- which has to ssh there first,
-# or already a shell on the remote (prefix+v from a remote pane), where another
-# ssh would only nest a second connection inside the first -- and where the
-# picker, a local script, cannot run, so that pane gets NeoVim whatever -f says.
-top_picker="yes"
-[ -z "$force" ] || top_picker=""
-if [ -n "$remote" ] && [ "$(tmux display-message -p -t "$top" '#{pane_current_command}')" = ssh ]; then
-  top_picker=""
-  editor_line="$(remote_typed_command "$top" "$editor" no-exit)"
-else
-  editor_line="$(closing_line "$nvim_command")"
-fi
+# What is typed into the pane the layout was applied to, with -n. That pane is
+# a local shell even in an ssh session -- the first pane of a session
+# New-SshSession.sh has just created -- so NeoVim goes through the same ssh a
+# new pane would, and the picker runs here as it always does.
+editor_line="$(closing_line "$nvim_command")"
 picker_line="$(closing_line "$picker_command")"
 
 # The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
@@ -197,13 +201,16 @@ fit_pane() {
 # main pane and the terminal are laid out and repaired.
 find_layout_panes
 
-# A window with none of the layout in it is a fresh one: the pane the binding
-# fired in becomes the picker, or NeoVim with -f, and the fixed panes are built
-# around it below.
+# A window the caller has just created (-n), with none of the layout in it
+# yet: its one pane becomes the picker, or NeoVim with -f, and the fixed panes
+# are built around it below. Any other window's panes are the user's, the one
+# the binding fired in included -- a window with no layout at all just gets the
+# radar column beside what is already there (and, with -f, NeoVim between the
+# two).
 fresh=""
-if [ -z "$git$agents$terminal$neovim$picker" ]; then
+if [ -n "$new_window" ] && [ -z "$git$agents$terminal$neovim$picker" ]; then
   fresh="yes"
-  if [ -n "$top_picker" ]; then
+  if [ -z "$force" ]; then
     picker=$top
     label_pane "$picker" "Picker"
     mark_role "$picker" picker

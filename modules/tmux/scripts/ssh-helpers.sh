@@ -144,20 +144,6 @@ ssh_command() {
   printf '%s%s %q%s %q' "$unlock" "$line" "$target" "$tag" "$remote"
 }
 
-# remote_typed_command <pane> <command> [no-exit]
-# What to type into a pane that is already a shell on the remote, as opposed
-# to a local shell that still has to ssh there (prefix+v fired from a remote
-# pane). On a dev-environment remote that shell is pwsh, so it gets the same
-# pwsh call a new pane would; anywhere else the command is typed as it is.
-remote_typed_command() {
-  local pane=$1 command=$2 no_exit=${3:-}
-  if ssh_is_devenv "$pane"; then
-    pwsh_invocation "$command" "$no_exit"
-  else
-    printf '%s' "$command"
-  fi
-}
-
 # remote_directory_matches <pane> <glob>
 # directory_matches (tmux-helpers.sh), asked of the session's working directory
 # on the remote. <glob> is left unquoted on purpose so the remote shell expands

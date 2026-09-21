@@ -43,5 +43,5 @@ if ! tmux has-session -t "=$name" 2>/dev/null; then
 fi
 
 tmux switch-client -t "=$name"
-[ -n "${layout:-}" ] && "$scripts/Set-NeovimLayout.sh" "$name:"
+[ -n "${layout:-}" ] && "$scripts/Set-NeovimLayout.sh" -n "$name:"
 exit 0
