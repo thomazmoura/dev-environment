@@ -5,9 +5,9 @@ Answers one question: **where did I leave each of my repositories?**
     prefix + t  then  R     one row per tmux session, live, in a normal pane
 
 ```
- ● dev-environment
+ ● dev-environment             ●1●2
    main ⇡4 ~6 ?2
-▎● Portal
+▎● Portal                        ●1
 ▎  feature/relatorios ⇣1
  ● scratch
    no-upstream-branch local +1
@@ -65,6 +65,16 @@ branch name is truncated before the counts are -- the counts are the point.
 A session name that does not fit is cut from the middle instead of the end
 (`apol…ment`): an ssh session is named `<host>-<directory>`, and it takes both
 ends to tell two of them apart.
+
+**The agents in each session sit flush right on its first line** -- the
+status bar's agent-radar summary, filtered to that session: `●1●2` is one agent
+waiting on you and two working, red waiting, green done, yellow working, grey
+unknown. Idle agents are left out for the same reason they are left out of the
+status bar, so a row with nothing there has nothing running that wants you. It
+reads agent-radar's own snapshot and redraws when that changes, on its
+one-second tick rather than git's three. The `prefix + /` session picker shows
+the same summary as a column after the session name (`Get-GitState.py
+--agents`). Without agent-radar installed, both simply leave it out.
 
 `local` marks a branch with no upstream. Without it, "show only non-zero
 counters" would render a branch you have never pushed identically to one that is

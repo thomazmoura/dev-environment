@@ -31,6 +31,13 @@ one of them: their rows are asked of their host's own git-radar (git_remote),
 and f/p/P on such a row run on the host over ssh. A host that cannot be asked
 shows its row as offline, saying why. See the README's "ssh sessions".
 
+Each entry's first line ends, flush right, with the agents running in that
+session -- agent-radar's status-bar summary filtered to it, ●1●2 coloured by
+state and with idle agents left out -- so a session with an agent waiting on
+you, or still working, is visible from the git feed too. It is agent-radar's
+snapshot, read the same way the status bar reads it, and it redraws when that
+snapshot changes rather than on git's slower tick.
+
 Rows are sorted by session name, not by how much they need attention. This list
 doubles as your session list, and a row that jumps while you are reaching for
 Enter is worse than one you have to scan for -- attention is carried by colour.
@@ -216,6 +223,17 @@ STATE_EMPHASIS = {
     gitr.CLEAN: curses.A_DIM,
     gitr.NOREPO: curses.A_DIM,
     gitr.OFFLINE: curses.A_DIM,
+}
+
+# The agent summary's colours by agent-radar state, in curses terms -- the same
+# hues as its ANSI map and the status bar. Keyed by the state strings so this
+# file need not import agent-radar just to name them; unknown is resolved to
+# grey at startup, like NOREPO above.
+AGENT_STATE_COLOUR = {
+    "blocked": curses.COLOR_RED,
+    "done": curses.COLOR_GREEN,
+    "working": curses.COLOR_YELLOW,
+    "unknown": curses.COLOR_WHITE,
 }
 
 EMPTY_MESSAGE = "no tmux sessions"
@@ -419,6 +437,17 @@ def sample() -> list:
     for next time. See radar_cache.RadarCache.sample_cached.
     """
     return feed.sample_cached()
+
+
+def agent_generation() -> float:
+    """The mtime of agent-radar's snapshot, or 0 where there is no agent-radar."""
+    cli = state_cli.agent_cli()
+    if cli is None:
+        return 0.0
+    try:
+        return cli.feed.generation()
+    except Exception:
+        return 0.0
 
 
 def note_key(repo) -> str:
@@ -888,12 +917,14 @@ def draw_confirm(stdscr, session: str, use_colour: bool, palette) -> None:
 
 
 def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band,
-                  current: str, home: str):
+                  current: str, home: str, agents=None):
     """The two lines of one entry, as (text, attribute) segments.
 
     Widths are decided per row rather than per column: the counters are measured
     first and the branch is given whatever is left, so a long branch name is what
-    gets truncated in a narrow pane -- never the counts, which are the point.
+    gets truncated in a narrow pane -- never the counts, which are the point. The
+    agent summary is measured first on the top line the same way, and the name
+    gives way to it.
     """
     body = band if chosen else curses.A_NORMAL
     # Bold only where it distinguishes: bolding every name spends the emphasis
@@ -931,14 +962,33 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         (coloured(RAIL_COLOUR) | curses.A_BOLD) if (use_colour and railed) else body
     )
 
+    # Flush right, so down the pane the summaries form a column you can scan
+    # for a dot without reading a name. draw_line stops one short of the edge.
+    agent_cells = []
+    agent_width = 0
+    for state, count in agents or ():
+        attr = coloured(AGENT_STATE_COLOUR.get(state, curses.COLOR_WHITE)) if use_colour else body
+        agent_cells.append((f"{state_cli.agent_cli().GLYPH}{count}", attr | curses.A_BOLD))
+        agent_width += len(agent_cells[-1][0])
+    name_room = width - state_cli.RAIL_WIDTH - 3
+    if agent_width:
+        name_room -= agent_width + 1
+    # Cut from the middle, not the end: an ssh session's name starts with its
+    # host and ends with its directory, and both are needed to tell the rows
+    # apart in a narrow pane.
+    name = ui.truncate_middle(repo.session, name_room)
+
     first = [
         (gutter, rail_attr),
         (f"{state_cli.marker(repo)} ", marker_attr),
-        # Cut from the middle, not the end: an ssh session's name starts with
-        # its host and ends with its directory, and both are needed to tell
-        # the rows apart in a narrow pane.
-        (ui.truncate_middle(repo.session, width - state_cli.RAIL_WIDTH - 3), name_attr),
+        (name, name_attr),
     ]
+    if agent_width:
+        used = state_cli.RAIL_WIDTH + 2 + len(name)
+        gap = width - 1 - used - agent_width
+        if gap >= 1:
+            first.append((" " * gap, body))
+            first.extend(agent_cells)
 
     cells = state_cli.counters(repo)
     measured = sum(len(cell.text) + 1 for cell in cells)
@@ -976,7 +1026,8 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
 
 def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
-         focused: bool, current: str, home: str, pending: str = "") -> None:
+         focused: bool, current: str, home: str, pending: str = "",
+         agents: dict | None = None) -> None:
     if pending:
         draw_confirm(stdscr, pending, use_colour, palette)
         return
@@ -997,7 +1048,8 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
         chosen = (first_row + offset == selected) and focused
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(
-            repo, chosen, width, palette, use_colour, band, current, home
+            repo, chosen, width, palette, use_colour, band, current, home,
+            (agents or {}).get(repo.session),
         )
         fill = band if chosen else None
         ui.draw_line(stdscr, line, width, top, fill)
@@ -1051,6 +1103,7 @@ def run(stdscr, interval: float) -> None:
         COUNTER_COLOUR["untracked"] = grey
         STATE_COLOUR[gitr.NOREPO] = grey
         STATE_COLOUR[gitr.OFFLINE] = grey
+        AGENT_STATE_COLOUR["unknown"] = grey
     if use_colour:
         FOREIGN_NAME_COLOUR = (
             FOREIGN_NAME_GREY if curses.COLORS >= 256 else curses.COLOR_WHITE
@@ -1078,6 +1131,7 @@ def run(stdscr, interval: float) -> None:
     home = gitr.current_host()
 
     repos = sample()
+    agents = state_cli.agent_summaries()
     # On this pane's own row, not on row 0. Every session has a feed of its own,
     # and the row worth having under the cursor in it is the session you are in
     # -- the same row the rail already marks. See SELF_KEY for the arrivals that
@@ -1095,11 +1149,15 @@ def run(stdscr, interval: float) -> None:
     # What the redraw follows: the mtime of the snapshot the sampler publishes.
     # last_sample is only the backstop for when there is none.
     last_generation = feed.generation()
+    # agent-radar samples every second against git's three, so its snapshot is
+    # followed on its own: an agent that starts waiting should not sit unseen
+    # for the rest of a git tick.
+    last_agent_generation = agent_generation()
     # Fetch threads change the detail column between samples, and at a three
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
     draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current,
-         home, pending)
+         home, pending, agents)
 
     try:
         while True:
@@ -1240,6 +1298,7 @@ def run(stdscr, interval: float) -> None:
             if not pending and (fresh or now - last_sample >= interval):
                 anchor = repos[selected].session if repos else ""
                 repos = sample()
+                agents = state_cli.agent_summaries()
                 selected = index_of(repos, anchor, selected)
                 if not homed:
                     selected = index_of(repos, current, selected)
@@ -1248,9 +1307,15 @@ def run(stdscr, interval: float) -> None:
                 last_generation = generation
                 redraw = True
 
+            generation = agent_generation()
+            if generation != last_agent_generation:
+                agents = state_cli.agent_summaries()
+                last_agent_generation = generation
+                redraw = True
+
             if redraw:
                 draw(stdscr, repos, selected, use_colour, palette, band,
-                     focus.focused, current, home, pending)
+                     focus.focused, current, home, pending, agents)
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read

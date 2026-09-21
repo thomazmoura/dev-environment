@@ -2,7 +2,7 @@
 # Fuzzy-find another session and switch the client to it, with where each
 # session's repository stands beside its name.
 #
-#   ● session  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
+#   ● session  ●agents  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
 #
 # Bound to prefix+/ and prefix+C-p as a popup command in
 # modules/tmux/common.conf. The current session is left out of the list: it is
@@ -16,7 +16,10 @@
 # columns are padded exactly as they are in the git feed. Rows are sorted by
 # what is left to do in them: uncommitted changes first, then commits to push,
 # then commits to pull, then clean and in sync -- unlike the feed, which keeps
-# session order. Without git-radar the list falls back to bare session names.
+# session order. --agents adds agent-radar's status-bar summary for each
+# session after its name (●1●2, idle agents left out), so a session with an
+# agent waiting or working shows it before you switch. Without git-radar the
+# list falls back to bare session names.
 #
 # Usage: Select-Session.sh [--list]
 #   --list  print the rows and exit; what ctrl-r reloads from
@@ -35,7 +38,7 @@ list_rows() {
   # --cached: read the snapshot Start-GitRadar.py publishes rather than running
   # a git status per session here, so the popup opens without a pause.
   if [ -x "$git_state" ]; then
-    rows="$("$git_state" --format=fzf --sort=changes --cached 2>/dev/null)"
+    rows="$("$git_state" --format=fzf --sort=changes --agents --cached 2>/dev/null)"
   fi
   if [ -z "$rows" ]; then
     rows="$(tmux list-sessions -F $'#{session_name}\t#{session_name}')"

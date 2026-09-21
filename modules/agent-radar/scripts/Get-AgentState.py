@@ -238,21 +238,55 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
     return rows
 
 
-def render_status(panes: list[radar.Pane]) -> str:
-    """A compact count per state for the tmux status bar.
+# The states a count summary shows, in the order it shows them. Idle agents are
+# omitted: a summary is glanced at, not read, and a dot that is always present
+# teaches you to ignore the whole segment. DONE is counted precisely because it
+# cannot always be present -- it clears itself the moment you look at the pane,
+# so a green dot is news every time.
+SUMMARY_STATES = (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
 
-    Idle agents are omitted: the status bar is glanced at, not read, and a dot
-    that is always present teaches you to ignore the whole segment. DONE is
-    counted precisely because it cannot always be present -- it clears itself
-    the moment you look at the pane, so a green dot here is news every time.
-    """
+
+def state_counts(panes: list[radar.Pane]) -> list[tuple[str, int]]:
+    """(state, count) for every summarised state with at least one pane."""
     counts: dict[str, int] = {}
     for p in panes:
         counts[p.state] = counts.get(p.state, 0) + 1
+    return [(state, counts[state]) for state in SUMMARY_STATES if counts.get(state)]
+
+
+def counts_by_session(panes: list[radar.Pane]) -> dict[str, list[tuple[str, int]]]:
+    """state_counts per tmux session, leaving out sessions with nothing to show.
+
+    What git-radar's rows carry beside each session name -- the status bar's
+    summary, filtered to one session. Keyed by the local session name, which an
+    ssh session's panes carry too, so a remote agent lands on its session's row.
+    """
+    by_session: dict[str, list[radar.Pane]] = {}
+    for p in panes:
+        by_session.setdefault(p.session, []).append(p)
+    summaries = {}
+    for session, group in by_session.items():
+        counts = state_counts(group)
+        if counts:
+            summaries[session] = counts
+    return summaries
+
+
+def summary_text(counts: list[tuple[str, int]]) -> str:
+    """The summary uncoloured, e.g. "●2●1" -- what a consumer pads by."""
+    return "".join(f"{GLYPH}{count}" for _, count in counts)
+
+
+def render_ansi_summary(counts: list[tuple[str, int]]) -> str:
+    """The summary for a terminal: each dot and count in its state's colour."""
+    return "".join(f"{ANSI[state]}{GLYPH}{count}{RESET}" for state, count in counts)
+
+
+def render_status(panes: list[radar.Pane]) -> str:
+    """A compact count per state for the tmux status bar. See SUMMARY_STATES."""
     parts = [
-        f"#[fg={TMUX_COLOUR[state]}]{GLYPH}{counts[state]}"
-        for state in (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
-        if counts.get(state)
+        f"#[fg={TMUX_COLOUR[state]}]{GLYPH}{count}"
+        for state, count in state_counts(panes)
     ]
     if not parts:
         return ""

@@ -24,6 +24,11 @@ to grep or hand to fzf and a record that wraps stops being one.
   fzf     session TAB <padded, ANSI-coloured row>, for a picker
   status  #[fg=...] counts, for a tmux status-bar segment
 
+`--agents` adds a column after the session name with agent-radar's status-bar
+summary filtered to that session -- ●1●2, coloured by state, idle agents left
+out -- so a row also says whether anything is running or waiting in it. The
+feed (Watch-GitFeed.py) always shows it; the picker asks for it.
+
 ssh sessions (prefix+N) are listed too, their state asked of the host they are
 on. `--serve` is that question's other end: run over ssh by the asking
 machine's git-radar (git_remote.query), it reads directories on stdin and
@@ -39,12 +44,14 @@ Usage:
   Get-GitState.py --cached          # the shared snapshot
   Get-GitState.py --format=json
   Get-GitState.py --format=fzf --sort=changes   # dirty, then unpushed, then unpulled, then clean
+  Get-GitState.py --format=fzf --agents --cached
   Get-GitState.py --serve [--fresh] < paths
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
@@ -158,6 +165,49 @@ DETACHED_LABEL = "detached"
 LOCAL_NOTE = "local"
 
 
+# agent-radar's CLI module, which owns the per-session agent summary -- its
+# vocabulary, glyph and colours -- the same way this file owns git's. Reached by
+# relative path, as SHARED_SCRIPTS is: both deployments keep the layout under
+# modules/. Loaded on first use rather than at import, so the paths that never
+# show agents do not pay for importing agent-radar.
+AGENT_STATE_SCRIPT = gitr.MODULE_ROOT.parent / "agent-radar" / "scripts" / "Get-AgentState.py"
+_agent_cli = None
+
+
+def agent_cli():
+    """agent-radar's Get-AgentState.py as a module, or None where it is missing."""
+    global _agent_cli
+    if _agent_cli is None:
+        _agent_cli = False
+        if AGENT_STATE_SCRIPT.is_file():
+            spec = importlib.util.spec_from_file_location(
+                "get_agent_state", AGENT_STATE_SCRIPT
+            )
+            module = importlib.util.module_from_spec(spec)
+            try:
+                spec.loader.exec_module(module)
+            except Exception:
+                pass
+            else:
+                _agent_cli = module
+    return _agent_cli or None
+
+
+def agent_summaries() -> dict[str, list[tuple[str, int]]]:
+    """Each session's agent counts from agent-radar's shared snapshot.
+
+    Session name -> [(state, count)], sessions with nothing to show left out.
+    Empty when agent-radar is not installed or cannot be read: agents are an
+    extra on a git row, and a broken agent-radar must not take the row with it.
+    """
+    cli = agent_cli()
+    if cli is None:
+        return {}
+    try:
+        return cli.counts_by_session(cli.feed.sample_cached())
+    except Exception:
+        return {}
+
 
 @dataclass
 class Cell:
@@ -267,16 +317,34 @@ def change_rank(repo: gitr.Repo) -> int:
 
 
 def render_rows(
-    repos: list[gitr.Repo], coloured: bool = True, current: str = ""
+    repos: list[gitr.Repo],
+    coloured: bool = True,
+    current: str = "",
+    agents: dict[str, list[tuple[str, int]]] | None = None,
 ) -> list[str]:
     """One padded line per session, for the CLI and for fzf.
 
     Deliberately one line where the curses feed uses two: a line here is a
     record, something to grep or to hand to fzf, and a record that wraps over
     two lines stops being one.
+
+    `agents` (from agent_summaries) adds the agent column after the session
+    name. It is left out entirely when no listed session has an agent to show,
+    rather than drawn as a column of blanks.
     """
     if not repos:
         return []
+
+    cli = agent_cli() if agents else None
+    agent_cells: dict[str, tuple[str, int]] = {}
+    if cli is not None:
+        for repo in repos:
+            counts = agents.get(repo.session)
+            if counts:
+                text = cli.summary_text(counts)
+                shown = cli.render_ansi_summary(counts) if coloured else text
+                agent_cells[repo.session] = (shown, len(text))
+    agent_width = max((width for _, width in agent_cells.values()), default=0)
 
     session_width = max(len(repo.session) for repo in repos)
     branch_width = max(
@@ -307,14 +375,25 @@ def render_rows(
         if detail:
             detail = f"  {DIM}{detail}{RESET}" if coloured else f"  {detail}"
 
+        # Padded by the uncoloured width: the escapes are zero-width on screen
+        # but not to a format spec.
+        agent_column = ""
+        if agent_width:
+            shown, width = agent_cells.get(repo.session, ("", 0))
+            agent_column = f"{shown}{' ' * (agent_width - width)}  "
+
         rows.append(
-            f"{gutter}{glyph} {repo.session:<{session_width}}  {branch}{pad_branch}"
-            f"  {label}  {cells}{detail}".rstrip()
+            f"{gutter}{glyph} {repo.session:<{session_width}}  {agent_column}"
+            f"{branch}{pad_branch}  {label}  {cells}{detail}".rstrip()
         )
     return rows
 
 
-def render_fzf(repos: list[gitr.Repo], current: str = "") -> list[str]:
+def render_fzf(
+    repos: list[gitr.Repo],
+    current: str = "",
+    agents: dict[str, list[tuple[str, int]]] | None = None,
+) -> list[str]:
     """One line per session: the session name, a tab, then the visible row.
 
     fzf is given --with-nth=2.. so the name is carried along invisibly and comes
@@ -323,7 +402,7 @@ def render_fzf(repos: list[gitr.Repo], current: str = "") -> list[str]:
     """
     return [
         f"{repo.session}\t{row}"
-        for repo, row in zip(repos, render_rows(repos, current=current))
+        for repo, row in zip(repos, render_rows(repos, current=current, agents=agents))
     ]
 
 
@@ -374,6 +453,11 @@ def main() -> int:
         default="session",
         help="session order (the default), or rows with the most to do first",
     )
+    parser.add_argument(
+        "--agents",
+        action="store_true",
+        help="with table or fzf, add each session's agent-radar summary after its name",
+    )
     args = parser.parse_args()
 
     if args.serve:
@@ -395,8 +479,10 @@ def main() -> int:
         # Stable, so sessions keep their usual order within a group.
         repos.sort(key=change_rank)
 
+    agents = agent_summaries() if args.agents else None
+
     if args.format == "fzf":
-        for row in render_fzf(repos, current):
+        for row in render_fzf(repos, current, agents):
             print(row)
         return 0
 
@@ -416,7 +502,9 @@ def main() -> int:
         return 0
 
     if args.format == "table":
-        for row in render_rows(repos, coloured=sys.stdout.isatty(), current=current):
+        for row in render_rows(
+            repos, coloured=sys.stdout.isatty(), current=current, agents=agents
+        ):
             print(row)
         return 0
 
