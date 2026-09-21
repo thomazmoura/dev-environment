@@ -25,8 +25,8 @@ to grep or hand to fzf and a record that wraps stops being one.
   status  #[fg=...] counts, for a tmux status-bar segment
 
 `--agents` adds a column after the session name with agent-radar's status-bar
-summary filtered to that session -- ●1●2, coloured by state, idle agents left
-out -- so a row also says whether anything is running or waiting in it. The
+summary filtered to that session, plus its idle agents -- ●1●2●1, coloured by
+state -- so a row also says what is running in it and whether it wants you. The
 feed (Watch-GitFeed.py) always shows it; the picker asks for it.
 
 ssh sessions (prefix+N) are listed too, their state asked of the host they are

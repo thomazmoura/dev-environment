@@ -32,9 +32,9 @@ and f/p/P on such a row run on the host over ssh. A host that cannot be asked
 shows its row as offline, saying why. See the README's "ssh sessions".
 
 Each entry's first line ends, flush right, with the agents running in that
-session -- agent-radar's status-bar summary filtered to it, ●1●2 coloured by
-state and with idle agents left out -- so a session with an agent waiting on
-you, or still working, is visible from the git feed too. It is agent-radar's
+session -- agent-radar's status-bar summary filtered to it, plus its idle
+agents, ●1●2●1 coloured by state -- so a session with an agent waiting on you,
+still working, or just sitting open is visible from the git feed too. It is agent-radar's
 snapshot, read the same way the status bar reads it, and it redraws when that
 snapshot changes rather than on git's slower tick.
 
@@ -234,6 +234,9 @@ AGENT_STATE_COLOUR = {
     "done": curses.COLOR_GREEN,
     "working": curses.COLOR_YELLOW,
     "unknown": curses.COLOR_WHITE,
+    # Base cyan where there are only 16 colours; agent-radar's muted teal
+    # (IDLE_256) where there are 256, resolved at startup like unknown.
+    "idle": curses.COLOR_CYAN,
 }
 
 EMPTY_MESSAGE = "no tmux sessions"
@@ -1104,6 +1107,9 @@ def run(stdscr, interval: float) -> None:
         STATE_COLOUR[gitr.NOREPO] = grey
         STATE_COLOUR[gitr.OFFLINE] = grey
         AGENT_STATE_COLOUR["unknown"] = grey
+    agent_cli = state_cli.agent_cli()
+    if curses.COLORS >= 256 and agent_cli is not None:
+        AGENT_STATE_COLOUR["idle"] = agent_cli.IDLE_256
     if use_colour:
         FOREIGN_NAME_COLOUR = (
             FOREIGN_NAME_GREY if curses.COLORS >= 256 else curses.COLOR_WHITE

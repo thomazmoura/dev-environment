@@ -245,28 +245,38 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
 # so a green dot is news every time.
 SUMMARY_STATES = (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
 
+# The per-session summary counts idle agents too, last. It sits beside a
+# session's name rather than in a segment glanced at from every screen, and
+# there the question is "what is running in this session" -- an idle agent is
+# part of that answer, and it is drawn in idle's muted teal so it never
+# competes with the states that want you.
+SESSION_SUMMARY_STATES = SUMMARY_STATES + (radar.IDLE,)
 
-def state_counts(panes: list[radar.Pane]) -> list[tuple[str, int]]:
-    """(state, count) for every summarised state with at least one pane."""
+
+def state_counts(
+    panes: list[radar.Pane], states: tuple[str, ...] = SUMMARY_STATES
+) -> list[tuple[str, int]]:
+    """(state, count) for every state in `states` with at least one pane."""
     counts: dict[str, int] = {}
     for p in panes:
         counts[p.state] = counts.get(p.state, 0) + 1
-    return [(state, counts[state]) for state in SUMMARY_STATES if counts.get(state)]
+    return [(state, counts[state]) for state in states if counts.get(state)]
 
 
 def counts_by_session(panes: list[radar.Pane]) -> dict[str, list[tuple[str, int]]]:
-    """state_counts per tmux session, leaving out sessions with nothing to show.
+    """state_counts per tmux session, leaving out sessions with no agents.
 
     What git-radar's rows carry beside each session name -- the status bar's
-    summary, filtered to one session. Keyed by the local session name, which an
-    ssh session's panes carry too, so a remote agent lands on its session's row.
+    summary filtered to one session, plus its idle agents (see
+    SESSION_SUMMARY_STATES). Keyed by the local session name, which an ssh
+    session's panes carry too, so a remote agent lands on its session's row.
     """
     by_session: dict[str, list[radar.Pane]] = {}
     for p in panes:
         by_session.setdefault(p.session, []).append(p)
     summaries = {}
     for session, group in by_session.items():
-        counts = state_counts(group)
+        counts = state_counts(group, SESSION_SUMMARY_STATES)
         if counts:
             summaries[session] = counts
     return summaries

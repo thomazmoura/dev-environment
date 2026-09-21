@@ -5,7 +5,7 @@ Answers one question: **where did I leave each of my repositories?**
     prefix + t  then  R     one row per tmux session, live, in a normal pane
 
 ```
- ● dev-environment             ●1●2
+ ● dev-environment           ●1●2●1
    main ⇡4 ~6 ?2
 ▎● Portal                        ●1
 ▎  feature/relatorios ⇣1
@@ -67,10 +67,12 @@ A session name that does not fit is cut from the middle instead of the end
 ends to tell two of them apart.
 
 **The agents in each session sit flush right on its first line** -- the
-status bar's agent-radar summary, filtered to that session: `●1●2` is one agent
-waiting on you and two working, red waiting, green done, yellow working, grey
-unknown. Idle agents are left out for the same reason they are left out of the
-status bar, so a row with nothing there has nothing running that wants you. It
+status bar's agent-radar summary, filtered to that session, plus its idle
+agents: `●1●2●1` is one agent waiting on you, two working and one idle, red
+waiting, green done, yellow working, grey unknown, muted teal idle. Idle agents
+are counted here though the status bar leaves them out: beside a session's name
+the question is what is running in it, and a row with nothing there has no
+agent open at all. It
 reads agent-radar's own snapshot and redraws when that changes, on its
 one-second tick rather than git's three. The `prefix + /` session picker shows
 the same summary as a column after the session name (`Get-GitState.py

@@ -17,8 +17,8 @@
 # what is left to do in them: uncommitted changes first, then commits to push,
 # then commits to pull, then clean and in sync -- unlike the feed, which keeps
 # session order. --agents adds agent-radar's status-bar summary for each
-# session after its name (●1●2, idle agents left out), so a session with an
-# agent waiting or working shows it before you switch. Without git-radar the
+# session after its name, idle agents included (●1●2●1), so a session with an
+# agent waiting, working or open shows it before you switch. Without git-radar the
 # list falls back to bare session names.
 #
 # Usage: Select-Session.sh [--list]
