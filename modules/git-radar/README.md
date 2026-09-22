@@ -89,7 +89,9 @@ counters" would render a branch you have never pushed identically to one that is
 fully in sync -- the one case where an absent arrow means the opposite of what it
 usually does.
 
-Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` refreshes now,
+Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` reloads the
+feed (as if the pane were closed and reopened), `R` does that and restarts the
+sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
 it and `P` pushes it, `c` commits it, `q` or `d` kills the selected session
 after asking, `Ctrl-C` closes the pane.
@@ -300,7 +302,7 @@ is the one place they are kept out of every list of sessions.
 poller's threads, and the sampler only reads the last answer each tick, so the
 local rows keep their three seconds and a `q` keeps its tenth of one. A host's
 answer changing wakes the sampler at once rather than on its next tick, and a
-nudge (`r`, a finished fetch) asks every host again with `--fresh` -- sampled
+nudge (a finished fetch, a killed session) asks every host again with `--fresh` -- sampled
 now, not read from a snapshot that predates the fetch.
 
 The ssh is BatchMode and `ControlMaster=no`: it rides the master connection the
@@ -416,8 +418,7 @@ flag: **1.3s before, 0.2s now**.
 
 The same applies to `f`, `p`, `P` and `c`: a finished fetch has moved the refs, and
 the counts on screen cannot change until something samples the repository
-again. And to `r`, where "refresh now" that returns identical numbers is
-indistinguishable from a dead key.
+again.
 
 The machinery is [`radar_cache.py`](../tmux/scripts/radar_cache.py) --
 `request_sample()` touches a flag, `wait_for_tick()` is what the sampler sleeps

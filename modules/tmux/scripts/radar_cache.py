@@ -34,6 +34,7 @@ row *is*, how it is sampled and any cross-sample smoothing stay with each radar.
     cache.read() / cache.sample_cached(sample)         what consumers call
     cache.source_baseline() / source_changed()         has the code been edited?
     cache.restart_daemon(lock, interval)               hand over to that code
+    cache.kill_daemon()                                kill it and start another
 
 It lives under modules/tmux/scripts rather than inside either radar because it
 belongs to neither. Both radars are tmux consumers and both already reach into
@@ -46,6 +47,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -497,6 +499,60 @@ class RadarCache:
             # branch where it was nothing.
             print(f"{self.name}: restart failed: {error!r}", file=sys.stderr, flush=True)
             os._exit(0)
+
+    def daemon_pids(self) -> list[int]:
+        """The pids holding the sampler lock, read from /proc/locks.
+
+        The lock, not a scan for open descriptors: every consumer opens the lock
+        file for a moment in `daemon_running`, and only the sampler holds it.
+        Empty wherever /proc/locks cannot be read, which is a no-op for
+        `kill_daemon` rather than a guess.
+        """
+        try:
+            info = self.lock_path().stat()
+            with open("/proc/locks") as locks:
+                lines = locks.read().splitlines()
+        except OSError:
+            return []
+        # "<major>:<minor>:<inode>", the device numbers in hex.
+        device = f"{os.major(info.st_dev):02x}:{os.minor(info.st_dev):02x}:{info.st_ino}"
+        pids = set()
+        for line in lines:
+            fields = line.split()
+            # "1: FLOCK ADVISORY WRITE <pid> <dev:inode> ...", or with a "->"
+            # after the number for a request still blocked on the lock.
+            if "->" in fields:
+                continue
+            if len(fields) >= 6 and fields[1] == "FLOCK" and fields[5] == device:
+                try:
+                    pids.add(int(fields[4]))
+                except ValueError:
+                    pass
+        pids.discard(os.getpid())
+        return sorted(pids)
+
+    def kill_daemon(self, timeout: float = 2.0) -> None:
+        """Stop the sampler, the way killing it by hand would, and start a new one.
+
+        SIGTERM first, then SIGKILL for one that has not let go of the lock by
+        `timeout` -- a sampler stuck in a hung `git status` or a dead ssh host is
+        the usual reason to want this at all. The replacement is started here
+        rather than left to the next consumer's tick, so it is already sampling
+        by the time whoever asked is back on screen.
+        """
+        pids = self.daemon_pids()
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            for pid in pids:
+                try:
+                    os.kill(pid, sig)
+                except OSError:
+                    pass
+            deadline = time.monotonic() + timeout
+            while self.daemon_running() and time.monotonic() < deadline:
+                time.sleep(NUDGE_POLL)
+            if not self.daemon_running():
+                break
+        self.ensure_daemon()
 
     def wait_for_tick(self, remaining: float, seen: float, also=None) -> float:
         """Sleep out the rest of a tick, unless somebody asks for a sample sooner.

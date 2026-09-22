@@ -41,8 +41,9 @@ It redraws when the sampler publishes rather than on a timer of its own, which
 would stack with the sampler's: a pane closing just after a tick would keep its
 row for the rest of that tick and then for the rest of ours.
 
-Keys: j/k/g/G move, Enter jumps to the agent's pane, r refreshes now, Ctrl-C
-closes the pane.
+Keys: j/k/g/G move, Enter jumps to the agent's pane, r reloads the
+feed (as if the pane were closed and reopened), R does that and restarts the
+sampler behind it too (as if it were killed), Ctrl-C closes the pane.
 
 Ctrl-C and nothing else, deliberately: this is a pane you leave open and type
 past, so closing it should take a gesture you cannot make by accident. q and Esc
@@ -348,7 +349,15 @@ def index_of(panes: list, pane_id: str, fallback: int) -> int:
     return max(0, min(fallback, len(panes) - 1))
 
 
-def run(stdscr, interval: float) -> None:
+# What r and R ask of main(). r starts this feed afresh, as closing and reopening
+# the pane would; R does the same after killing the sampler behind it too.
+RELOAD = "reload"
+RESTART = "restart"
+
+
+def run(stdscr, interval: float) -> str:
+    """Run the feed. Returns what to do once curses is gone: "", or one of
+    RELOAD and RESTART, which main() carries out."""
     curses.curs_set(0)
 
     # Ctrl-C is the only way out, and it has to close the *pane*. The pane
@@ -416,7 +425,13 @@ def run(stdscr, interval: float) -> None:
             # ui.Focus has already swallowed the escape *sequences* by now, so
             # what is left is only a real Esc press.
             elif key == 3:  # Ctrl-C
-                return
+                return ""
+            elif key == ord("r"):
+                # Handed back to main() rather than done here: the terminal has
+                # to be put back before this process is replaced.
+                return RELOAD
+            elif key == ord("R"):
+                return RESTART
             elif key in (ord("j"), curses.KEY_DOWN):
                 selected = min(selected + 1, max(0, len(panes) - 1))
                 redraw = True
@@ -434,8 +449,6 @@ def run(stdscr, interval: float) -> None:
                     jump(panes[selected].pane_id)
             elif key == curses.KEY_RESIZE:
                 redraw = True
-            elif key == ord("r"):
-                last_sample = 0
 
             # A stat on every pass of this loop, which already runs ten times a
             # second for the keyboard -- not a read, since decoding the snapshot
@@ -477,9 +490,21 @@ def main() -> int:
         return 2
 
     try:
-        curses.wrapper(run, interval)
+        action = curses.wrapper(run, interval)
     except KeyboardInterrupt:
-        pass
+        return 0
+    if action == RESTART:
+        # The sampler holds its own copy of the code and its own state (the
+        # snapshot's history, a stuck remote host), and a reload of the feed
+        # alone keeps reading from it. Killed here, before the exec, so the
+        # new feed's first read is already the new sampler's.
+        feed.CACHE.kill_daemon()
+    if action:
+        # After curses.wrapper has restored the terminal, so the new process
+        # starts from the same state a freshly opened pane would. Re-reads the
+        # script and every module it imports, which is the point: an edit to
+        # the feed shows up without closing and reopening the pane.
+        os.execv(sys.executable, [sys.executable, *sys.argv])
     return 0
 
 
