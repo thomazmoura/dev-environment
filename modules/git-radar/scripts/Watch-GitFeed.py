@@ -278,6 +278,12 @@ FAILED_GLYPH = "\u2717"  # ✗
 BUSY_GLYPH_COLOUR = curses.COLOR_MAGENTA
 FAILED_GLYPH_COLOUR = curses.COLOR_RED
 
+# Where a clean, in-sync row's counters would be, so "nothing to report" is said
+# rather than left for an empty slot to imply. A check mark, not the ✔️ emoji,
+# for the same one-cell reason as the glyphs above; dimmed, because it is the
+# one thing on the row that never needs acting on.
+CLEAN_GLYPH = "\u2713"  # ✓
+
 # The errors that mean "no usable credential", as opposed to "no network" or "no
 # such remote". Only these are worth offering a key for, and they are the same
 # whichever of the three commands hit them.
@@ -1012,7 +1018,6 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
             first.extend(agent_cells)
 
     cells = state_cli.counters(repo)
-    measured = sum(len(cell.text) + 1 for cell in cells)
     note = state_cli.upstream_note(repo)
     fetched = notes.get(note_key(repo))
     detail = fetched.text if fetched and fetched.text else state_cli.detail_text(repo)
@@ -1026,9 +1031,26 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     else:
         lead = [(ui.INDENT, body)]
 
-    room = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - measured - 1
+    # The summary -- upstream note, counters, or the clean mark -- is flush
+    # right, like the agent summary above it, so down the pane it forms a column
+    # whatever length each branch is. Measured first; the branch gets the rest.
+    summary = []
     if note:
-        room -= len(note) + 1
+        summary.append((f" {note}", body | curses.A_DIM))
+    for cell in cells:
+        colour = COUNTER_COLOUR[cell.key]
+        attr = coloured(colour) if use_colour else body
+        if cell.key in GREY_COUNTERS or not use_colour:
+            attr = body | curses.A_DIM
+        elif cell.key == "conflicted":
+            attr |= curses.A_BOLD
+        summary.append((f" {cell.text}", attr))
+    if repo.state == gitr.CLEAN:
+        summary.append((f" {CLEAN_GLYPH}", body | curses.A_DIM))
+    summary_width = sum(len(text) for text, _ in summary)
+
+    # draw_line stops one short of the edge.
+    room = width - 1 - state_cli.RAIL_WIDTH - len(ui.INDENT) - summary_width
     # A row with no repository has no branch, so the state label takes the slot
     # -- it is the only thing there is to say about it.
     text = state_cli.branch_label(repo) or state_cli.state_label(repo)
@@ -1039,18 +1061,16 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         *lead,
         (branch, branch_attr),
     ]
-    if note:
-        second.append((f" {note}", body | curses.A_DIM))
-    for cell in cells:
-        colour = COUNTER_COLOUR[cell.key]
-        attr = coloured(colour) if use_colour else body
-        if cell.key in GREY_COUNTERS or not use_colour:
-            attr = body | curses.A_DIM
-        elif cell.key == "conflicted":
-            attr |= curses.A_BOLD
-        second.append((f" {cell.text}", attr))
-    if detail:
-        second.append((f"  {detail}", body | curses.A_DIM))
+    # The detail only gets what the whole branch leaves over: it is the one
+    # thing on the line that is allowed to be clipped.
+    spare = room - len(branch)
+    if detail and spare > 3:
+        shown = ui.truncate(detail, spare - 3)
+        second.append((f"  {shown}", body | curses.A_DIM))
+        spare -= len(shown) + 2
+    if summary:
+        second.append((" " * max(0, spare), body))
+        second.extend(summary)
 
     return first, second
 

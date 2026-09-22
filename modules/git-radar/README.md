@@ -43,7 +43,13 @@ no session.
 
 **A counter appears only when it is non-zero.** A row of `+0 ~0 -0 ?0` has to be
 read before it can be dismissed; a lone green `+2` does not. What is left on the
-row is only what is true, so a clean repository is just a name and a branch.
+row is only what is true. A clean, in-sync repository shows a single muted `✓`
+where the counters would be, so "nothing to do" is said rather than left for an
+empty slot to imply -- a check mark, not the `✔️` emoji, because the layout counts
+characters and an emoji is two wide.
+
+**The counters sit flush right on the second line**, as the agent summary does on
+the first, so down the pane they form a column whatever length each branch is.
 
 Green added, yellow modified, red deleted, grey untracked is the vocabulary
 every diff already uses, so it needs no learning. The two arrows take cyan and
@@ -217,7 +223,7 @@ worse than a keypress that visibly did not take.
 
 What a row is doing is a single glyph in the column under its state dot, left
 of the branch: `↻` fetching, `↓` pulling, `↑` pushing, `✎` committing, and a red
-`✗` once one of them has failed, with the reason after the counters. It sits
+`✗` once one of them has failed, with the reason after the branch. It sits
 there rather than after the branch so that a long branch name in a narrow pane
 can never push it off the edge.
 
