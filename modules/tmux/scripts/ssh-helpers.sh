@@ -192,8 +192,13 @@ remote_agent_env() {
 # is no lock between them. Unlocking in one pane and reopening the others is
 # the way out of that.
 #
-# The key, and the condition for adding it at all, are linux-profile.ps1's: a
-# host with no ~/.ssh/id_rsa.pub, or with ~/.skip-ssh, is left alone. An agent
+# The key, and the condition for adding it at all, are linux-profile.ps1's and
+# Add-SshKey's: the one SSH_KEY_FILE names, else the first ~/.ssh/*.pub's; a
+# host with neither, or with ~/.skip-ssh, is left alone. SSH_KEY_FILE is taken
+# from the environment ssh hands this script or, since this is sh and not the
+# pwsh profile, from its `$env:SSH_KEY_FILE = ...` line in ~/.profile.ps1,
+# where the host's own panes read it -- otherwise the panes would find their
+# key missing from the agent and ask again. An agent
 # that already holds the key -- another session on this host unlocked it --
 # means there is nothing to ask. A socket nobody answers on is what an agent
 # that died leaves behind, and ssh-agent will not bind over it, so it goes.
@@ -208,8 +213,21 @@ remote_agent_env() {
 remote_agent_unlock() {
   local target=$1 key=${2:-} script
   script="a=\"$REMOTE_AGENT_DIR\""'
-key="${2:-$HOME/.ssh/id_rsa}"
-[ -n "$2" ] || { [ -f "$key.pub" ] && [ ! -e "$HOME/.skip-ssh" ]; } || exit 0
+key="$2"
+if [ -z "$key" ]; then
+  [ -e "$HOME/.skip-ssh" ] && exit 0
+  f="${SSH_KEY_FILE:-}"
+  [ -n "$f" ] || f="$(sed -n "s/^[[:space:]]*\$env:SSH_KEY_FILE[[:space:]]*=//p" "$HOME/.profile.ps1" 2>/dev/null |
+    tail -n 1 | tr -d "\"\047[:space:]")"
+  if [ -z "$f" ]; then
+    for p in "$HOME"/.ssh/*.pub; do
+      [ -f "$p" ] && { f="$(basename "$p" .pub)"; break; }
+    done
+  fi
+  [ -n "$f" ] || exit 0
+  key="$HOME/.ssh/$f"
+  [ -f "$key" ] || exit 0
+fi
 command -v ssh-agent >/dev/null 2>&1 || exit 0
 umask 077
 mkdir -p "$a" && chmod 700 "$a" || exit 1

@@ -316,7 +316,7 @@ popup, which for a remote row offers to unlock *the host's* key in its shared
 agent (`remote_agent_unlock`) and retries there. The key is picked on the host
 the same way a local row's is -- what its `ssh -G` would try for that remote and
 its shared agent does not hold -- so a GitHub that only knows the host's
-`id_ed25519` gets that key, not the `id_rsa` the panes unlock. Notes are keyed
+`id_ed25519` gets that key, not the key the panes unlock. Notes are keyed
 by host and root, so `~/code/x` here and `~/code/x` there never share a busy flag.
 
 **Both machines need this version.** The remote runs its own `~/.modules`
