@@ -215,6 +215,12 @@ pressed on a busy row does nothing rather than queueing: the row is already
 saying what it is doing, and a second command you did not notice starting is
 worse than a keypress that visibly did not take.
 
+What a row is doing is a single glyph in the column under its state dot, left
+of the branch: `↻` fetching, `↓` pulling, `↑` pushing, `✎` committing, and a red
+`✗` once one of them has failed, with the reason after the counters. It sits
+there rather than after the branch so that a long branch name in a narrow pane
+can never push it off the edge.
+
 ## Rows are in session order, not urgency order
 
 agent-radar sorts blocked agents to the top, because you open that list to find

@@ -265,6 +265,19 @@ OP_PARALLEL = 4
 # work in progress has no deadline, because it ends when the work does.
 NOTE_TTL = 8.0
 
+# What a row shows under its state dot while something runs in it, and once it
+# has failed. One cell each and never an emoji: the layout counts characters, and
+# a double-width glyph would shove the branch one column right of every other
+# row's. Arrows that are not the counters' dashed ⇡/⇣, so "pushing" never reads
+# as "one commit to push".
+FETCH_GLYPH = "\u21bb"   # ↻
+PULL_GLYPH = "\u2193"    # ↓
+PUSH_GLYPH = "\u2191"    # ↑
+COMMIT_GLYPH = "\u270e"  # ✎
+FAILED_GLYPH = "\u2717"  # ✗
+BUSY_GLYPH_COLOUR = curses.COLOR_MAGENTA
+FAILED_GLYPH_COLOUR = curses.COLOR_RED
+
 # The errors that mean "no usable credential", as opposed to "no network" or "no
 # such remote". Only these are worth offering a key for, and they are the same
 # whichever of the three commands hit them.
@@ -327,11 +340,14 @@ class Note:
     no-lock reasoning below true, and so that == compares by value -- the draw
     loop notices new notes by comparing the whole dict against its last copy.
 
-    `text` is what the row shows; `detail` is the full message the popup shows,
-    which is usually several lines and never fits a row.
+    `glyph` is the one character the row shows in the slot under the state dot,
+    left of the branch, where no branch name can push it off the edge. `text` is
+    what the row says after the counters, if anything -- a finished note's
+    reason, which the pane may well clip; `detail` is the full message the popup
+    shows, which is usually several lines and never fits a row.
     """
 
-    text: str
+    text: str = ""
     detail: str = ""
     # A monotonic deadline, or 0 for "until something replaces it" -- a note
     # marking work in progress, which ends when the work does rather than on a
@@ -343,6 +359,12 @@ class Note:
     # three operations sharing one note "is it fetching?" would happily let a p
     # start on top of an f and leave two git processes fighting over index.lock.
     busy: bool = False
+    glyph: str = ""
+
+
+def finished(text: str, detail: str = "") -> Note:
+    """A note for work that ended without doing what was asked. It expires."""
+    return Note(text, detail, time.monotonic() + NOTE_TTL, glyph=FAILED_GLYPH)
 
 
 def git_argv(repo, *args: str) -> list[str]:
@@ -415,13 +437,13 @@ class Op:
     """
 
     verb: str
-    progress: str
+    glyph: str
     argv: Callable[[gitr.Repo], "list[str] | str"]
 
 
-FETCH = Op("fetch", "fetching\u2026", fetch_argv)
-PULL = Op("pull", "pulling\u2026", pull_argv)
-PUSH = Op("push", "pushing\u2026", push_argv)
+FETCH = Op("fetch", FETCH_GLYPH, fetch_argv)
+PULL = Op("pull", PULL_GLYPH, pull_argv)
+PUSH = Op("push", PUSH_GLYPH, push_argv)
 
 # Notes by repository root, so two sessions on one repository both show it -- and
 # so the busy flag is a lock on the thing that actually has an index.lock.
@@ -505,7 +527,7 @@ def failure_note(op: Op, message: str) -> Note:
             (phrase for marker, phrase in REASON_MARKERS if marker in lowered),
             lines[0] if lines else f"{op.verb} failed",
         )
-    return Note(text, message.strip(), time.monotonic() + NOTE_TTL)
+    return finished(text, message.strip())
 
 
 def show_failure(op: Op, repo, note: Note) -> None:
@@ -589,20 +611,20 @@ def start_op(repo, op: Op, interactive: bool = True) -> None:
     if repo.state == gitr.OFFLINE:
         # Nothing to run it on. The row already says why, so the note only
         # says that the key was heard.
-        notes[key] = Note(f"cannot {op.verb}", expires=time.monotonic() + NOTE_TTL)
+        notes[key] = finished(f"cannot {op.verb}")
         return
     if not repo.root:
-        notes[key] = Note("not a git repository", expires=time.monotonic() + NOTE_TTL)
+        notes[key] = finished("not a git repository")
         return
 
     argv = op.argv(repo)
     if isinstance(argv, str):
         # A refusal the row could answer without asking anyone. It expires like
         # any other finished note.
-        notes[key] = Note(argv, expires=time.monotonic() + NOTE_TTL)
+        notes[key] = finished(argv)
         return
 
-    notes[key] = Note(op.progress, busy=True)
+    notes[key] = Note(busy=True, glyph=op.glyph)
 
     def worker() -> None:
         # Queue here rather than at the call site: the key press should be
@@ -623,14 +645,10 @@ def start_op(repo, op: Op, interactive: bool = True) -> None:
                     start_new_session=True,
                 )
             except subprocess.TimeoutExpired:
-                notes[key] = Note(
-                    f"{op.verb} timed out", expires=time.monotonic() + NOTE_TTL
-                )
+                notes[key] = finished(f"{op.verb} timed out")
                 return
             except OSError as error:
-                notes[key] = Note(
-                    f"{op.verb} failed", str(error), time.monotonic() + NOTE_TTL
-                )
+                notes[key] = finished(f"{op.verb} failed", str(error))
                 return
 
             if result.returncode == 0:
@@ -686,10 +704,10 @@ def start_commit(repo) -> None:
     elif not (repo.added or repo.modified or repo.deleted or repo.untracked):
         refusal = "nothing to commit"
     if refusal:
-        notes[key] = Note(refusal, expires=time.monotonic() + NOTE_TTL)
+        notes[key] = finished(refusal)
         return
 
-    notes[key] = Note("committing…", busy=True)
+    notes[key] = Note(busy=True, glyph=COMMIT_GLYPH)
     popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
 
     def worker() -> None:
@@ -997,7 +1015,16 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     measured = sum(len(cell.text) + 1 for cell in cells)
     note = state_cli.upstream_note(repo)
     fetched = notes.get(note_key(repo))
-    detail = fetched.text if fetched else state_cli.detail_text(repo)
+    detail = fetched.text if fetched and fetched.text else state_cli.detail_text(repo)
+    # The note's glyph takes the indent's first cell -- the column under the
+    # state dot -- so it costs the branch no room and is never the thing a
+    # narrow pane clips.
+    if fetched and fetched.glyph:
+        colour = BUSY_GLYPH_COLOUR if fetched.busy else FAILED_GLYPH_COLOUR
+        glyph_attr = (coloured(colour) if use_colour else body) | curses.A_BOLD
+        lead = [(fetched.glyph, glyph_attr), (ui.INDENT[1:], body)]
+    else:
+        lead = [(ui.INDENT, body)]
 
     room = width - state_cli.RAIL_WIDTH - len(ui.INDENT) - measured - 1
     if note:
@@ -1009,7 +1036,7 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
     second = [
         (gutter, rail_attr),
-        (ui.INDENT, body),
+        *lead,
         (branch, branch_attr),
     ]
     if note:
