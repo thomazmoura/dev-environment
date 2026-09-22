@@ -20,6 +20,11 @@
 #                 pane about the whole machine rather than the session's
 #                 directory, like the git feed (prefix+t then R), which lists
 #                 the ssh sessions itself and asks their hosts
+#   -r <role>     give the new pane this @layout_role unless a pane of its window
+#                 already has it -- the plain terminals (prefix+% and prefix+")
+#                 pass "terminal", so the first one opened in a window without a
+#                 layout terminal becomes the row prefix+v resizes
+#                 (Set-NeovimLayout.sh)
 #
 # Example, as used by the binding for prefix+t then C:
 #   New-ToolPane.sh -t "#{pane_id}" "Claude Code" "claude --resume"
@@ -38,8 +43,9 @@ no_exit=""
 print_id=""
 requires=""
 local_only=""
+role=""
 
-while getopts ":t:vl:kPd:L" option; do
+while getopts ":t:vl:kPd:Lr:" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     v) direction="-v" ;;
@@ -48,6 +54,7 @@ while getopts ":t:vl:kPd:L" option; do
     P) print_id="yes" ;;
     d) requires="$OPTARG" ;;
     L) local_only="yes" ;;
+    r) role="$OPTARG" ;;
     *) die "New-ToolPane.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -90,6 +97,11 @@ if [ -n "$requires" ]; then
 fi
 
 pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
+
+if [ -n "$role" ] &&
+  ! tmux list-panes -t "$pane" -F '#{@layout_role}' | grep -qxF "$role"; then
+  tmux set -p -t "$pane" @layout_role "$role"
+fi
 
 if [ -n "$print_id" ]; then
   printf '%s\n' "$pane"
