@@ -172,7 +172,8 @@ pane_kind() {
   kind_no_exit=""
   case "$kind" in
     NeoVim)
-      kind_no_exit="no-exit"
+      # No no-exit: quitting NeoVim closes its pane, as quitting an agent does,
+      # instead of leaving a pwsh prompt where the editor was.
       if [ -n "$bare" ]; then
         kind_command="nvim"
       else

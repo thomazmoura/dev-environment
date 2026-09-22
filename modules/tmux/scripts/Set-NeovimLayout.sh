@@ -59,6 +59,13 @@ shift $((OPTIND - 1))
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
 
+# A laid-out window is never left with nothing to work in: when its last pane
+# but the feeds closes, a picker takes that pane's place (Restore-PickerPane.sh,
+# from the pane-died and after-kill-pane hooks in common.conf). remain-on-exit
+# is what gives the hook a dead pane to respawn rather than a hole.
+tmux set -w -t "$top" @layout_window yes
+tmux set -w -t "$top" remain-on-exit on
+
 # Every pane goes through pane_command, so in an ssh session (prefix+N) the
 # whole layout runs on the remote, in the session's working directory -- all but
 # the two feeds and the picker, which always run here: each feed lists the ssh
