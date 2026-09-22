@@ -32,7 +32,7 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição de base padrões demorou: $
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 Write-Verbose "`n->> Checking if ssh key is set"
 $SshKeyFolder = "$HOME/.ssh"
-if( (Test-Path "$SshKeyFolder/id_rsa.pub") -and !(Test-Path "$HOME/.skip-ssh") ) {
+if( ($env:SSH_KEY_FILE -or (Get-ChildItem "$SshKeyFolder/*.pub" -ErrorAction SilentlyContinue)) -and !(Test-Path "$HOME/.skip-ssh") ) {
     Add-SshKey -SshKeyFolder $SshKeyFolder
 }
 $stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"

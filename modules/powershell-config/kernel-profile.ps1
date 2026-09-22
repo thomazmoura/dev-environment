@@ -809,7 +809,19 @@ function Create-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:
   }
 }
 
-function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = "id_rsa") {
+function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
+  # The key to add: the one asked for, else the one $env:SSH_KEY_FILE names,
+  # else the first key in the folder that has a .pub beside it.
+  if (!$SshKeyFile) { $SshKeyFile = $env:SSH_KEY_FILE }
+  if (!$SshKeyFile) {
+    $pub = Get-ChildItem -Path $SshKeyFolder -Filter "*.pub" -File -ErrorAction SilentlyContinue |
+      Sort-Object Name | Select-Object -First 1
+    if ($pub) { $SshKeyFile = $pub.BaseName }
+  }
+  if (!$SshKeyFile) {
+    Write-Information "`n->> No SSH key found in $SshKeyFolder"
+    return
+  }
   $sshKey = "$SshKeyFolder/$SshKeyFile"
   # An agent handed down with both variables -- by the tmux server locally, or
   # by an ssh session's pane from the host's shared agent
