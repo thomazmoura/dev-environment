@@ -113,6 +113,7 @@
     }
   ],
   "final_space": true,
+  "streaming": 100,
   "version": 2
 }
 
