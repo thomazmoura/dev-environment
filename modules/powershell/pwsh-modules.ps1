@@ -67,7 +67,9 @@ function Import-SqlServer() {
 function Import-OhMyPoshOnLinux() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   Write-Verbose "`n->> Activating oh-my-posh"
-  if( !(Get-Command oh-my-posh -ErrorAction SilentlyContinue) ) {
+  $ompBinary = "$HOME/.local/bin/oh-my-posh"
+  $ompConfig = "$HOME/.config/powershell/linux.omp.json"
+  if( !(Test-Path $ompBinary) ) {
     if(!(Test-Path "$HOME/.local/bin") ) {
       New-Item -Force -ItemType Directory -Path "$HOME/.local/bin";
     }
@@ -76,8 +78,24 @@ function Import-OhMyPoshOnLinux() {
   } else {
     Write-Verbose "OhMyPosh instalado corretamente"
   }
-  & $HOME/.local/bin/oh-my-posh init pwsh --config $HOME/.config/powershell/linux.omp.json | Invoke-Expression
-  Write-Verbose "Carregado o arquivo $HOME/.config/powershell/linux.omp.json"
+  # `init pwsh` only prints a line that runs the binary again with --print, and
+  # what that prints depends on nothing but the binary and the theme. Kept in a
+  # file rebuilt whenever either is newer, so a shell start loads it without
+  # launching oh-my-posh twice first.
+  $ompInit = "$HOME/.cache/oh-my-posh/pwsh-init.ps1"
+  $ompInitTime = if (Test-Path $ompInit) { (Get-Item $ompInit).LastWriteTime }
+  if( !$ompInitTime -or
+      $ompInitTime -lt (Get-Item $ompBinary).LastWriteTime -or
+      $ompInitTime -lt (Get-Item $ompConfig).LastWriteTime ) {
+    Write-Verbose "Regenerating $ompInit"
+    New-Item -Force -ItemType Directory -Path (Split-Path $ompInit) | Out-Null
+    & $ompBinary init pwsh --config=$ompConfig --print | Set-Content $ompInit
+  }
+  # Through Invoke-Expression, not dot-sourced: the prompt tells a debugger
+  # session apart by call-stack locations starting with "<No file>", and code
+  # loaded from a file carries its path instead, so every prompt came out [DBG].
+  Get-Content -Raw $ompInit | Invoke-Expression
+  Write-Verbose "Carregado o arquivo $ompConfig"
   $stopwatch.Stop();
   Write-Verbose "`n-->> Importação do Oh-My-Posh demorou: $($stopwatch.ElapsedMilliseconds)"
 }

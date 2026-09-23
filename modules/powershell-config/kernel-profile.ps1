@@ -79,11 +79,15 @@ $stopwatch.Stop(); Write-Verbose "`n-->> Definição da CODE_FOLDER demorou: $($
 
 # Definição de scripts padrões
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
-$cicdFolder = (
-  fd "^CI-CD$" --type d --max-depth 2 --base-directory $env:CODE_FOLDER --absolute-path 2>$null |
-  Where-Object { $_ -NotMatch 'code-scripts' } |
-  Select-Object -First 1
-)
+# Get-Item with a wildcard rather than fd: fd compiles the .gitignore of every
+# repo it passes, and a dozen Visual Studio templates of ~480 lines each made
+# this two-level search cost ~150ms on every shell start.
+$cicdFolder = if ($env:CODE_FOLDER) {
+  Get-Item "$env:CODE_FOLDER/CI-CD", "$env:CODE_FOLDER/*/CI-CD" -ErrorAction SilentlyContinue |
+  Where-Object { $_.PSIsContainer -and $_.FullName -NotMatch 'code-scripts' } |
+  Select-Object -First 1 |
+  ForEach-Object { "$($_.FullName)/" }
+}
 if ($cicdFolder) {
   Write-Verbose "`n->> CI-CD folder found at $cicdFolder, adding Utilitarios and Scripts to PATH"
   $env:PATH = "$($cicdFolder)Utilitarios:$($cicdFolder)QuickStarts/Scripts:${env:PATH}"
@@ -826,11 +830,16 @@ function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
   # An agent handed down with both variables -- by the tmux server locally, or
   # by an ssh session's pane from the host's shared agent
   # (modules/tmux/scripts/ssh-helpers.sh) -- is the one to use while it still
-  # answers. ssh-add -l exits 2 only when there is no agent to talk to.
+  # answers. ssh-add -L exits 2 only when there is no agent to talk to, and its
+  # output is kept for Test-SshKeyInAgent below, so every shell start pays for
+  # one ssh-add launch instead of two.
   $agentAlive = $env:SSH_AUTH_SOCK -and $env:SSH_AGENT_PID
+  $agentKeys = $null
+  $agentExitCode = 2
   if ($agentAlive) {
-    ssh-add -l *> $null
-    $agentAlive = $LASTEXITCODE -ne 2
+    $agentKeys = ssh-add -L 2> $null
+    $agentExitCode = $LASTEXITCODE
+    $agentAlive = $agentExitCode -ne 2
   }
   if ( !$agentAlive -and (Test-Path $sshKey) ) {
     Write-Verbose "`n->> Adding SSH key"
@@ -839,7 +848,7 @@ function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
     $env:SSH_AGENT_PID = $sshAgent[1].Split("=").Split(";")[1]
     ssh-add $sshKey
   }
-  elseif ( (Test-Path $sshKey) -and !(Test-SshKeyInAgent $sshKey) ) {
+  elseif ( (Test-Path $sshKey) -and !(Test-SshKeyInAgent $sshKey -AgentKeys $agentKeys -AgentExitCode $agentExitCode) ) {
     # The agent is running but no longer has the key: it outlived the key's
     # lifetime, or the key was removed. Added back into that same agent, so
     # this pane asks and the ones after it don't.
@@ -856,15 +865,19 @@ function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
 # public half: the first two fields of the .pub (type and key) against each
 # line of ssh-add -L. Without a .pub there is nothing to compare, and any key
 # in the agent is taken to be this one -- what Add-SshKey assumed before it
-# compared at all.
-function Test-SshKeyInAgent($SshKey) {
+# compared at all. -AgentKeys/-AgentExitCode take an ssh-add -L the caller
+# already ran; without them it asks the agent itself.
+function Test-SshKeyInAgent($SshKey, $AgentKeys, $AgentExitCode) {
+  if (!$PSBoundParameters.ContainsKey('AgentExitCode')) {
+    $AgentKeys = ssh-add -L 2> $null
+    $AgentExitCode = $LASTEXITCODE
+  }
   $pub = "$SshKey.pub"
   if (!(Test-Path $pub)) {
-    ssh-add -l *> $null
-    return $LASTEXITCODE -eq 0
+    return $AgentExitCode -eq 0
   }
   $id = ((Get-Content $pub -TotalCount 1) -split ' ')[0..1] -join ' '
-  $loaded = ssh-add -L 2>$null | Where-Object { (($_ -split ' ')[0..1] -join ' ') -eq $id }
+  $loaded = $AgentKeys | Where-Object { (($_ -split ' ')[0..1] -join ' ') -eq $id }
   return [bool]$loaded
 }
 
@@ -950,7 +963,22 @@ function Set-AutoNodeVersion() {
     nvs use lts
   }
   Write-Verbose "`n->> Setting nvs auto on"
-  nvs auto on
+  # What `nvs auto on` prints for PowerShell, written out here: generating it
+  # boots nvs's own node and its whole JS library, ~250ms on every shell start
+  # for the same ten lines each time. The hook itself still goes through
+  # nvs.ps1, which only launches node when the .node-version in scope changes.
+  if (-not $global:NVS_ORIGINAL_PROMPT) {
+    $global:NVS_ORIGINAL_PROMPT = $Function:prompt
+  }
+  function global:prompt {
+    # We have to do this so a prompt customization tool (like Oh My Posh or Starship) can get
+    # the correct last command execution status and native command return code.
+    $global:NVS_ORIGINAL_LASTEXECUTIONSTATUS = $?
+    $originalExitCode = $global:LASTEXITCODE
+    . "$env:NVS_HOME/nvs.ps1" "prompt"
+    $global:LASTEXITCODE = $originalExitCode
+    $global:NVS_ORIGINAL_PROMPT.Invoke()
+  }
   $stopwatch.Stop(); Write-Information "`n-->> Definição de versão padrão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 

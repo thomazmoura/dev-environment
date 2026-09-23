@@ -270,7 +270,7 @@ function Copy-WindowsPrints([int]$Quantity = 1, [string]$OriginPath = $null, [st
 }
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if((cat /etc/issue) -match 'ubuntu') { 
+if((Get-Content -Raw /etc/issue) -match 'ubuntu') {
 	New-Alias -Force bat batcat
 	New-Alias -Force fd fdfind
 }
