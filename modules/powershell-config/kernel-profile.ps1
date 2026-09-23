@@ -956,30 +956,22 @@ function Exit-Session() {
   exit
 }
 
-function Set-AutoNodeVersion() {
+# Switches to the node version of the .node-version (or .nvmrc) in scope, or to
+# LTS when there is none. Not run by the profile -- a prompt hook costs every
+# shell, and most never touch node -- but by the pane commands that need node:
+# NeoVim (LSP servers and Copilot) and the Copilot CLI, in
+# modules/tmux/scripts/tmux-helpers.sh, modules/tmux/common.conf and
+# modules/herdr/scripts/workspace-actions.sh.
+function Use-NodeVersion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
+  nvs use auto
+  # With no version file and no `nvs link` default, `nvs use auto` leaves no
+  # node on PATH at all.
   if ( !(Get-Command node -ErrorAction SilentlyContinue) ) {
-    Write-Warning "`n->> No default node version detected, setting as LTS"
+    Write-Verbose "`n->> No .node-version in scope, using LTS"
     nvs use lts
   }
-  Write-Verbose "`n->> Setting nvs auto on"
-  # What `nvs auto on` prints for PowerShell, written out here: generating it
-  # boots nvs's own node and its whole JS library, ~250ms on every shell start
-  # for the same ten lines each time. The hook itself still goes through
-  # nvs.ps1, which only launches node when the .node-version in scope changes.
-  if (-not $global:NVS_ORIGINAL_PROMPT) {
-    $global:NVS_ORIGINAL_PROMPT = $Function:prompt
-  }
-  function global:prompt {
-    # We have to do this so a prompt customization tool (like Oh My Posh or Starship) can get
-    # the correct last command execution status and native command return code.
-    $global:NVS_ORIGINAL_LASTEXECUTIONSTATUS = $?
-    $originalExitCode = $global:LASTEXITCODE
-    . "$env:NVS_HOME/nvs.ps1" "prompt"
-    $global:LASTEXITCODE = $originalExitCode
-    $global:NVS_ORIGINAL_PROMPT.Invoke()
-  }
-  $stopwatch.Stop(); Write-Information "`n-->> Definição de versão padrão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
+  $stopwatch.Stop(); Write-Verbose "`n-->> Definição de versão do NVS demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
 function Run-CodeFolderScripts() {

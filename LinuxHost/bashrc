@@ -12,6 +12,9 @@ if ! git config --global user.name &> /dev/null; then
 fi
 
 export NVS_HOME="$HOME/.nvs"
+# The `nvs link` default (modules/node/Setup-NVS.ps1), put on PATH without
+# launching node. nvs use swaps it out.
+export PATH="$NVS_HOME/default/bin:$PATH"
 
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)

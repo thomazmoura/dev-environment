@@ -288,7 +288,6 @@ New-Alias -Force lso Get-OctalFilePermissions
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
 
 Import-OhMyPoshOnLinux
-Set-AutoNodeVersion
 # We dot-source this so that if there's any custom functions on the code-scripts folder, they get added to the global scope
 . Run-CodeFolderScripts 
 Start-DevSession

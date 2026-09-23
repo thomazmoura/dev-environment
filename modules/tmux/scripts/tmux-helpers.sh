@@ -177,7 +177,8 @@ pane_kind() {
       if [ -n "$bare" ]; then
         kind_command="nvim"
       else
-        kind_command='~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
+        # Node for the LSP servers and Copilot (Use-NodeVersion, kernel-profile.ps1).
+        kind_command='Use-NodeVersion && ~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
       fi
       ;;
     "NeoVim (NORC)")
@@ -196,7 +197,14 @@ pane_kind() {
       fi
       ;;
     "Claude Code") kind_command="claude" ;;
-    Copilot) kind_command="copilot --max-ai-credits 500" ;;
+    Copilot)
+      # The Copilot CLI is a node package.
+      if [ -n "$bare" ]; then
+        kind_command="copilot --max-ai-credits 500"
+      else
+        kind_command="Use-NodeVersion && copilot --max-ai-credits 500"
+      fi
+      ;;
     Codex) kind_command="codex" ;;
     "Open Code") kind_command="nvs use latest && opencode" ;;
     *) return 1 ;;
