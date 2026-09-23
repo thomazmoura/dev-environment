@@ -1,0 +1,1 @@
+code -r $env:DEFAULT_VSCODE_QUERY_LOCATION --profile MSSQL
