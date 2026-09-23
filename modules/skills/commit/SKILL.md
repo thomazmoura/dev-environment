@@ -17,7 +17,7 @@ allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git comm
 
 Based on the above changes, create a single git commit:
 
-1. Stage all modified tracked files using `git add -u`
+1. Stage all changes, including new files, using `git add .`
 2. Scan what is now staged for sensitive information. Run both commands exactly as written:
 
    ```
@@ -33,7 +33,8 @@ Based on the above changes, create a single git commit:
    - The second prints each staged file header (`+++ b/<file>`) followed by any added lines that
      look like keys, tokens, passwords, credentials in URLs, absolute user or server paths, or
      private IPs. Headers with no line under them are clean.
-   - Also read the added (`+`) lines in the context diff for anything the patterns cannot catch:
+   - Also read the added (`+`) lines in the context diff — and in `git diff --cached` for newly
+     added files, which the context diff does not show — for anything the patterns cannot catch:
      internal hostnames or domains, hard-coded connection strings, real people's emails or
      personal data, customer data.
    - Judge each hit: a `~/` path, an obvious placeholder (`example.com`, `changeme`, `xxx`) or a
