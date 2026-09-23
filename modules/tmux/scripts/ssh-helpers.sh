@@ -88,7 +88,7 @@ ssh_is_devenv() {
   [ "$(ssh_option "$1" @ssh_devenv)" = yes ]
 }
 
-# remote_run <pane> <command> [no-exit]
+# remote_run <pane> <command> [no-exit] [no-pwsh]
 # How the remote runs <command>, in the same three shapes pwsh_invocation has.
 # A dev-environment remote gets exactly that pwsh call, pointed at the host's
 # shared agent. Any other host gets its login shell -- a login shell so the
@@ -96,9 +96,9 @@ ssh_is_devenv() {
 # command, and staying afterwards for no-exit. `$SHELL` is left for the remote
 # to expand.
 remote_run() {
-  local pane=$1 command=$2 no_exit=${3:-}
+  local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
   if ssh_is_devenv "$pane"; then
-    printf '%s%s' "$(remote_agent_env)" "$(pwsh_invocation "$command" "$no_exit")"
+    printf '%s%s' "$(remote_agent_env)" "$(pwsh_invocation "$command" "$no_exit" "$no_pwsh")"
   elif [ -z "$command" ]; then
     printf 'exec "$SHELL" -l'
   elif [ -n "$no_exit" ]; then
@@ -108,7 +108,7 @@ remote_run() {
   fi
 }
 
-# ssh_command <pane> <command> [no-exit]
+# ssh_command <pane> <command> [no-exit] [no-pwsh]
 # The line typed into a new local pane of <pane>'s session: ssh to the host,
 # cd into the working directory and run the command there. The pane closes when
 # the ssh ends, however it ends (see closing_line in tmux-helpers.sh).
@@ -129,11 +129,11 @@ remote_run() {
 # is being built. ssh joins its arguments with spaces, so the remote reads one
 # command: `export AGENT_RADAR_PANE=<host>/%12; cd ... && ...`.
 ssh_command() {
-  local pane=$1 command=$2 no_exit=${3:-}
+  local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
   local target dir remote opt line="ssh -t" unlock="" tag=""
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
-  remote="cd $(sq "$dir") && $(remote_run "$pane" "$command" "$no_exit")"
+  remote="cd $(sq "$dir") && $(remote_run "$pane" "$command" "$no_exit" "$no_pwsh")"
   for opt in "${SSH_OPTS[@]}"; do
     line+=" $(printf '%q' "$opt")"
   done

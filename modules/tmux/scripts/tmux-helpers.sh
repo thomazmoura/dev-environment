@@ -87,17 +87,20 @@ label_pane() {
   tmux set -p -t "$1" @pane_label "$2"
 }
 
-# pwsh_invocation <command> [no-exit]
+# pwsh_invocation <command> [no-exit] [no-pwsh]
 # Builds the pwsh invocation the bindings send. Without the second argument
 # pwsh runs the command and exits with it; with it, pwsh stays interactive
 # afterwards. An empty command opens a plain interactive pwsh -- that is what
-# the prefix+% and prefix+" terminal splits want. An ssh session runs the same
+# the prefix+% and prefix+" terminal splits want. The third leaves pwsh out:
+# the command is run by the pane's bash as it is. An ssh session runs the same
 # call on the remote (see ssh-helpers.sh).
 #
 # Either way the pane closes when pwsh does: new_pane sees to that.
 pwsh_invocation() {
-  local command=$1 no_exit=${2:-}
-  if [ -z "$command" ]; then
+  local command=$1 no_exit=${2:-} no_pwsh=${3:-}
+  if [ -n "$no_pwsh" ]; then
+    printf '%s' "$command"
+  elif [ -z "$command" ]; then
     printf 'pwsh'
   elif [ -n "$no_exit" ]; then
     printf 'pwsh -NoExit -Command "%s"' "$command"
@@ -106,7 +109,7 @@ pwsh_invocation() {
   fi
 }
 
-# pane_command <pane> <command> [no-exit]
+# pane_command <pane> <command> [no-exit] [no-pwsh]
 # What a new pane split off <pane> should run: pwsh_invocation, or the same thing
 # over ssh when <pane> belongs to a session opened with prefix+N. Every
 # pane-creating script builds its command through here, which is what lets the
@@ -157,7 +160,7 @@ new_pane() {
 PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code")
 
 # pane_kind <pane> <kind>
-# Sets kind_command and kind_no_exit to what a pane of <kind> runs, ready for
+# Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
 # pane_command. The one place these commands are spelled for the layout
 # (Set-NeovimLayout.sh), the picker, prefix+e and prefix+E -- the prefix+t bindings in
 # common.conf use the same strings.
@@ -170,6 +173,7 @@ pane_kind() {
     bare="yes"
   fi
   kind_no_exit=""
+  kind_no_pwsh=""
   case "$kind" in
     NeoVim)
       # No no-exit: quitting NeoVim closes its pane, as quitting an agent does,
@@ -183,8 +187,10 @@ pane_kind() {
       ;;
     "NeoVim (NORC)")
       # prefix+E: NeoVim without the vimrc or plugins, so no LSP packages to
-      # install first. Not in PANE_KINDS -- the picker does not offer it.
+      # install first, and run straight from bash -- no pwsh to start or
+      # profile to load. Not in PANE_KINDS -- the picker does not offer it.
       kind_command="nvim -u NORC"
+      kind_no_pwsh="no-pwsh"
       ;;
     Terminal)
       # Refresh git state, load the fzf helpers and build the project if it
