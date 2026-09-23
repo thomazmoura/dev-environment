@@ -46,15 +46,16 @@ Keys: j/k/g/G move, Enter switches to the session, r reloads the feed (as if
 the pane were closed and reopened), R does that and restarts the sampler behind
 it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
-it, c commits it, q or d kills the selected session after asking, Ctrl-C
-closes the pane.
+it, c commits it, s shows its status, q or d kills the selected session after
+asking, Ctrl-C closes the pane.
 
 c opens a popup with the repository's `git status` and asks: y stages
 everything and commits, with $EDITOR opening in the popup for the message, and
 any other key closes it having touched nothing. A popup because the commit
 needs an editor, and an editor needs a tty and room that this pane has neither
 of -- see Show-GitCommit.sh. It asks because "everything" is whatever the
-status says, untracked files included.
+status says, untracked files included. s is the same popup without the
+question: just the status, and any key closes it.
 
 p and P exist because the two counters this pane spends most of its time showing
 -- behind and ahead -- were the two it could do nothing about: it would tell you
@@ -739,6 +740,41 @@ def start_commit(repo) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
+def show_status(repo) -> None:
+    """`s`. The repository's `git status`, in a popup, touching nothing.
+
+    The read-only half of `c`: the counters on a row say how much is dirty, this
+    says what. Not marked busy, since it takes no lock and races nothing. On a
+    thread for the same reason start_commit is: display-popup blocks until the
+    popup closes, and the feed keeps drawing underneath it.
+    """
+    if repo.state == gitr.OFFLINE or not repo.root:
+        refusal = "cannot show status" if repo.root else "not a git repository"
+        notes[note_key(repo)] = finished(refusal)
+        return
+
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitStatus.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def start_fetch(repo, interactive: bool = True) -> None:
     """f and F, which are start_op(FETCH) and nothing else."""
     start_op(repo, FETCH, interactive)
@@ -1324,6 +1360,9 @@ def run(stdscr, interval: float) -> str:
             elif key == ord("c"):
                 if repos:
                     start_commit(repos[selected])
+            elif key == ord("s"):
+                if repos:
+                    show_status(repos[selected])
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same

@@ -93,14 +93,18 @@ Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` reloads the
 feed (as if the pane were closed and reopened), `R` does that and restarts the
 sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
-it and `P` pushes it, `c` commits it, `q` or `d` kills the selected session
-after asking, `Ctrl-C` closes the pane.
+it and `P` pushes it, `c` commits it, `s` shows its status, `q` or `d` kills
+the selected session after asking, `Ctrl-C` closes the pane.
 
 `c` opens a popup with the repository's `git status` and asks: `y` stages
 everything (untracked files included) and commits, with `$EDITOR` opening in
 the popup for the message; any other key closes it and touches nothing. On a
 row of an ssh session it runs on the host, over `ssh -t`, so the editor is the
 host's. See `Show-GitCommit.sh`.
+
+`s` opens the same kind of popup with the repository's `git status` and nothing
+else -- no question, any key closes it. On an ssh row it too runs on the host.
+See `Show-GitStatus.sh`.
 
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the
