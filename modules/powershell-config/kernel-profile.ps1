@@ -1,3 +1,12 @@
+# A lean profile for panes that run one command and exit (PWSH_LEAN=1, set by
+# pwsh_invocation in modules/tmux/scripts/tmux-helpers.sh): they get the same
+# environment, functions, ssh-agent and code-scripts, but skip what only a
+# prompt uses -- PSReadLine, completers and oh-my-posh (linux-profile.ps1).
+# Cleared right away so a pwsh started from inside the tool (Claude's shell,
+# NeoVim's :terminal) gets the full profile again.
+$global:LeanProfile = [bool]$env:PWSH_LEAN
+$env:PWSH_LEAN = $null
+
 $InformationPreference = "Continue";
 
 . $HOME/.modules/powershell/pwsh-modules.ps1
@@ -6,59 +15,61 @@ if(Test-Path "$HOME/.profile.ps1") {
   . $HOME/.profile.ps1
 }
 
-# Vi style cursor
-$stopwatch = [system.diagnostics.stopwatch]::StartNew()
-if ($PSVersionTable.PSVersion.Major -ge 6) {
-  $OnViModeChange = [scriptblock] {
-    if ($args[0] -eq 'Command') {
-      # Set the cursor to a blinking block.
-      Write-Host -NoNewLine "`e[1 q"
+if (!$global:LeanProfile) {
+  # Vi style cursor
+  $stopwatch = [system.diagnostics.stopwatch]::StartNew()
+  if ($PSVersionTable.PSVersion.Major -ge 6) {
+    $OnViModeChange = [scriptblock] {
+      if ($args[0] -eq 'Command') {
+        # Set the cursor to a blinking block.
+        Write-Host -NoNewLine "`e[1 q"
+      }
+      else {
+        # Set the cursor to a blinking line.
+        Write-Host -NoNewLine "`e[5 q"
+      }
     }
-    else {
-      # Set the cursor to a blinking line.
-      Write-Host -NoNewLine "`e[5 q"
+    Set-PSReadLineOption -ViModeIndicator Script -ViModeChangeHandler $OnViModeChange
+  }
+  $stopwatch.Stop(); Write-Verbose "`n-->> Troca automática de cursor demorou: $($stopwatch.ElapsedMilliseconds)"
+
+  # VI mode editing
+  $stopwatch = [system.diagnostics.stopwatch]::StartNew()
+  Set-PsReadLineOption -EditMode Vi
+  Set-PSReadlineOption -BellStyle None
+  $stopwatch.Stop(); Write-Verbose "`n-->> Ativar o modo VI demorou: $($stopwatch.ElapsedMilliseconds)"
+
+  # Enable prediction and increase history size
+  $stopwatch = [system.diagnostics.stopwatch]::StartNew()
+  try {
+    $MaximumHistoryCount = 20000
+    Set-PSReadlineOption -MaximumHistoryCount $MaximumHistoryCount
+    Set-PSReadLineOption -PredictionSource History
+    Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
+    Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
+    Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
+  }
+  catch {
+    Install-Module -Force -AcceptLicense PSReadLine 
+    Set-PSReadLineOption -PredictionSource History
+    Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
+    Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
+    Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
+  }
+  $stopwatch.Stop(); Write-Verbose "`n-->> Ativar predição demorou: $($stopwatch.ElapsedMilliseconds)"
+
+  # dotnet autocomplete
+  $stopwatch = [system.diagnostics.stopwatch]::StartNew()
+  if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+    Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
+      param($commandName, $wordToComplete, $cursorPosition)
+      dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+      }
     }
   }
-  Set-PSReadLineOption -ViModeIndicator Script -ViModeChangeHandler $OnViModeChange
+  $stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
 }
-$stopwatch.Stop(); Write-Verbose "`n-->> Troca automática de cursor demorou: $($stopwatch.ElapsedMilliseconds)"
-
-# VI mode editing
-$stopwatch = [system.diagnostics.stopwatch]::StartNew()
-Set-PsReadLineOption -EditMode Vi
-Set-PSReadlineOption -BellStyle None
-$stopwatch.Stop(); Write-Verbose "`n-->> Ativar o modo VI demorou: $($stopwatch.ElapsedMilliseconds)"
-
-# Enable prediction and increase history size
-$stopwatch = [system.diagnostics.stopwatch]::StartNew()
-try {
-  $MaximumHistoryCount = 20000
-  Set-PSReadlineOption -MaximumHistoryCount $MaximumHistoryCount
-  Set-PSReadLineOption -PredictionSource History
-  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
-  Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
-  Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
-}
-catch {
-  Install-Module -Force -AcceptLicense PSReadLine 
-  Set-PSReadLineOption -PredictionSource History
-  Set-PSReadLineOption -Colors @{ InlinePrediction = "#666699" }
-  Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
-  Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Ativar predição demorou: $($stopwatch.ElapsedMilliseconds)"
-
-# dotnet autocomplete
-$stopwatch = [system.diagnostics.stopwatch]::StartNew()
-if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-  Register-ArgumentCompleter -Native -CommandName dotnet -ScriptBlock {
-    param($commandName, $wordToComplete, $cursorPosition)
-    dotnet complete --position $cursorPosition "$wordToComplete" | ForEach-Object {
-      [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-    }
-  }
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Importação do autocomplete do dotnet demorou: $($stopwatch.ElapsedMilliseconds)"
 
 $stopwatch = [system.diagnostics.stopwatch]::StartNew()
 if (! ($env:CODE_FOLDER)) {

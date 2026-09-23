@@ -96,11 +96,12 @@ new_tab() { # <workspace_id> <cwd> <label> <--focus|--no-focus>
 # leaves the error on screen. TERMINAL_COMMAND is the one that keeps -NoExit,
 # and must: its -Command is only profile setup, so without it the tab would
 # open and vanish in the same breath. Exiting that pwsh still closes the tab.
-NVIM_COMMAND="pwsh -Command 'Use-NodeVersion && $HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim' && exit"
+# The others get PWSH_LEAN=1, as in tmux-helpers.sh:pwsh_invocation.
+NVIM_COMMAND="PWSH_LEAN=1 pwsh -Command 'Use-NodeVersion && $HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim' && exit"
 TERMINAL_COMMAND="pwsh -NoExit -Command 'psgit && psfzf && Build-DotnetProjectIfNeeded' && exit"
-TESTS_COMMAND='pwsh -Command "cd \"*Testes/\" && dwt"; exit'
-FRONTEND_COMMAND='pwsh -Command "cd \"*Angular\" && nvs use auto && Install-NpmIfNeeded && Start-Frontend"; exit'
-WINSERVICE_COMMAND='pwsh -Command "cd \"*WinService\" && dotnet watch run"; exit'
+TESTS_COMMAND='PWSH_LEAN=1 pwsh -Command "cd \"*Testes/\" && dwt"; exit'
+FRONTEND_COMMAND='PWSH_LEAN=1 pwsh -Command "cd \"*Angular\" && nvs use auto && Install-NpmIfNeeded && Start-Frontend"; exit'
+WINSERVICE_COMMAND='PWSH_LEAN=1 pwsh -Command "cd \"*WinService\" && dotnet watch run"; exit'
 
 # An agent tab is the one that cannot carry an "&& exit": `herdr agent start`
 # types the agent's name into the tab's shell itself, so there is no command

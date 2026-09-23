@@ -95,6 +95,11 @@ label_pane() {
 # the command is run by the pane's bash as it is. An ssh session runs the same
 # call on the remote (see ssh-helpers.sh).
 #
+# A pwsh that runs the command and exits gets PWSH_LEAN=1: the profile then
+# skips its prompt-only parts (PSReadLine, completers, oh-my-posh) but keeps the
+# environment, ssh-agent and code-scripts the tool needs. The interactive ones
+# -- the empty command and no-exit -- keep the full profile.
+#
 # Either way the pane closes when pwsh does: new_pane sees to that.
 pwsh_invocation() {
   local command=$1 no_exit=${2:-} no_pwsh=${3:-}
@@ -105,7 +110,7 @@ pwsh_invocation() {
   elif [ -n "$no_exit" ]; then
     printf 'pwsh -NoExit -Command "%s"' "$command"
   else
-    printf 'pwsh -Command "%s"' "$command"
+    printf 'PWSH_LEAN=1 pwsh -Command "%s"' "$command"
   fi
 }
 
