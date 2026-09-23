@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The picker pane of the default layout, and the pane opener behind prefix+e
-# and prefix+E.
+# The picker pane of the default layout, and the pane opener behind prefix+e,
+# prefix+E and prefix+Space.
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents), and
@@ -10,9 +10,10 @@
 # may not want.
 #
 # With a kind it splits a new pane off -t running that kind, the way
-# New-ToolPane.sh does -- prefix+e and prefix+- then e open NeoVim that way.
-# The kind Picker splits off a new pane that asks, the way the layout's picker
-# does -- prefix+E and prefix+- then E. A new pane is the only way to get one
+# New-ToolPane.sh does -- prefix+e and prefix+- then e open NeoVim that way,
+# prefix+E and prefix+- then E a bare NeoVim (NORC). The kind Picker splits off
+# a new pane that asks, the way the layout's picker does -- prefix+Space and
+# prefix+- then Space. A new pane is the only way to get one
 # outside a new session: nothing types the picker into a pane that is already
 # there.
 #

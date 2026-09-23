@@ -20,7 +20,7 @@
 # the caller has just created it: the pane a binding fires in may be running
 # anything -- an agent, an editor, a half-typed command -- and a window laid
 # out before @layout_role existed looks just like a fresh one. Without -n that
-# pane is left alone and the layout is built around it; prefix+E opens a new
+# pane is left alone and the layout is built around it; prefix+Space opens a new
 # picker pane when one is wanted.
 #
 # Usage: Set-NeovimLayout.sh [-f] [-n] [target]

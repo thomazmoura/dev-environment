@@ -159,7 +159,7 @@ PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code")
 # pane_kind <pane> <kind>
 # Sets kind_command and kind_no_exit to what a pane of <kind> runs, ready for
 # pane_command. The one place these commands are spelled for the layout
-# (Set-NeovimLayout.sh), the picker and prefix+e -- the prefix+t bindings in
+# (Set-NeovimLayout.sh), the picker, prefix+e and prefix+E -- the prefix+t bindings in
 # common.conf use the same strings.
 #
 # A remote without this dev-environment has no pwsh profile and no ~/.modules,
@@ -179,6 +179,11 @@ pane_kind() {
       else
         kind_command='~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
       fi
+      ;;
+    "NeoVim (NORC)")
+      # prefix+E: NeoVim without the vimrc or plugins, so no LSP packages to
+      # install first. Not in PANE_KINDS -- the picker does not offer it.
+      kind_command="nvim -u NORC"
       ;;
     Terminal)
       # Refresh git state, load the fzf helpers and build the project if it
