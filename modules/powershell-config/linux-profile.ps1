@@ -288,8 +288,9 @@ New-Alias -Force lso Get-OctalFilePermissions
 $stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
 
 # Only a prompt shows it: skipped by the lean profile (see kernel-profile.ps1).
+# `omp` swaps in oh-my-posh for the session.
 if (!$global:LeanProfile) {
-  Import-OhMyPoshOnLinux
+  Set-NativePrompt
 }
 # We dot-source this so that if there's any custom functions on the code-scripts folder, they get added to the global scope
 . Run-CodeFolderScripts 
