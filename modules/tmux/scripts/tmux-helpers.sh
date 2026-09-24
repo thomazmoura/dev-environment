@@ -198,11 +198,15 @@ pane_kind() {
       kind_no_pwsh="no-pwsh"
       ;;
     Notes)
-      # prefix+t, n and the layout's notes feed (Set-NeovimLayout.sh): the same
-      # bare NeoVim, on the repository's .notes. The root is found where the
+      # prefix+t, n and the layout's notes feed (Set-NeovimLayout.sh): NeoVim
+      # on the repository's .notes, with the notes profile (vim/notes.vimrc) --
+      # bare but for tmux navigation and a transparent background -- or, on an
+      # ssh host without the modules, NORC. The root is found where the
       # command runs, so the same string serves a local pane and a remote one.
       # Not in PANE_KINDS either.
-      kind_command='nvim -u NORC "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.notes"'
+      local profile="~/.local/share/nvim/site/notes.vimrc"
+      [ -n "$bare" ] && profile="NORC"
+      kind_command="nvim -u $profile \"\$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.notes\""
       kind_no_pwsh="no-pwsh"
       ;;
     Terminal)

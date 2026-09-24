@@ -7,7 +7,7 @@
 # project's setup command instead.
 #
 # A project that keeps a .notes file at the root of its repository gets a third
-# pane at the bottom of the radar column: that file in a bare NeoVim (the Notes
+# pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
 # pane kind, prefix+t, n). Both prefix+v and prefix+V bring it back when it is
 # missing, and take it away once the file is gone.
 #
