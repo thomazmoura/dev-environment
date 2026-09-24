@@ -67,6 +67,9 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require("markview").setup({
     buf_ignore = {},
     max_length = 99999,
+    markdown = {
+      list_items = { shift_width = 2 },
+    },
   })
 
 
