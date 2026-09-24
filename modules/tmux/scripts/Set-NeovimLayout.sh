@@ -6,6 +6,11 @@
 # it. With -f the rest of the window is NeoVim over a terminal running the
 # project's setup command instead.
 #
+# A project that keeps a .notes file at the root of its repository gets a third
+# pane at the bottom of the radar column: that file in a bare NeoVim (the Notes
+# pane kind, prefix+t, n). Both prefix+v and prefix+V bring it back when it is
+# missing, and take it away once the file is gone.
+#
 # Safe to run again on a window that already has the layout: it only creates
 # the radar panes (Git, Agents) that are missing and puts the fixed sizes back,
 # so prefix+v also repairs a layout broken by a closed pane or a stray resize.
@@ -103,6 +108,24 @@ picker_command="bash ~/.modules/tmux/scripts/Select-PaneKind.sh"
 editor_line="$(closing_line "$nvim_command")"
 picker_line="$(closing_line "$picker_command")"
 
+# The notes pane, as a new one runs it. Like NeoVim it runs where the session
+# does, on the remote in an ssh session; only a window with the radar column
+# has a place for it.
+notes_command=""
+want_notes=no
+if [ -n "$radars" ]; then
+  pane_kind "$top" Notes
+  notes_command="$(pane_command "$top" "$kind_command" "$kind_no_exit" "$kind_no_pwsh")"
+  # yes, no, or -- an ssh session's host could not be asked -- unknown, which
+  # leaves a notes pane that is there alone and does not open one that is not.
+  status=0
+  has_notes "$top" || status=$?
+  case "$status" in
+    0) want_notes=yes ;;
+    2) want_notes=unknown ;;
+  esac
+fi
+
 # The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
 # no-exit on either: closing a feed should close its pane, not leave a pwsh
 # prompt sitting in a sliver of the radar column. Both are built with
@@ -113,11 +136,13 @@ git_feed="$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
 
 # The fixed sizes, each a percentage of the window. The radar column is
 # git_width_pct wide and full height, with the agent feed taking
-# agents_height_pct of it from the bottom; the terminal row is
-# terminal_height_pct tall. Everything else -- NeoVim, and any pane the user
-# adds -- gets what is left.
+# agents_height_pct of it -- and the notes pane, when there is one,
+# notes_height_pct at the very bottom -- and Git the rest at the top; the
+# terminal row is terminal_height_pct tall. Everything else -- NeoVim, and any
+# pane the user adds -- gets what is left.
 git_width_pct=12
 agents_height_pct=40
+notes_height_pct=25
 terminal_height_pct=16
 
 # @layout_role is what tells this layout's panes apart from lookalikes. Labels
@@ -128,7 +153,7 @@ mark_role() {
 }
 
 # find_layout_panes
-# Sets git, agents, terminal, neovim and picker to the pane ids holding those
+# Sets git, agents, notes, terminal, neovim and picker to the pane ids holding those
 # roles in the target's window, or to empty for a role nobody holds. The
 # picker's role is its own only until it is answered: Select-PaneKind.sh hands
 # it on to neovim, or drops it for anything else.
@@ -140,7 +165,7 @@ mark_role() {
 # terminal beside it isn't taken -- and the panes found that way get their
 # roles stamped so later runs don't need to guess.
 find_layout_panes() {
-  git="" agents="" terminal="" neovim="" picker=""
+  git="" agents="" notes="" terminal="" neovim="" picker=""
   local id left pane_top role label
   local -a unmarked=()
   local panes
@@ -152,6 +177,7 @@ find_layout_panes() {
     case "$role" in
       git) git=$id ;;
       agents) agents=$id ;;
+      notes) notes=$id ;;
       terminal) terminal=$id ;;
       neovim) neovim=$id ;;
       picker) picker=$id ;;
@@ -159,7 +185,7 @@ find_layout_panes() {
     esac
   done <<<"$panes"
 
-  [ -z "$git$agents$terminal$neovim$picker" ] || return 0
+  [ -z "$git$agents$notes$terminal$neovim$picker" ] || return 0
 
   local neovim_left="" neovim_top="" terminal_top=""
   for pane in "${unmarked[@]}"; do
@@ -215,7 +241,7 @@ find_layout_panes
 # radar column beside what is already there (and, with -f, NeoVim between the
 # two).
 fresh=""
-if [ -n "$new_window" ] && [ -z "$git$agents$terminal$neovim$picker" ]; then
+if [ -n "$new_window" ] && [ -z "$git$agents$notes$terminal$neovim$picker" ]; then
   fresh="yes"
   if [ -z "$force" ]; then
     picker=$top
@@ -228,6 +254,16 @@ if [ -n "$new_window" ] && [ -z "$git$agents$terminal$neovim$picker" ]; then
   fi
 fi
 
+# A notes pane that outlived its file goes before the column is rebuilt, so a
+# missing Git or Agents is not split off around it.
+if [ "$want_notes" = no ] && [ -n "$notes" ]; then
+  tmux kill-pane -t "$notes"
+  notes=""
+fi
+if [ "$want_notes" = yes ] || [ -n "$notes" ]; then
+  agents_height_pct=35
+fi
+
 # `-b` puts a split *before* the pane being split: that is what lands the
 # column on the left and Git above Agents. `-f` makes the column span the full
 # window height whichever pane it is split from, including a NeoVim that
@@ -235,6 +271,8 @@ fi
 if [ -n "$radars" ] && [ -z "$git" ]; then
   if [ -n "$agents" ]; then
     git="$(new_pane "$agents" "Git" "$git_feed" -v -b -l $((100 - agents_height_pct))%)"
+  elif [ -n "$notes" ]; then
+    git="$(new_pane "$notes" "Git" "$git_feed" -v -b -l $((100 - notes_height_pct))%)"
   else
     git="$(new_pane "$top" "Git" "$git_feed" -h -b -f -l "$git_width_pct%")"
   fi
@@ -242,8 +280,17 @@ if [ -n "$radars" ] && [ -z "$git" ]; then
 fi
 
 if [ -n "$radars" ] && [ -z "$agents" ]; then
-  agents="$(new_pane "$git" "Agents" "$agent_feed" -v -l "$agents_height_pct%")"
+  if [ -n "$notes" ]; then
+    agents="$(new_pane "$notes" "Agents" "$agent_feed" -v -b -l $((100 - notes_height_pct))%)"
+  else
+    agents="$(new_pane "$git" "Agents" "$agent_feed" -v -l "$agents_height_pct%")"
+  fi
   mark_role "$agents" agents
+fi
+
+if [ "$want_notes" = yes ] && [ -z "$notes" ]; then
+  notes="$(new_pane "$agents" "Notes" "$notes_command" -v -l "$notes_height_pct%")"
+  mark_role "$notes" notes
 fi
 
 # A missing main pane is only brought back when nothing has taken its place:
@@ -271,7 +318,7 @@ if [ -z "$neovim$picker" ]; then
       main_split "$terminal" -v -b
     fi
   elif [ -n "$radars" ] &&
-    [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents")" = 0 ]; then
+    [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents" -e "$notes")" = 0 ]; then
     main_split "$git" -h -f
   fi
 fi
@@ -305,7 +352,7 @@ fi
 # fired in -- unless that is the radar column, which has no room for it.
 if [ -z "$terminal" ] && [ -n "$force" ]; then
   anchor=${neovim:-$top}
-  if [ "$anchor" = "$git" ] || [ "$anchor" = "$agents" ]; then
+  if [ "$anchor" = "$git" ] || [ "$anchor" = "$agents" ] || [ "$anchor" = "$notes" ]; then
     tmux display-message "No NeoVim pane: run prefix+V from the pane the terminal should go under"
   else
     terminal="$(new_pane "$anchor" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%")"
@@ -321,7 +368,15 @@ fi
 read -r window_width window_height < <(tmux display-message -p -t "$top" '#{window_width} #{window_height}')
 if [ -n "$radars" ]; then
   fit_pane "$git" -x $((window_width * git_width_pct / 100))
-  fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
+  # tmux resizes a pane by moving its bottom edge, or its top one when it is
+  # the last pane of the column. With notes, then, Git and Notes are the two
+  # that can be fitted without undoing each other, and Agents gets the rest.
+  if [ -n "$notes" ]; then
+    fit_pane "$git" -y $((window_height * (100 - agents_height_pct - notes_height_pct) / 100))
+    fit_pane "$notes" -y $((window_height * notes_height_pct / 100))
+  else
+    fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
+  fi
 fi
 [ -z "$terminal" ] || fit_pane "$terminal" -y $((window_height * terminal_height_pct / 100))
 

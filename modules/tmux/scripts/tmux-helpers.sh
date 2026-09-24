@@ -197,6 +197,14 @@ pane_kind() {
       kind_command="nvim -u NORC"
       kind_no_pwsh="no-pwsh"
       ;;
+    Notes)
+      # prefix+t, n and the layout's notes feed (Set-NeovimLayout.sh): the same
+      # bare NeoVim, on the repository's .notes. The root is found where the
+      # command runs, so the same string serves a local pane and a remote one.
+      # Not in PANE_KINDS either.
+      kind_command='nvim -u NORC "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.notes"'
+      kind_no_pwsh="no-pwsh"
+      ;;
     Terminal)
       # Refresh git state, load the fzf helpers and build the project if it
       # needs it, then leave the shell open.
@@ -220,6 +228,26 @@ pane_kind() {
     "Open Code") kind_command="nvs use latest && opencode" ;;
     *) return 1 ;;
   esac
+}
+
+# has_notes <pane>
+# Whether the project of <pane>'s session keeps notes: a .notes file at the root
+# of the repository the session was opened on (or in that directory, outside a
+# repository). Exits 0 for yes, 1 for no and 2 when an ssh session's host could
+# not be asked -- a caller should then leave things as they are.
+has_notes() {
+  local pane=$1 dir root status=0
+  if [ -n "$(ssh_option "$pane" @ssh_target)" ]; then
+    remote_has_notes "$pane" || status=$?
+    case "$status" in
+      0) return 0 ;;
+      255) return 2 ;;
+      *) return 1 ;;
+    esac
+  fi
+  dir="$(tmux display-message -p -t "$pane" '#{session_path}')"
+  root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || printf '%s' "$dir")"
+  [ -f "$root/.notes" ]
 }
 
 # current_pane [target]

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Keeps a laid-out window from running out of panes to work in: when a pane
 # closes and what is left of the window is nothing, or only the Git and Agents
-# feeds, a picker pane (Select-PaneKind.sh) takes the closed pane's place.
+# feeds (and the notes pane), a picker pane (Select-PaneKind.sh) takes the closed pane's place.
 #
 # tmux has no hook that fires before a pane closes, so the layout windows get
 # the next best thing: Set-NeovimLayout.sh marks them @layout_window and turns
@@ -36,7 +36,8 @@ die() { exit 0; }
 dead="${1:-}"
 
 # only_feeds <window> [except]
-# True when every live pane of <window> but <except> is a Git or Agents feed --
+# True when every live pane of <window> but <except> is a Git or Agents feed or
+# the notes pane --
 # labels rather than @layout_role, so a feed opened with prefix+t, r/R counts
 # too -- or when there is no such pane at all.
 only_feeds() {
@@ -44,7 +45,7 @@ only_feeds() {
   while IFS='|' read -r id pane_dead label; do
     [ "$id" != "$except" ] && [ "$pane_dead" != 1 ] || continue
     case "$label" in
-      Git | Agents) ;;
+      Git | Agents | Notes) ;;
       *) return 1 ;;
     esac
   done < <(tmux list-panes -t "$window" -F '#{pane_id}|#{pane_dead}|#{@pane_label}' 2>/dev/null)

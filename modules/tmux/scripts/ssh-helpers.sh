@@ -95,9 +95,16 @@ ssh_is_devenv() {
 # PATH additions in its profile (nvm and the like) are there -- running the
 # command, and staying afterwards for no-exit. `$SHELL` is left for the remote
 # to expand.
+#
+# no-pwsh on a dev-environment remote goes through the login shell too, still
+# pointed at the shared agent: the shell sshd runs the command in is neither
+# login nor interactive, so it has none of the profile's PATH -- no
+# ~/.local/bin, where nvim is -- and without pwsh nothing else adds it.
 remote_run() {
   local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
-  if ssh_is_devenv "$pane"; then
+  if ssh_is_devenv "$pane" && [ -n "$no_pwsh" ]; then
+    printf '%sexec "$SHELL" -lc %s' "$(remote_agent_env)" "$(sq "$command")"
+  elif ssh_is_devenv "$pane"; then
     printf '%s%s' "$(remote_agent_env)" "$(pwsh_invocation "$command" "$no_exit" "$no_pwsh")"
   elif [ -z "$command" ]; then
     printf 'exec "$SHELL" -l'
@@ -161,6 +168,20 @@ remote_directory_matches() {
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   check="cd $(sq "$dir") && set -- $glob/ && [ -d \"\$1\" ]"
+  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+    "sh -c $(sq "$check")" </dev/null
+}
+
+# remote_has_notes <pane>
+# has_notes (tmux-helpers.sh), asked of the session's working directory on the
+# remote: true when the repository it is in -- or the directory itself, outside
+# one -- has a .notes file. Exits 255 when ssh failed, as
+# remote_directory_matches does, and for the same reason.
+remote_has_notes() {
+  local pane=$1 target dir check
+  target="$(ssh_option "$pane" @ssh_target)"
+  dir="$(ssh_option "$pane" @ssh_dir)"
+  check="cd $(sq "$dir") && root=\"\$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && [ -f \"\$root/.notes\" ]"
   ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
     "sh -c $(sq "$check")" </dev/null
 }

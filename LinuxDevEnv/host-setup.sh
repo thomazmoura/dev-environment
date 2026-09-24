@@ -117,6 +117,16 @@ export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME
 # Delta diff installation
 pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1
 
+# Every repository's .notes (the tmux layout's Notes pane) stays out of git:
+# make sure the global excludes file delta-setup.ps1 points git at lists it.
+git_excludes="$(git config --global core.excludesFile || true)"
+git_excludes="${git_excludes/#\~/$HOME}"
+git_excludes="${git_excludes//\$HOME/$HOME}"
+if [ -n "$git_excludes" ] && ! grep -qxF .notes "$git_excludes" 2>/dev/null; then
+  echo ".notes" >> "$git_excludes"
+  echo "Added .notes to the global gitignore ($git_excludes)"
+fi
+
 # herdr (terminal multiplexer used as the runtime for coding agents; also
 # installs the agent state hooks and the Claude Code agent skill)
 pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1

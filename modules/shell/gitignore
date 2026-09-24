@@ -9,3 +9,4 @@ global.json
 .claude/worktrees
 
 **/.claude/settings.local.json
+.notes
