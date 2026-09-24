@@ -186,7 +186,7 @@ pane_kind() {
       if [ -n "$bare" ]; then
         kind_command="nvim"
       else
-        # Node for the LSP servers and Copilot (Use-NodeVersion, kernel-profile.ps1).
+        # Node for the LSP servers and Copilot (Use-NodeVersion, DevHelpers.psm1).
         kind_command='Use-NodeVersion && ~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
       fi
       ;;

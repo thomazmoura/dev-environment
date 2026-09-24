@@ -17,7 +17,7 @@
 set -uo pipefail
 
 # fzf's code for Esc/ctrl-c, which -ExitOnCancel reuses for an aborted project
-# pick (see New-VerticalTmuxSession in modules/powershell-config/linux-profile.ps1).
+# pick (see New-VerticalTmuxSession in modules/powershell/Modules/DevHelpers/DevHelpers.psm1).
 # Every other status means tmux actually ran, and belongs to the session that
 # just ended rather than to this script.
 CANCELLED=130

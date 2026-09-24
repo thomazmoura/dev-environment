@@ -1,4 +1,4 @@
-if( Test-Path "$HOME/.storage/powershell/profile.ps1") {
+if( [IO.File]::Exists("$HOME/.storage/powershell/profile.ps1") ) {
   . "$HOME/.storage/powershell/profile.ps1"
 }
 

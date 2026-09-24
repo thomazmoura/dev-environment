@@ -38,7 +38,7 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPe
 # The remote's ssh key, unlocked once per host rather than once per pane.
 #
 # Locally the key is unlocked before tmux starts: Add-SshKey
-# (modules/powershell-config/kernel-profile.ps1) puts SSH_AUTH_SOCK and
+# (modules/powershell/Modules/DevHelpers/DevHelpers.psm1) puts SSH_AUTH_SOCK and
 # SSH_AGENT_PID in the environment the tmux server inherits, and every pane's
 # profile finds the agent there and asks nothing. A remote pane inherits
 # nothing, so its profile used to start an agent of its own and ask for the
@@ -49,8 +49,8 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPe
 # popup (remote_agent_unlock), where ssh-add has a terminal to read the
 # password from; the password goes from there to ssh-add and nowhere else --
 # not into a variable, an option or a file. Every pane then gets the same two
-# variables a local pane inherits (remote_agent_env), so the profile's
-# Add-SshKey finds the key already there.
+# variables a local pane inherits (remote_agent_env), so the profile finds a
+# live agent there and leaves it alone (linux-profile.ps1).
 #
 # Every new pane also runs remote_agent_unlock before it connects
 # (Unlock-RemoteKey.sh, see ssh_command). When the key is there that is one

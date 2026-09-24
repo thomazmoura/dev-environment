@@ -106,7 +106,6 @@ function Import-OhMyPoshOnLinux() {
 # this costs a few ms, plus one `git status` per prompt inside a repository.
 # `omp` still loads oh-my-posh.
 function Set-NativePrompt() {
-  $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   $osId = 'linux'
   if ([IO.File]::Exists('/etc/os-release')) {
     foreach ($line in [IO.File]::ReadAllLines('/etc/os-release')) {
@@ -135,8 +134,8 @@ function Set-NativePrompt() {
     First      = $true
   }
 
-  # Two-line prompt: PSReadLine has to know to redraw from the line above.
-  if (Get-Module PSReadLine) { Set-PSReadLineOption -ExtraPromptLineCount 1 }
+  # Two-line prompt: PSReadLine's -ExtraPromptLineCount 1 is set with the rest
+  # of its options, on the first idle tick (kernel-profile.ps1).
 
   function global:prompt {
     $ok = $?
@@ -226,8 +225,6 @@ function Set-NativePrompt() {
     if ($working) { $out += $s.Working + ($working -join ' ') + $s.GitFg }
     $out + ' '
   }
-
-  $stopwatch.Stop(); Write-Verbose "`n-->> Configuração do prompt nativo demorou: $($stopwatch.ElapsedMilliseconds)"
 }
 
 function Update-PSReadline() {
@@ -235,12 +232,12 @@ function Update-PSReadline() {
   Install-Module -Name PSReadLine -Force
 }
 
+# Runs on every shell start, so .NET checks rather than Test-Path (see
+# kernel-profile.ps1); the cmdlets only run the one time it has work to do.
 function Start-DevSession() {
-  if( !(Test-Path "$HOME/.dev-session-started") -and (Test-Path "$HOME/.modules/entrypoint/Start-DevSession.ps1") ) {
+  if( ![IO.File]::Exists("$HOME/.dev-session-started") -and [IO.File]::Exists("$HOME/.modules/entrypoint/Start-DevSession.ps1") ) {
     Write-Information "Setting initial dev-environment configuration"
     . "$HOME/.modules/entrypoint/Start-DevSession.ps1" &&
       Get-Date > "$HOME/.dev-session-started"
-  } else {
-    Write-Verbose "Initial dev-environment configuration already set"
   }
 }

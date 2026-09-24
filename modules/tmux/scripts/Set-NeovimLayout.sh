@@ -40,7 +40,7 @@
 #            current pane.
 #
 # Used by the prefix+v / prefix+V bindings and, with -n, by New-CodeSession.sh,
-# New-SshSession.sh and vtmux (linux-profile.ps1), which build a session and
+# New-SshSession.sh and vtmux (DevHelpers.psm1), which build a session and
 # then hand it here so a new project always opens the same way -- on the
 # remote, for an ssh session.
 set -euo pipefail

@@ -1,6 +1,5 @@
 . "$PSScriptRoot/kernel-profile.ps1"
 
-Write-Verbose "`n->> Setting environment variables"
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:DOTNET_ENVIRONMENT="Development"
 $env:NVS_HOME="$env:HOME/.nvs"
@@ -10,7 +9,7 @@ $env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 # it in kernel-profile.ps1 -- goes through OSC 52 to the clipboard of the
 # machine you are ssh'ing from instead (see modules/clipboard/wl-copy). In front
 # of PATH, since the host's own /usr/bin/wl-copy would win otherwise.
-if ($env:SSH_CONNECTION -and -not $env:WAYLAND_DISPLAY -and (Test-Path "$HOME/.modules/clipboard")) {
+if ($env:SSH_CONNECTION -and -not $env:WAYLAND_DISPLAY -and [IO.Directory]::Exists("$HOME/.modules/clipboard")) {
   $env:PATH = "$HOME/.modules/clipboard:$($env:PATH)"
 }
 
@@ -23,269 +22,32 @@ if ($env:SSH_CONNECTION -and -not $env:WAYLAND_DISPLAY -and (Test-Path "$HOME/.m
 $env:RunAnalyzers="false"
 $env:RunAnalyzersDuringBuild="false"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
-$stopwatch.Stop(); Write-Verbose "`n-->> Definição de base padrões demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-Write-Verbose "`n->> Checking if ssh key is set"
+# An agent handed down with SSH_AUTH_SOCK and SSH_AGENT_PID -- by the tmux
+# server locally, or by an ssh session's pane from the host's shared agent
+# (modules/tmux/scripts/ssh-helpers.sh) -- is trusted while its socket and
+# process are there, without asking it for its keys: that ssh-add -L cost
+# ~40ms, plus Add-SshKey's own ~50ms, on every shell start. A key that has
+# left the agent since is added back by ssh itself on first use
+# (AddKeysToAgent, set up by LinuxDevEnv/host-setup.sh). Add-SshKey runs --
+# and autoloads from DevHelpers -- only when there is no live agent.
 $SshKeyFolder = "$HOME/.ssh"
-if( ($env:SSH_KEY_FILE -or (Get-ChildItem "$SshKeyFolder/*.pub" -ErrorAction SilentlyContinue)) -and !(Test-Path "$HOME/.skip-ssh") ) {
+$sshAgentAlive = $env:SSH_AUTH_SOCK -and $env:SSH_AGENT_PID -and
+  [IO.File]::Exists($env:SSH_AUTH_SOCK) -and [IO.Directory]::Exists("/proc/$env:SSH_AGENT_PID")
+if( !$sshAgentAlive -and ![IO.File]::Exists("$HOME/.skip-ssh") -and
+    ($env:SSH_KEY_FILE -or ([IO.Directory]::Exists($SshKeyFolder) -and [IO.Directory]::GetFiles($SshKeyFolder, "*.pub"))) ) {
     Add-SshKey -SshKeyFolder $SshKeyFolder
 }
-$stopwatch.Stop(); Write-Verbose "`n-->> Acréscimo de SSH demorou: $($stopwatch.ElapsedMilliseconds)"
 
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-function New-HorizontalTmuxSession ($FirstPaneCommand="psgit", $SecondPaneCommand="") {
-  $location = FuzzySearch-Location
-	if($location) {
-		Set-Location $location
-		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1)
-		& tmux new-session `; `
-			rename-session $currentDirectory `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			split-window -h -l 20% `; `
-			select-pane -t 1 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			send-keys "$SecondPaneCommand" C-m `; `
-			split-window -v -l 50% `; `
-			select-pane -t 2 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			send-keys "$FirstPaneCommand" C-m `; `
-			select-pane -t 1 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			send-keys nvim C-m
-	}
-	Write-Information "Cancelled by user"
+# Aliases through the Alias provider rather than New-Alias: see kernel-profile.ps1.
+if([IO.File]::ReadAllText('/etc/issue') -match 'ubuntu') {
+	$null = $ExecutionContext.InvokeProvider.Item.New('Alias:\', 'bat', '', 'batcat', $true)
+	$null = $ExecutionContext.InvokeProvider.Item.New('Alias:\', 'fd', '', 'fdfind', $true)
 }
-
-function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand="npm start",$SecondFolder="*api",$SecondCommand="dotnet watch run") {
-  $location = FuzzySearch-Location
-	if($location) {
-		Set-Location $location
-		$currentDirectory = ($pwd.Path.Split("/") | Select -Last 1)
-		tmux new-session `; `
-			rename-session $currentDirectory `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			split-window -h -l 20% `; `
-			select-pane -t 1 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			send-keys "cd $FirstFolder" C-m `; `
-			send-keys "$FirstCommand" C-m `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			send-keys "cd $FirstFolder" C-m `; `
-			send-keys nvim C-m `; `
-			new-window `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			split-window -h -l 20% `; `
-			select-pane -t 1 `; `
-			select-pane -T "Terminal" `; `
-			set -p '@pane_label' "Terminal" `; `
-			send-keys "cd $SecondFolder" C-m `; `
-			send-keys "$SecondCommand" C-m `; `
-			select-pane -t 0 `; `
-			select-pane -T "NeoVim" `; `
-			set -p '@pane_label' "NeoVim" `; `
-			send-keys "cd $SecondFolder" C-m `; `
-			send-keys nvim C-m `; `
-			new-window `; `
-			select-pane -t 0 `; `
-			select-pane -T "Terminal" `; `
-			set -p @pane_label "Terminal" `; `
-			send-keys "htop" C-m `; `
-			select-window -t 0
-	}
-	Write-Information "Cancelled by user"
-}
-
-function New-VerticalTmuxSession {
-  <#
-    .SYNOPSIS
-      Opens the first tmux session of the day on a project picked with fzf.
-
-    .DESCRIPTION
-      The layout itself is not built here: the session is created detached and
-      handed to modules/tmux/scripts/Set-NeovimLayout.sh, which is the same
-      script behind prefix+v and behind prefix+C-n's New-CodeSession.sh. That
-      is deliberate -- this function used to spell the panes out inline and
-      drifted from the bindings every time the layout changed.
-
-      Detached matters twice over: `tmux attach-session` below only gets a
-      terminal once the layout is in place, and the explicit -x/-y give the
-      window the real terminal's size, so Set-NeovimLayout's percentage splits
-      land where they will still be after attaching rather than being scaled up
-      from tmux's default 80x24.
-
-    .PARAMETER ExitOnCancel
-      Exit the whole pwsh process with 130 -- fzf's own code for Esc/ctrl-c --
-      when the project picker is aborted, instead of just returning.
-
-      For callers that run this as the process's only job and need to tell "the
-      user did not want tmux" apart from "the tmux session ended", which a plain
-      return cannot express. modules/ghostty/scripts/Select-Shell.sh uses it to
-      fall back to its shell picker. Off by default: exiting is the wrong answer
-      when vtmux is typed at an interactive prompt, since it would take the
-      session down with it.
-  #>
-  param([Switch]$ExitOnCancel)
-
-  if(tmux ls 2> $null) {
-    Get-TmuxSession
-    return
-  }
-
-  $location = FuzzySearch-Location
-	if($location) {
-		Set-Location $location
-		# tmux session names cannot contain dots -- they separate session:window.pane.
-		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
-		$size = $Host.UI.RawUI.WindowSize
-		tmux new-session -d -s $currentDirectory -c $location -x $size.Width -y $size.Height
-		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -n "${currentDirectory}:"
-		tmux attach-session -t $currentDirectory
-		return
-	}
-	Write-Information "Cancelled by user"
-	if($ExitOnCancel) { exit 130 }
-}
-
-function Start-Frontend() {
-  <#
-    .SYNOPSIS
-      Runs the project's `npm run frontend` (ng serve + dotnet watch run) at a
-      lowered scheduling priority.
-
-    .DESCRIPTION
-      A `dotnet watch` rebuild recompiles every source file in the API project
-      and its domain project - there is no sub-project incrementality in Roslyn -
-      and MSBuild sizes its parallelism to the core count, so a single rude edit
-      saturates the machine while the Angular esbuild workers are also running.
-
-      CPUWeight is a *relative share that only applies under contention*: on an
-      idle machine the rebuild still gets every core at full speed, but as soon
-      as something interactive wants CPU the editor and browser win. That is why
-      this uses CPUWeight rather than CPUQuota, which would slow rebuilds down
-      unconditionally.
-  #>
-  if (!(Test-Path "package.json")) {
-    Write-Warning "No package.json here. Run this from the Angular project folder."
-    return
-  }
-
-  if (Get-Command systemd-run -ErrorAction SilentlyContinue) {
-    Write-Verbose "Starting frontend in a de-prioritised systemd scope"
-    & systemd-run --user --scope --quiet -p CPUWeight=20 -p IOWeight=50 -- npm run frontend
-  } elseif (Get-Command nice -ErrorAction SilentlyContinue) {
-    # Same only-under-contention semantics, without the IO component.
-    Write-Verbose "systemd-run unavailable. Falling back to nice"
-    & nice -n 10 npm run frontend
-  } else {
-    Write-Verbose "Neither systemd-run nor nice available. Running unthrottled"
-    & npm run frontend
-  }
-}
-
-function Enable-Bash ($enable = $true) {
-	if($enable) {
-		$env:SKIP_PWSH=$true
-	} else {
-		$env:SKIP_PWSH=$null
-	}
-}
-
-function Get-ChildItemsSize() {
-	du -hs * | sort -hr | less
-}
-
-function Get-TmuxSession ($Session=$null) {
-	if($Session) {
-		tmux attach-session -t $Session
-	} else {
-		$tmuxListSessionsResult = tmux list-sessions;
-		if($tmuxListSessionsResult -is [array]) {
-			$tmuxSessions = (
-					($tmuxListSessionsResult |
-					 Select-Object @{l="Session";e={$_.Split(':')[0]}}
-					).Session
-					)
-				$favoredSessions = "dev-environment"
-				$availableFavoredSession = $null
-				foreach($favoredSession in $favoredSessions) {
-					if($tmuxSessions -eq $favoredSession) {
-						$availableFavoredSession = $favoredSession
-					}
-				}
-			if($availableFavoredSession){
-				tmux attach-session -t $availableFavoredSession
-			} else {
-				tmux attach-session -t $tmuxSessions[0].Split(':')[0]
-			}
-		} else {
-			if($tmuxListSessionsResult) {
-				tmux attach-session -t $tmuxListSessionsResult.Split(':')[0]
-			}
-		}
-	}
-}
-
-function Get-OctalFilePermissions() {
-  stat -c '%a | %n' *
-}
-
-function Copy-WindowsPrints([int]$Quantity = 1, [string]$OriginPath = $null, [string]$DestinationPath = $null) {
-  if(!($OriginPath) -and $env:WINDOWS_PRINTS_PATH) {
-    $OriginPath = $env:WINDOWS_PRINTS_PATH
-  }
-  if(!($DestinationPath) -and $env:PRINTS_RELATIVE_PATH) {
-    $DestinationPath = $env:PRINTS_RELATIVE_PATH
-  }
-  if(!($OriginPath) -or !($DestinationPath)) {
-    Write-Error "Both OriginPath and DestinationPath environment variables must be set."
-  }
-  $PrintsToBeCopied = Get-ChildItem $OriginPath |
-    Sort-Object CreationTime -Descending |
-    Select-Object -First $Quantity |
-    ForEach-Object {
-      Copy-Item -Path $_.FullName -Destination $DestinationPath -Force
-      return "'$DestinationPath/$($_.Name)'"
-    }
-  return [string]::Join(", ", $PrintsToBeCopied)
-}
-
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-if((Get-Content -Raw /etc/issue) -match 'ubuntu') {
-	New-Alias -Force bat batcat
-	New-Alias -Force fd fdfind
-}
-$stopwatch.Stop(); Write-Verbose "`n-->> Definição de alias demorou: $($stopwatch.ElapsedMilliseconds)"
-
-$stopwatch =  [system.diagnostics.stopwatch]::StartNew()
-New-Alias -Force htmux New-HorizontalTmuxSession
-New-Alias -Force dhtmux New-HorizontalDoubleTmuxSession
-New-Alias -Force vtmux New-VerticalTmuxSession
-New-Alias -Force tmuxa Get-TmuxSession
-New-Alias -Force duhs Get-ChildItemsSize
-New-Alias -Force nvs "$env:NVS_HOME/nvs.ps1"
-New-Alias -Force lso Get-OctalFilePermissions
-
-$stopwatch.Stop(); Write-Verbose "`n-->> Definição de aliases de linux demorou: $($stopwatch.ElapsedMilliseconds)"
+$null = $ExecutionContext.InvokeProvider.Item.New('Alias:\', 'nvs', '', "$env:NVS_HOME/nvs.ps1", $true)
 
 # Only a prompt shows it: skipped by the lean profile (see kernel-profile.ps1).
 # `omp` swaps in oh-my-posh for the session.
