@@ -21,6 +21,7 @@ if not (vim.g.vscode) and not (vim.g.azuredatastudio) then
   require('hop-settings')
   require('ai-settings')
   require('workhorse-settings')
+  require('pane-background')
 
   -- nvim-tree setup
   require 'nvim-tree'.setup {
