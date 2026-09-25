@@ -21,6 +21,10 @@ set runtimepath^=~/.local/share/nvim/site/.plugged/auto-save.nvim
 lua require("auto-save").setup({ enabled = true, trigger_events = { "BufLeave", "FocusLost" }, execution_message = { message = "" } })
 runtime plugin/auto-save.lua
 
+" Long lines wrap at word boundaries instead of splitting a word across lines
+set wrap
+set linebreak
+
 " .notes is markdown
 autocmd BufNewFile,BufRead .notes set filetype=markdown
 
@@ -29,14 +33,41 @@ autocmd BufNewFile,BufRead .notes set filetype=markdown
 autocmd FileType markdown lua pcall(vim.treesitter.start)
 
 " Markview (Markdown rendering on normal mode), with the options setup.lua uses
-" but for list items indented by a single space per level instead of two
+" but for list items not indented at the top level -- bullets and numbers sit
+" flush with the left edge -- and by a single space per level of nesting
 set runtimepath^=~/.local/share/nvim/site/.plugged/markview.nvim
 lua << EOF
+-- How many lists <item> sits inside of, not counting its own (0 at the top level)
+local function list_depth(buffer, item)
+  local ok, node = pcall(vim.treesitter.get_node, {
+    bufnr = buffer,
+    pos = { item.range.row_start, item.range.col_start + item.indent },
+  })
+  local depth = -1
+  while ok and node do
+    if node:type() == "list_item" then
+      depth = depth + 1
+    end
+    node = node:parent()
+  end
+  return math.max(depth, 0)
+end
+
 require("markview").setup({
   buf_ignore = {},
   max_length = 99999,
   markdown = {
-    list_items = { shift_width = 1 },
+    list_items = {
+      indent_size = 2,
+      -- markview pads an item by (ceil(indent / indent_size) + 1) * shift_width
+      -- spaces, so no whole shift_width gives 0 at the top level and 1 per
+      -- level below it. This fraction makes that product depth + 0.5, which
+      -- string.rep truncates to depth.
+      shift_width = function(buffer, item)
+        local levels = math.ceil(item.indent / 2) + 1
+        return (list_depth(buffer, item) + 0.5) / levels
+      end,
+    },
   },
 })
 EOF
