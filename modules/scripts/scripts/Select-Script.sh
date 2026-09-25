@@ -21,9 +21,19 @@
 # Structurally this is Select-Session.sh with a different action at the end:
 # same hidden-value-in-column-one rows, same ctrl-r reload through --list.
 #
+# In an ssh session (prefix+N) the pane runs on the remote, like every other
+# pane there, so the list is the remote's library, not this one: a path from
+# here means nothing on the other host, and a script that is only here -- a
+# hidden one, or one not pulled there yet -- could not run. The rows come from
+# the remote's own copy of this script (--list), so the paths in them, and the
+# Invoke-Script.sh next to them, are the remote's. A remote without this
+# dev-environment has no library to offer.
+#
 # Usage: Select-Script.sh [-v]
-#   -v      open the pane below the current one instead of to its right
-#   --list  print the rows and exit; what ctrl-r reloads from
+#   -v                open the pane below the current one instead of to its right
+#   --list            print the rows and exit
+#   --rows-for <pane> the rows for <pane>'s machine: --list here, or over ssh in
+#                     an ssh session; what ctrl-r reloads from
 set -uo pipefail
 
 here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -95,6 +105,29 @@ if [ "${1:-}" = "--list" ]; then
   exit 0
 fi
 
+# rows_for <pane>
+# BatchMode as in remote_directory_matches: the session's master connection is
+# up, so it never needs a password, and a dead host fails instead of hanging
+# the popup. ~ is expanded by the remote shell, to the remote's home.
+rows_for() {
+  local target
+  target="$(ssh_option "$1" @ssh_target)"
+  if [ -z "$target" ]; then
+    list_rows
+  elif ssh_is_devenv "$1"; then
+    ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+      '~/.modules/scripts/scripts/Select-Script.sh --list' </dev/null
+  else
+    printf '%s has no dev-environment, so no script library\n' "${target##*@}" >&2
+    return 1
+  fi
+}
+
+if [ "${1:-}" = "--rows-for" ]; then
+  rows_for "${2:-}"
+  exit
+fi
+
 require_tools tmux fzf
 
 direction=()
@@ -105,13 +138,14 @@ while getopts ":v" option; do
   esac
 done
 
-rows="$(list_rows)"
-[ -n "$rows" ] || die "No scripts in $library"
-
 # Before fzf: a popup is an overlay rather than a pane, so #{pane_id} still
 # resolves to the pane underneath it -- the one the new pane should be split
 # off. Resolved here anyway, while nothing else could have taken focus.
 origin="$(current_pane)"
+
+remote="$(ssh_option "$origin" @ssh_target)"
+rows="$(rows_for "$origin")" || die "Could not list the scripts${remote:+ on ${remote##*@}}"
+[ -n "$rows" ] || die "No scripts in the library${remote:+ on ${remote##*@}}"
 
 self="$(readlink -f "${BASH_SOURCE[0]}")"
 selection="$(
@@ -119,11 +153,15 @@ selection="$(
     | fzf --ansi --reverse --delimiter=$'\t' --with-nth=2.. \
           --prompt='script> ' \
           --header=$'Run script   (ctrl-r refresh)' \
-          --bind="ctrl-r:reload('$self' --list)"
+          --bind="ctrl-r:reload('$self' --rows-for '$origin')"
 )" || exit 0
 [ -n "$selection" ] || exit 0
 
 path="${selection%%$'\t'*}"
+
+# Invoke-Script.sh beside the library the path came from, so that on a remote
+# it is the remote's copy too.
+runner="$(dirname "$(dirname "$path")")/scripts/Invoke-Script.sh"
 
 # The pane runs pwsh (pwsh_invocation), so this is a pwsh line: & is its call
 # operator, and a single-quoted path is literal to it -- with '' for a quote in
@@ -132,4 +170,4 @@ pwsh_quote() { printf "'%s'" "${1//\'/\'\'}"; }
 
 "$HOME/.modules/tmux/scripts/New-ToolPane.sh" "${direction[@]}" -t "$origin" \
   "$(basename "$path")" \
-  "& $(pwsh_quote "$here/Invoke-Script.sh") $(pwsh_quote "$path")"
+  "& $(pwsh_quote "$runner") $(pwsh_quote "$path")"

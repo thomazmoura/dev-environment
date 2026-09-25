@@ -72,8 +72,10 @@ second would mean never seeing what it printed.
 In the pane's current directory -- the picker splits the pane you fired it from,
 so a script that works on "the repository I am in" gets the one you are looking
 at. In an ssh session (`prefix + N`) it runs on the **remote**, in that session's
-directory, like every other tool pane; the remote needs its own clone of this
-repository for that to find anything.
+directory, like every other tool pane. The list is then the **remote's** library,
+read from its own clone of this repository, so what you pick is what is there to
+run -- a hidden script kept on this machine is not offered on the other one. A
+remote without this dev-environment has no library, and the picker says so.
 
 ## Files
 
