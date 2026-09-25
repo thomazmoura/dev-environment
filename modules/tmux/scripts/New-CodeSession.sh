@@ -3,7 +3,7 @@
 # Agents and a picker pane (see Set-NeovimLayout.sh).
 #
 # Usage: New-CodeSession.sh [directory]
-#   no argument - fuzzy-find a directory under ~/code (bound to prefix+C-n)
+#   no argument - fuzzy-find a directory under ~/code (bound to prefix+/)
 #   directory   - use that directory directly (bound to prefix+C-c for ~/code)
 #
 # Bound as popup commands in modules/tmux/common.conf. The session is created

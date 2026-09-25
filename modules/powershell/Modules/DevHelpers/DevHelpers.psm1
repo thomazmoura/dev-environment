@@ -1126,7 +1126,7 @@ function New-VerticalTmuxSession {
     .DESCRIPTION
       The layout itself is not built here: the session is created detached and
       handed to modules/tmux/scripts/Set-NeovimLayout.sh, which is the same
-      script behind prefix+v and behind prefix+C-n's New-CodeSession.sh. That
+      script behind prefix+v and behind prefix+/'s New-CodeSession.sh. That
       is deliberate -- this function used to spell the panes out inline and
       drifted from the bindings every time the layout changed.
 

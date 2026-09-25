@@ -20,5 +20,5 @@ __pycache__/
 *.pyc
 
 # Local scripts. Anything hidden in the scripts library belongs to this machine
-# alone; the picker (prefix + t then s) lists them like any other script.
+# alone; the picker (prefix + s) lists them like any other script.
 modules/scripts/library/.*

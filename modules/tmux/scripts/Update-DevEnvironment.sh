@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pulls this dev-environment clone and reloads the tmux config.
 #
-# Bound to prefix+t, u as a small popup in modules/tmux/common.conf. Closes by
+# Bound to prefix+u as a small popup in modules/tmux/common.conf. Closes by
 # itself when everything worked; a failed pull (dirty tree, diverged branch, no
 # network) holds the popup open on git's message instead.
 #

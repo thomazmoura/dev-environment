@@ -150,12 +150,12 @@ pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 chmod +x $HOME/.modules/agent-radar/scripts/* $HOME/.modules/agent-radar/hooks/*
 
 # git-radar (one row per tmux session: branch, commits to push/pull and
-# working-tree counts; bound to prefix + t then R). Same story -- no installer,
+# working-tree counts; bound to prefix + R). Same story -- no installer,
 # it runs in place out of $HOME/.modules and shares the sampling machinery in
 # modules/tmux/scripts/radar_cache.py.
 chmod +x $HOME/.modules/git-radar/scripts/*
 
-# scripts (your own scripts, picked from a popup with prefix + t then s). No
+# scripts (your own scripts, picked from a popup with prefix + s). No
 # installer either: the picker and the library run in place out of
 # $HOME/.modules, so a committed script is live without re-running this.
 chmod +x $HOME/.modules/scripts/scripts/* $HOME/.modules/scripts/library/*

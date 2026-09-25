@@ -2,7 +2,7 @@
 """The single sampler behind every git-radar consumer.
 
 Runs one `git status` per session per tick and publishes the result; the feed on
-prefix + t then R reads what it publishes instead of sampling for itself. See
+prefix + R reads what it publishes instead of sampling for itself. See
 modules/tmux/scripts/radar_cache.py for why that matters -- the short version is
 that sampling cost otherwise multiplies by the number of open consumers rather
 than by the number of repositories.

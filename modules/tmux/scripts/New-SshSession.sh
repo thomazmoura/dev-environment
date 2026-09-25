@@ -3,7 +3,7 @@
 # remote host, in one working directory there.
 #
 # Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
-# counterpart of prefix+C-n (New-CodeSession.sh). It:
+# counterpart of prefix+/ (New-CodeSession.sh). It:
 #
 #   1. asks for user@host (up-arrow recalls the ones used before, kept in
 #      ~/.ssh-session-history) and connects, in the popup, so a host key or
@@ -11,7 +11,7 @@
 #      is on one host, it goes there without asking, from any session; leaving
 #      the directory picker of step 2 then asks after all;
 #   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
-#      has no ~/code -- the way prefix+C-n does locally;
+#      has no ~/code -- the way prefix+/ does locally;
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
@@ -168,7 +168,7 @@ probe_kind() {
 # login shell may be anything. The first line is the root the list is relative
 # to, the second whether the remote has this dev-environment, and the rest the
 # directories. fd -- or Debian's fdfind -- when there is one, so .gitignore is
-# honoured as it is by prefix+C-n; otherwise find, skipping hidden folders and
+# honoured as it is by prefix+/; otherwise find, skipping hidden folders and
 # build output.
 listing='
 root="$HOME/code"
@@ -263,7 +263,7 @@ record_agent() {
 }
 
 # Re-running prefix+N for a directory that is already open takes you there, as
-# prefix+C-n does. A session with the same name for somewhere else -- a local
+# prefix+/ does. A session with the same name for somewhere else -- a local
 # one, or the same folder name elsewhere on that host -- is not ours to reuse.
 if tmux has-session -t "=$name" 2>/dev/null; then
   if [ "$(ssh_option "=$name:" @ssh_target)" != "$target" ] ||

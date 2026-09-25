@@ -18,7 +18,7 @@
 #                 what is missing and closes on the next keypress
 #   -L            always run the command here, even in an ssh session -- for a
 #                 pane about the whole machine rather than the session's
-#                 directory, like the git feed (prefix+t then R), which lists
+#                 directory, like the git feed (prefix+R), which lists
 #                 the ssh sessions itself and asks their hosts
 #   -r <role>     give the new pane this @layout_role unless a pane of its window
 #                 already has it -- the plain terminals (prefix+% and prefix+")

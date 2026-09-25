@@ -2,9 +2,9 @@
 
 Your own scripts, kept under version control and one chord away.
 
-    prefix + t  then  s         pick one, run it in a pane on the right
-    prefix + t  then  -  then  s    the same, in a pane below
-    prefix + t  then  S         the same, run inside the picker's popup
+    prefix + s              pick one, run it in a pane on the right
+    prefix + -  then  s     the same, in a pane below
+    prefix + S              the same, run inside the picker's popup
 
 ```
   script> back

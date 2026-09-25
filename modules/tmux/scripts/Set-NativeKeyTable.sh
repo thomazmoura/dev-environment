@@ -18,8 +18,8 @@
 #
 # list-keys prints the bindings without their notes, and list-keys -N only the
 # notes, one line per key in the same order; the two are joined back together
-# here so prefix+? can list the native table as well. A line whose key does not
-# match is bound without a note rather than with the wrong one.
+# here so prefix+C-b ? can list the native table as well. A line whose key
+# does not match is bound without a note rather than with the wrong one.
 set -uo pipefail
 
 probe() { tmux -L "native-probe-$$" -f /dev/null start-server \; "$@"; }
@@ -54,4 +54,5 @@ trap 'rm -f "$conf"' EXIT
     }'
 } > "$conf"
 
-tmux source-file "$conf"
+# Then the few bindings that replace a default there (native-overrides.conf).
+tmux source-file "$conf" \; source-file "$(dirname "$0")/../native-overrides.conf"

@@ -198,7 +198,7 @@ pane_kind() {
       kind_no_pwsh="no-pwsh"
       ;;
     Notes)
-      # prefix+t, n and the layout's notes feed (Set-NeovimLayout.sh): NeoVim
+      # prefix+n and the layout's notes feed (Set-NeovimLayout.sh): NeoVim
       # on the repository's .notes, with the notes profile (vim/notes.vimrc) --
       # bare but for tmux navigation and a transparent background -- or, on an
       # ssh host without the modules, NORC. The root is found where the

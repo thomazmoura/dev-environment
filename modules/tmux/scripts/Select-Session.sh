@@ -4,7 +4,7 @@
 #
 #   ● session  ●agents  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
 #
-# Bound to prefix+/ and prefix+C-p as a popup command in
+# Bound to prefix+? and prefix+C-p as a popup command in
 # modules/tmux/common.conf. The current session is left out of the list: it is
 # never a useful answer, and dropping it means the first row is already the
 # session you most likely want.

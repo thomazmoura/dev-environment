@@ -12,7 +12,7 @@
 # With a kind it splits a new pane off -t running that kind, the way
 # New-ToolPane.sh does -- prefix+e and prefix+- then e open NeoVim that way,
 # prefix+E and prefix+- then E a bare NeoVim (NORC), run by bash, not pwsh,
-# and prefix+t, n a nearly bare one (vim/notes.vimrc) on the repository's .notes. The kind Picker splits off
+# and prefix+n a nearly bare one (vim/notes.vimrc) on the repository's .notes. The kind Picker splits off
 # a new pane that asks, the way the layout's picker does -- prefix+Space and
 # prefix+- then Space. A new pane is the only way to get one
 # outside a new session: nothing types the picker into a pane that is already

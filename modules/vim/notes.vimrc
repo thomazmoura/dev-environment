@@ -1,4 +1,4 @@
-" The Notes pane's NeoVim (tmux layout, prefix+t, n): as bare as nvim -u NORC,
+" The Notes pane's NeoVim (tmux layout, prefix+n): as bare as nvim -u NORC,
 " plus just a few things from the full vimrc -- moving between tmux panes,
 " auto-save, a transparent background and markview's markdown rendering -- and
 " without a status bar.

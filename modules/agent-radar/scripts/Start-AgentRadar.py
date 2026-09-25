@@ -3,7 +3,7 @@
 
 Reads every agent pane once per tick and publishes the result; the status bar
 (prefix-less, always on), the picker on prefix + t then a, the fzf watcher on
-prefix + t then A and the curses feed on prefix + t then r all read what it
+prefix + t then A and the curses feed on prefix + r all read what it
 publishes instead of detecting for themselves. See agent_feed.py for why that
 matters -- the short version is that detection cost used to multiply by the
 number of open consumers, and the working->idle debounce was silently broken by

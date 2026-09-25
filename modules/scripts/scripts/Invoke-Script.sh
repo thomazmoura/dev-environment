@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs one script from modules/scripts/library and holds the screen afterwards.
-# What the pane opened by prefix+t then s actually runs (see Select-Script.sh),
+# What the pane opened by prefix+s actually runs (see Select-Script.sh),
 # and a perfectly good way to run a library script by hand.
 #
 # Two things it does that `./script` does not:

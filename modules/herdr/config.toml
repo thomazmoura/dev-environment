@@ -29,7 +29,7 @@ focus_pane_right = ["prefix+l", "ctrl+alt+l"]
 # already rooted there or build a new one: one tab per the picked agent CLI, a
 # "NeoVim" tab and a "Terminal" tab running pwsh. Picking "NeoVim" in the agent
 # picker skips the agent tab.
-# The herdr counterpart of the tmux prefix+C-n binding. prefix+n stays next_tab.
+# The herdr counterpart of the tmux prefix+/ binding. prefix+n stays next_tab.
 [[keys.command]]
 key = "prefix+ctrl+n"
 type = "popup"

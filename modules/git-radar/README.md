@@ -2,7 +2,7 @@
 
 Answers one question: **where did I leave each of my repositories?**
 
-    prefix + t  then  R     one row per tmux session, live, in a normal pane
+    prefix + R              one row per tmux session, live, in a normal pane
 
 ```
  ● dev-environment           ●1●2●1
@@ -80,7 +80,7 @@ are counted here though the status bar leaves them out: beside a session's name
 the question is what is running in it, and a row with nothing there has no
 agent open at all. It
 reads agent-radar's own snapshot and redraws when that changes, on its
-one-second tick rather than git's three. The `prefix + /` session picker shows
+one-second tick rather than git's three. The `prefix + ?` session picker shows
 the same summary as a column after the session name (`Get-GitState.py
 --agents`). Without agent-radar installed, both simply leave it out.
 
@@ -280,7 +280,7 @@ home its ssh commands are typed from. Its directory is `@ssh_dir`, on the host i
 An ssh session is a local tmux session whose panes are all ssh'd into one host
 (`modules/tmux/scripts/New-SshSession.sh`). It gets a row in every feed, beside
 the local sessions, with the same branch and counts -- and its Git pane is a
-local one, the same feed as everywhere else. `prefix + t` then `R` passes `-L` to
+local one, the same feed as everywhere else. `prefix + R` passes `-L` to
 `New-ToolPane.sh`, and `Set-NeovimLayout.sh` builds the Git pane with
 `pwsh_command`, so neither follows the rest of the session onto the host. (The
 feed used to run there, where it listed the *remote's* tmux sessions -- usually
@@ -369,7 +369,7 @@ Start-GitRadar.py     the daemon. One sampler for the whole machine.
                       the RemotePoller are tmux/scripts/radar_remote.py,
                       shared with agent-radar)
   Get-GitState.py     presentation + CLI (table / tsv / json / fzf / status)
-Watch-GitFeed.py      the curses feed on prefix + t then R. Reads, never samples.
+Watch-GitFeed.py      the curses feed on prefix + R. Reads, never samples.
   Show-GitFailure.sh  the popup a named f/p/P failure opens: the message, and
                       an offer to unlock the key it wanted and retry.
 ```

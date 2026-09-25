@@ -38,7 +38,7 @@ dead="${1:-}"
 # only_feeds <window> [except]
 # True when every live pane of <window> but <except> is a Git or Agents feed or
 # the notes pane --
-# labels rather than @layout_role, so a feed opened with prefix+t, r/R counts
+# labels rather than @layout_role, so a feed opened with prefix+r/R counts
 # too -- or when there is no such pane at all.
 only_feeds() {
   local window=$1 except=${2:-} id pane_dead label

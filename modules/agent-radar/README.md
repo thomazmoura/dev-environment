@@ -4,7 +4,7 @@ Answers one question: **which coding agent is waiting for me right now?**
 
     prefix + t  then  a     popup picker -- pick an agent, jump to its pane
     prefix + t  then  A     the same list, live, in a normal pane
-    prefix + t  then  r     the same live pane, chrome-free (curses, not fzf)
+    prefix + r              the same live pane, chrome-free (curses, not fzf)
     status bar              ●2●1●1  -- two waiting, one finished, one working
 
 The picker and the fzf watcher list one agent per line:
@@ -197,7 +197,7 @@ An ssh session is a local tmux session whose panes are all ssh'd into one host
 one of its panes -- by `prefix + t` then `c`, or typed by hand -- is listed in
 every consumer beside the local ones: the status bar, the picker, both feed
 panes, the notifications. The feed panes are local ones even in an ssh session
-(`prefix + t` then `r` and `A` pass `-L` to `New-ToolPane.sh`, and
+(`prefix + r` and `prefix + t` then `A` pass `-L` to `New-ToolPane.sh`, and
 `Set-NeovimLayout.sh` builds the Agents pane with `pwsh_command`), so there is
 one feed, the same everywhere.
 

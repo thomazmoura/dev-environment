@@ -3,8 +3,8 @@
 #
 #   Show-Example.sh   bash   Prints where it ran, as a shape to copy
 #
-# Bound to prefix+t then s as a popup, with prefix+t then - then s opening the
-# pane below instead of on the right, and prefix+t then S running it right there
+# Bound to prefix+s as a popup, with prefix+- then s opening the pane below
+# instead of on the right, and prefix+S running it right there
 # in the picker's popup (see modules/tmux/common.conf). Meant to be run from a
 # tmux binding so the split happens in the client that opened it.
 #

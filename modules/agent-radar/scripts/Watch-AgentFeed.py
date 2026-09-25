@@ -2,7 +2,7 @@
 """A live feed of every coding agent's state, in a pane you leave open.
 
 Same data as Watch-Agents.sh, different host: a curses screen instead of fzf.
-Bound to prefix+t then r (see modules/tmux/common.conf), which opens it through
+Bound to prefix+r (see modules/tmux/common.conf), which opens it through
 New-ToolPane.sh so the pane is labelled like every other one. The fzf version
 stays on prefix+t then A -- the two are meant to be run side by side.
 

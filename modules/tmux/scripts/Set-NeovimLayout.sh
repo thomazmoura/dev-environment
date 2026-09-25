@@ -8,7 +8,7 @@
 #
 # A project that keeps a .notes file at the root of its repository gets a third
 # pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
-# pane kind, prefix+t, n). Both prefix+v and prefix+V bring it back when it is
+# pane kind, prefix+n). Both prefix+v and prefix+V bring it back when it is
 # missing, and take it away once the file is gone.
 #
 # Safe to run again on a window that already has the layout: it only creates
@@ -126,10 +126,10 @@ if [ -n "$radars" ]; then
   esac
 fi
 
-# The two live feeds, the same ones prefix+t, r and prefix+t, R open. No
+# The two live feeds, the same ones prefix+r and prefix+R open. No
 # no-exit on either: closing a feed should close its pane, not leave a pwsh
 # prompt sitting in a sliver of the radar column. Both are built with
-# pwsh_invocation, not pane_command, for the reason above -- as prefix+t, r's
+# pwsh_invocation, not pane_command, for the reason above -- as prefix+r's
 # and R's -L.
 agent_feed="$(pwsh_invocation '& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py')"
 git_feed="$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
@@ -146,7 +146,7 @@ notes_height_pct=25
 terminal_height_pct=16
 
 # @layout_role is what tells this layout's panes apart from lookalikes. Labels
-# can't: prefix+% opens more "Terminal" panes, and prefix+t, r/R open "Agents"
+# can't: prefix+% opens more "Terminal" panes, and prefix+r/R open "Agents"
 # and "Git" panes of their own.
 mark_role() {
   tmux set -p -t "$1" @layout_role "$2"
@@ -190,7 +190,7 @@ find_layout_panes() {
   local neovim_left="" neovim_top="" terminal_top=""
   for pane in "${unmarked[@]}"; do
     IFS='|' read -r id left pane_top label <<<"$pane"
-    # The radar column is at the left edge; a feed opened by prefix+t, r/R
+    # The radar column is at the left edge; a feed opened by prefix+r/R
     # splits off to the right of some other pane and never is.
     case "$label" in
       Git) [ -n "$git" ] || [ "$left" != 0 ] || git=$id ;;
@@ -226,7 +226,7 @@ fit_pane() {
 # The default layout: a radar column down the left edge -- git feed on top,
 # agent feed under it -- and the picker in what is left (NeoVim over a
 # terminal row, with -f). The
-# feeds are part of the default layout rather than something prefix+t, r/R has
+# feeds are part of the default layout rather than something prefix+r/R has
 # to open every time: they are the panes whose whole job is to be read without
 # being asked for, so they get a column of their own that NeoVim never covers.
 #

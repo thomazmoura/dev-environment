@@ -37,13 +37,13 @@ COPY --chown=developer:developer modules/agent-radar /home/developer/.modules/ag
 RUN chmod +x /home/developer/.modules/agent-radar/scripts/* /home/developer/.modules/agent-radar/hooks/*
 
 # git-radar (one row per tmux session: branch, commits to push/pull and
-# working-tree counts; bound to prefix + t then R). Same story -- bash plus
+# working-tree counts; bound to prefix + R). Same story -- bash plus
 # python3, nothing to install. It shares the sampling machinery in
 # modules/tmux/scripts/radar_cache.py, which the tmux COPY below brings in.
 COPY --chown=developer:developer modules/git-radar /home/developer/.modules/git-radar
 RUN chmod +x /home/developer/.modules/git-radar/scripts/*
 
-# scripts (your own scripts, picked from a popup with prefix + t then s).
+# scripts (your own scripts, picked from a popup with prefix + s).
 # Nothing to install -- the picker is bash plus fzf, and what it runs is
 # whatever modules/scripts/library holds.
 COPY --chown=developer:developer modules/scripts /home/developer/.modules/scripts

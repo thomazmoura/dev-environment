@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A live feed of where every tmux session's repository stands, in a pane you leave open.
 
-Bound to prefix+t then R (see modules/tmux/common.conf), which opens it through
+Bound to prefix+R (see modules/tmux/common.conf), which opens it through
 New-ToolPane.sh so the pane is labelled like every other one. It is the git
-counterpart of agent-radar's prefix+t then r, and deliberately the same shape:
+counterpart of agent-radar's prefix+r, and deliberately the same shape:
 curses rather than fzf, because fzf is an interactive filter that insists on
 being one -- a prompt line, a match counter, a header, and an animated indicator
 on every reload. On a timer in a narrow pane that is three lines of chrome and a
