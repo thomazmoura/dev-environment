@@ -47,6 +47,10 @@ if (!$global:LeanProfile) {
     }
     Set-PSReadLineKeyHandler -Chord "RightArrow" -Function ForwardWord
     Set-PSReadLineKeyHandler -Chord "End" -Function ForwardChar
+    # Ctrl+Space reaches pwsh as a NUL byte, which .NET reads as Ctrl+@ rather
+    # than the Ctrl+Spacebar PSReadLine binds, so it typed a literal @. In tmux,
+    # where C-Space is the prefix, it is C-Space twice.
+    Set-PSReadLineKeyHandler -Chord "Ctrl+@" -Function MenuComplete
 
     # The native prompt is two lines: PSReadLine has to redraw from the line above.
     Set-PSReadLineOption -ExtraPromptLineCount 1
