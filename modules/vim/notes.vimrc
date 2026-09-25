@@ -46,6 +46,9 @@ runtime plugin/markview.lua
 highlight Normal guibg=none ctermbg=none
 highlight NormalNC guibg=none ctermbg=none
 
+" No ~ on the empty lines past the end of the buffer
+lua vim.opt.fillchars:append({ eob = " " })
+
 " No status bar, nor the ruler that takes its place in the command line
 set laststatus=0
 set noruler
@@ -56,3 +59,6 @@ set noruler
 set cmdheight=0
 set report=99999
 set shortmess+=FWI
+
+" Ctrl+C on normal mode saves and closes the notes
+nnoremap <C-c> <Cmd>wq<CR>
