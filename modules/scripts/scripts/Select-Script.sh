@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Fuzzy-find one of your own scripts and run it in a pane of its own.
+# Fuzzy-find one of your own scripts and run it in a pane of its own, or in the popup.
 #
 #   Show-Example.sh   bash   Prints where it ran, as a shape to copy
 #
 # Bound to prefix+t then s as a popup, with prefix+t then - then s opening the
-# pane below instead of on the right (see modules/tmux/common.conf). Meant to be
-# run from a tmux binding so the split happens in the client that opened it.
+# pane below instead of on the right, and prefix+t then S running it right there
+# in the picker's popup (see modules/tmux/common.conf). Meant to be run from a
+# tmux binding so the split happens in the client that opened it.
 #
 # The list is whatever is in modules/scripts/library -- no registry to keep in
 # step, no metadata file: a script is listed because it is there, and it is
@@ -31,6 +32,8 @@
 #
 # Usage: Select-Script.sh [-v]
 #   -v                open the pane below the current one instead of to its right
+#   -p                run the script in this popup instead of a new pane; the
+#                     binding's -d '#{pane_current_path}' is its directory
 #   --list            print the rows and exit
 #   --rows-for <pane> the rows for <pane>'s machine: --list here, or over ssh in
 #                     an ssh session; what ctrl-r reloads from
@@ -131,9 +134,11 @@ fi
 require_tools tmux fzf
 
 direction=()
-while getopts ":v" option; do
+in_popup=""
+while getopts ":vp" option; do
   case "$option" in
     v) direction=(-v) ;;
+    p) in_popup="yes" ;;
     *) die "Select-Script.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -167,7 +172,14 @@ runner="$(dirname "$(dirname "$path")")/scripts/Invoke-Script.sh"
 # operator, and a single-quoted path is literal to it -- with '' for a quote in
 # the path itself, which is pwsh's own escape.
 pwsh_quote() { printf "'%s'" "${1//\'/\'\'}"; }
+command="& $(pwsh_quote "$runner") $(pwsh_quote "$path")"
+
+# The same line a pane would get (pane_command, as New-PopupShell.sh uses it),
+# so in an ssh session the popup runs it on the remote, in the session's
+# directory. Invoke-Script.sh's keypress pause holds the popup open too.
+if [ -n "$in_popup" ]; then
+  exec bash -c "$(pane_command "$origin" "$command")"
+fi
 
 "$HOME/.modules/tmux/scripts/New-ToolPane.sh" "${direction[@]}" -t "$origin" \
-  "$(basename "$path")" \
-  "& $(pwsh_quote "$runner") $(pwsh_quote "$path")"
+  "$(basename "$path")" "$command"
