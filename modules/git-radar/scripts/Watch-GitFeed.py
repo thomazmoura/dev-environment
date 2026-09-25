@@ -46,8 +46,8 @@ Keys: j/k/g/G move, Enter switches to the session, r reloads the feed (as if
 the pane were closed and reopened), R does that and restarts the sampler behind
 it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
-it, c commits it, s shows its status, q or d kills the selected session after
-asking, Ctrl-C closes the pane.
+it, c commits it, s shows its status, h its history, m merges its branch into
+another, q or d kills the selected session after asking, Ctrl-C closes the pane.
 
 c opens a popup with the repository's `git status` and asks: y stages
 everything and commits, with $EDITOR opening in the popup for the message, and
@@ -55,7 +55,13 @@ any other key closes it having touched nothing. A popup because the commit
 needs an editor, and an editor needs a tty and room that this pane has neither
 of -- see Show-GitCommit.sh. It asks because "everything" is whatever the
 status says, untracked files included. s is the same popup without the
-question: just the status, and any key closes it.
+question: just the status, and any key closes it. h is the same kind of popup
+with the commit graph, paged, and q closes it.
+
+m is gitub from the pwsh profile, asked first: a popup offers every other branch
+in fzf, names the merge and the push it is about to do, and only y goes on. It
+then checks out that branch, merges the one you were on into it, pushes, and
+checks the original branch back out -- see Show-GitMerge.sh.
 
 p and P exist because the two counters this pane spends most of its time showing
 -- behind and ahead -- were the two it could do nothing about: it would tell you
@@ -277,6 +283,7 @@ FETCH_GLYPH = "\u21bb"   # ↻
 PULL_GLYPH = "\u2193"    # ↓
 PUSH_GLYPH = "\u2191"    # ↑
 COMMIT_GLYPH = "\u270e"  # ✎
+MERGE_GLYPH = "\u2387"   # ⎇
 FAILED_GLYPH = "\u2717"  # ✗
 BUSY_GLYPH_COLOUR = curses.COLOR_MAGENTA
 FAILED_GLYPH_COLOUR = curses.COLOR_RED
@@ -771,6 +778,95 @@ def show_status(repo) -> None:
             )
         except (OSError, subprocess.SubprocessError):
             pass
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def show_history(repo) -> None:
+    """`h`. The repository's commit graph, in a popup, touching nothing.
+
+    `s` for the log rather than the work tree, and shaped the same way: not
+    busy, on a thread, and refused from the row when there is nothing to ask.
+    """
+    if repo.state == gitr.OFFLINE or not repo.root:
+        refusal = "cannot show history" if repo.root else "not a git repository"
+        notes[note_key(repo)] = finished(refusal)
+        return
+
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitHistory.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def start_merge(repo) -> None:
+    """`m`. Merge the row's branch into one picked in a popup, and come back.
+
+    gitub with a question in front of it. It checks out another branch, so it
+    is a popup for the same reasons `c` is -- fzf and the confirmation want a
+    tty, and a merge may want credentials for the push -- and busy for the same
+    reason too: an f, p or P meanwhile would race it for index.lock, and a p
+    would pull into whichever branch happened to be checked out at the time.
+
+    A dirty work tree is refused here as well as in Show-GitMerge.sh: the row
+    already knows, and the checkout would carry the changes onto the other
+    branch. Untracked files do not count, as they do not for git.
+    """
+    key = note_key(repo)
+    current = notes.get(key)
+    if current is not None and current.busy:
+        return
+    refusal = ""
+    if repo.state == gitr.OFFLINE:
+        refusal = "cannot merge"
+    elif not repo.root:
+        refusal = "not a git repository"
+    elif repo.branch == gitr.DETACHED:
+        refusal = "detached HEAD"
+    elif repo.conflicted:
+        refusal = "conflicted"
+    elif repo.added or repo.modified or repo.deleted:
+        refusal = "uncommitted changes"
+    if refusal:
+        notes[key] = finished(refusal)
+        return
+
+    notes[key] = Note(busy=True, glyph=MERGE_GLYPH)
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitMerge.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        notes.pop(key, None)
 
     threading.Thread(target=worker, daemon=True).start()
 
@@ -1363,6 +1459,12 @@ def run(stdscr, interval: float) -> str:
             elif key == ord("s"):
                 if repos:
                     show_status(repos[selected])
+            elif key == ord("h"):
+                if repos:
+                    show_history(repos[selected])
+            elif key == ord("m"):
+                if repos:
+                    start_merge(repos[selected])
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same

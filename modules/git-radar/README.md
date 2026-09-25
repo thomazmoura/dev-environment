@@ -93,8 +93,9 @@ Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` reloads the
 feed (as if the pane were closed and reopened), `R` does that and restarts the
 sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
-it and `P` pushes it, `c` commits it, `s` shows its status, `q` or `d` kills
-the selected session after asking, `Ctrl-C` closes the pane.
+it and `P` pushes it, `c` commits it, `s` shows its status, `h` its history,
+`m` merges its branch into another, `q` or `d` kills the selected session after
+asking, `Ctrl-C` closes the pane.
 
 `c` opens a popup with the repository's `git status` and asks: `y` stages
 everything (untracked files included) and commits, with `$EDITOR` opening in
@@ -105,6 +106,21 @@ host's. See `Show-GitCommit.sh`.
 `s` opens the same kind of popup with the repository's `git status` and nothing
 else -- no question, any key closes it. On an ssh row it too runs on the host.
 See `Show-GitStatus.sh`.
+
+`h` opens a popup with the commit graph -- the same log as `git history`
+(`gith` in pwsh), spelled out so a host without the alias shows it too -- paged
+by `less`, which `q` closes. See `Show-GitHistory.sh`.
+
+`m` is `gitub` from the pwsh profile with a question in front of it. The popup
+offers every other local and `origin` branch in fzf; picking one shows what is
+about to happen -- merge this branch into that one, push it, come back -- and
+only `y` goes on. It then checks the target out, fast-forwards it to its
+upstream, merges, pushes with `--set-upstream`, and checks the original branch
+back out, so you end where you started. It stops instead of carrying on where
+`gitub` would do damage: a dirty work tree is refused (untracked files are
+fine), a target that cannot fast-forward is left alone, and a merge that
+conflicts is aborted. The row is busy (`⎇`) while the popup is open, like `c`.
+See `Show-GitMerge.sh`.
 
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the
