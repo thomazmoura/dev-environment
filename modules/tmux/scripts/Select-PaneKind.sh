@@ -60,7 +60,7 @@ if [ -n "$kind" ]; then
 fi
 
 # No kind: this pane asks. Esc brings the list back rather than leaving an
-# empty pane in the layout's main slot; prefix+x still closes it.
+# empty pane in the layout's main slot; prefix+C-b x still closes it.
 require_tools tmux fzf
 pane="$(current_pane "${target:-${TMUX_PANE:-}}")"
 while :; do

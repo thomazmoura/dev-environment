@@ -9,14 +9,14 @@
 # pane-died hook hands it here before it is gone. Here it is either killed --
 # the window still has a pane to work in, and it closes as it always did -- or
 # respawned as the picker, in the very spot it held. A window's last pane is
-# only ever respawned, so the window and the session outlive it; prefix+x on
+# only ever respawned, so the window and the session outlive it; prefix+C-b x on
 # the picker still closes them, since kill-pane never leaves a dead pane.
 #
-# prefix+x is the one close with no dead pane to hand over. The after-kill-pane
-# hook runs this without a pane: it looks through every layout window for one
-# left with only the feeds, and has Set-NeovimLayout.sh put the picker back
-# beside them -- the same repair prefix+v makes. A window whose last pane was
-# killed is gone by then, as it should be.
+# prefix+C-b x is the one close with no dead pane to hand over. The
+# after-kill-pane hook runs this without a pane: it looks through every layout
+# window for one left with only the feeds, and has Set-NeovimLayout.sh put the
+# picker back beside them -- the same repair prefix+v makes. A window whose
+# last pane was killed is gone by then, as it should be.
 #
 # Windows laid out before this existed have neither option until prefix+v (or
 # prefix+V) is run in them once.

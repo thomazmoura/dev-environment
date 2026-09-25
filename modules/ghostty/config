@@ -77,7 +77,7 @@ clipboard-write = allow
 clipboard-trim-trailing-spaces = true
 
 # --- Keep tmux's keys intact -----------------------------------------
-# Ghostty's Linux defaults are all ctrl+shift+*, so tmux's ctrl+b prefix,
+# Ghostty's Linux defaults are all ctrl+shift+*, so tmux's ctrl+space prefix,
 # the ctrl+h/j/k/l vim-navigator bindings and alt+y / alt+shift+y
 # already pass through untouched.
 # Matches the one custom wezterm binding (SpawnTab).
