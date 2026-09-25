@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs a throwaway pwsh inside a popup (prefix+P), for a quick command that
+# Runs a throwaway pwsh inside a popup (prefix+p), for a quick command that
 # should not disturb the window's layout. The shell is the one a plain terminal
 # split would get (prefix+%): a local pwsh in the directory of the pane the
 # binding fired from, or, in an ssh session (prefix+N), a shell on the remote
