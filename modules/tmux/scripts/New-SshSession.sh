@@ -25,8 +25,10 @@
 # opens a new ssh into that directory and runs its usual command there, through
 # pane_command in tmux-helpers.sh.
 #
-# Usage: New-SshSession.sh [-t user@host -d /remote/dir [-n session name]]
+# Usage: New-SshSession.sh [-a | -t user@host -d /remote/dir [-n session name]]
 #   no options  ask both questions, as prefix+N does
+#   -a          ask for user@host even when every open ssh session is on one
+#               host, as prefix+C-n does: a session on another machine
 #   -t and -d   skip both and build the session for that host and directory.
 #               How a worktree made on a remote opens its session
 #               (Open-WorktreeSession.sh): the host and the directory are
@@ -44,8 +46,10 @@ history_file="$HOME/.ssh-session-history"
 target=""
 dir=""
 name_override=""
-while getopts ":t:d:n:" option; do
+always_ask=""
+while getopts ":at:d:n:" option; do
   case "$option" in
+    a) always_ask="yes" ;;
     t) target="$OPTARG" ;;
     d) dir="$OPTARG" ;;
     n) name_override="$OPTARG" ;;
@@ -213,7 +217,7 @@ pick() {
 #
 # Otherwise: the host of the open ssh sessions, when they are all on one, is
 # tried without asking; several hosts are not guessed between. Leaving it --
-# the connection or the picker -- asks for a host after all.
+# the connection or the picker -- asks for a host after all. -a skips the guess.
 if [ -n "$dir" ]; then
   connect || exit 0
   kind="$(probe_kind)"
@@ -221,7 +225,7 @@ if [ -n "$dir" ]; then
 else
   hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d' | sort -u)"
   target=
-  [ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
+  [ -z "$always_ask" ] && [ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
   if [ -n "$target" ]; then
     printf 'New ssh session on %s\n' "$target"
     connect && pick ' (Esc for another host)' || { clear; target=; }
