@@ -85,5 +85,5 @@ fi
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../tmux/scripts/ssh-helpers.sh"
 # The host's own sampler is nudged afterwards, as Show-GitCommit.sh does.
-exec ssh "${SSH_OPTS[@]}" -q -t "$target" \
+exec "$REMOTE_SSH" "${SSH_OPTS[@]}" -q -t "$target" \
   "env REMOTE_ROW=1 bash -c $(sq "$body") bash $(sq "$root")"

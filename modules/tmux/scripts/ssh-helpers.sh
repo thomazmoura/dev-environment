@@ -35,6 +35,20 @@
 SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPersist=10m
           -o ServerAliveInterval=10 -o ServerAliveCountMax=3)
 
+# Every ssh below -- and in every script that sources this -- goes through
+# Invoke-Remote.sh rather than ssh itself. It is ssh for a host; for a target
+# of the form docker:<container>, a session opened on a local container
+# (prefix+D), it is the same call made with `docker exec`. That is the one
+# place the two differ, so everything else about a session -- @ssh_target and
+# the rest -- serves both.
+REMOTE_SSH="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Invoke-Remote.sh"
+
+# is_docker_target <target>
+# Whether an @ssh_target names a local container rather than a host.
+is_docker_target() {
+  [[ $1 == docker:* ]]
+}
+
 # The remote's ssh key, unlocked once per host rather than once per pane.
 #
 # Locally the key is unlocked before tmux starts: Add-SshKey
@@ -137,10 +151,11 @@ remote_run() {
 # command: `export AGENT_RADAR_PANE=<host>/%12; cd ... && ...`.
 ssh_command() {
   local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
-  local target dir remote opt line="ssh -t" unlock="" tag=""
+  local target dir remote opt line unlock="" tag=""
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   remote="cd $(sq "$dir") && $(remote_run "$pane" "$command" "$no_exit" "$no_pwsh")"
+  line="$(printf '%q' "$REMOTE_SSH") -t"
   for opt in "${SSH_OPTS[@]}"; do
     line+=" $(printf '%q' "$opt")"
   done
@@ -168,7 +183,7 @@ remote_directory_matches() {
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   check="cd $(sq "$dir") && set -- $glob/ && [ -d \"\$1\" ]"
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
     "sh -c $(sq "$check")" </dev/null
 }
 
@@ -182,7 +197,7 @@ remote_has_notes() {
   target="$(ssh_option "$pane" @ssh_target)"
   dir="$(ssh_option "$pane" @ssh_dir)"
   check="cd $(sq "$dir") && root=\"\$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" && [ -f \"\$root/.notes\" ]"
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
     "sh -c $(sq "$check")" </dev/null
 }
 
@@ -265,7 +280,7 @@ if [ $? -eq 2 ]; then
   echo "$SSH_AGENT_PID" > "$a/agent.pid"
 fi
 ssh-add "$key"'
-  ssh "${SSH_OPTS[@]}" -q -t "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -q -t "$target" \
     "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME") $(sq "$key")"
 }
 
@@ -284,7 +299,7 @@ remote_agent_kill() {
 SSH_AUTH_SOCK="$a/agent.sock" ssh-add -l >/dev/null 2>&1
 if [ $? -ne 2 ] && [ -f "$a/agent.pid" ]; then kill "$(cat "$a/agent.pid")"; fi
 rm -f "$a/agent.sock" "$a/agent.pid"'
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
     "sh -c $(sq "$script")" </dev/null
 }
 

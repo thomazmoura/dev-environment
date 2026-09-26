@@ -61,5 +61,5 @@ fi
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../tmux/scripts/ssh-helpers.sh"
 # The host's own sampler is nudged afterwards, as git_remote.op_argv does, so
 # its snapshot -- and any feed open on the host itself -- moves with the commit.
-exec ssh "${SSH_OPTS[@]}" -q -t "$target" \
+exec "$REMOTE_SSH" "${SSH_OPTS[@]}" -q -t "$target" \
   "env REMOTE_ROW=1 bash -c $(sq "$body") bash $(sq "$root")"

@@ -19,13 +19,14 @@
 #
 # The popup's border is drawn in the theme colour of the machine the shell runs
 # on: the global theme colour for a local shell, the ssh sessions' own for a
-# remote one -- violet unless @ssh_theme_colour says otherwise (see
-# Set-SshTheme.sh). That is why this is a run-shell and not a `popup` binding:
-# display-popup takes -S as it is, with no formats, so the colour has to be
-# worked out before the popup opens. clock-mode-colour is the theme colour on
-# its own, and Set-SshTheme.sh swaps it on an ssh session's windows along with
-# the rest of the theme. Every ssh session has the same colour, so the popup can
-# take it from any of them before the picker has chosen one.
+# remote one -- violet unless @ssh_theme_colour says otherwise, Docker's blue
+# for a container session (see Set-SshTheme.sh). That is why this is a
+# run-shell and not a `popup` binding: display-popup takes -S as it is, with no
+# formats, so the colour has to be worked out before the popup opens.
+# clock-mode-colour is the theme colour on its own, and Set-SshTheme.sh swaps it
+# on an ssh session's windows along with the rest of the theme. With several
+# sessions to pick from, the colour is the first one's -- the current session,
+# when it is remote -- since it has to be chosen before the picker has run.
 #
 # The popup closes when the shell exits, however it exits: the line is exec'd,
 # so nothing is left behind it for the popup to fall back to. Ctrl+C at the
@@ -74,7 +75,7 @@ if [ "${1:-}" = "--pick" ]; then
   done
   picked="$(printf '%s' "$rows" \
     | fzf --reverse --no-sort --delimiter=$'\t' --with-nth=2.. \
-          --prompt='ssh> ' --header='Run a shell in which ssh session?')" || exit 0
+          --prompt='ssh> ' --header='Run a shell in which remote session?')" || exit 0
   exec bash -c "$(popup_line "${picked%%$'\t'*}")"
 fi
 

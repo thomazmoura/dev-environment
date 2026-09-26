@@ -50,7 +50,7 @@ find . -type f -mmin +1440 -delete 2>/dev/null
 cat > "$1" && printf "%s/%s" "$dir" "$1"'
 
 path="$(wl-paste --no-newline --type "$type" |
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
     "sh -c $(sq "$upload") _ $(sq "$name")")"
 [ -n "$path" ] || warn "Could not send the clipboard image to $target"
 

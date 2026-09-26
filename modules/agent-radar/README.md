@@ -201,6 +201,13 @@ panes, the notifications. The feed panes are local ones even in an ssh session
 `Set-NeovimLayout.sh` builds the Agents pane with `pwsh_command`), so there is
 one feed, the same everywhere.
 
+A Docker session (`prefix + D`, `New-SshSession.sh -D`) is an ssh session whose
+`@ssh_target` is `docker:<container>`. Every ssh -- the panes', and the one
+`radar_remote.remote_argv` makes to ask the host's radar -- goes through
+`modules/tmux/scripts/Invoke-Remote.sh`, which runs `docker exec` into the
+container for such a target, and exits 255 like an unreachable host when the
+container is stopped. So everything below applies to a container as it is.
+
 **The screen is here; only the process is there.** Of the three layers, only
 identification cannot run locally: this machine's `ps` sees `ssh` in the pane's
 foreground, not `claude`. But the pane is relaying the host's pty, so

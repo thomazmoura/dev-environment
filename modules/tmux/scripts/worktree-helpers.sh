@@ -77,9 +77,9 @@ wt_sh() {
   line="sh -c $(sq "$script") sh"
   for a in "$@"; do line+=" $(sq "$a")"; done
   if [ -n "${WT_SSH_INTERACTIVE:-}" ]; then
-    ssh "${SSH_OPTS[@]}" "$target" "$line"
+    "$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "$line"
   else
-    ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" "$line" </dev/null
+    "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" "$line" </dev/null
   fi
 }
 

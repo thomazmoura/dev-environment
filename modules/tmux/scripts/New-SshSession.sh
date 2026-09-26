@@ -25,10 +25,17 @@
 # opens a new ssh into that directory and runs its usual command there, through
 # pane_command in tmux-helpers.sh.
 #
-# Usage: New-SshSession.sh [-a | -t user@host -d /remote/dir [-n session name]]
+# Usage: New-SshSession.sh [-D] [-a | -t user@host -d /remote/dir [-n session name]]
 #   no options  ask both questions, as prefix+N does
 #   -a          ask for user@host even when every open ssh session is on one
 #               host, as prefix+C-n does: a session on another machine
+#   -D          the same, into a local Docker container instead of a host, as
+#               prefix+D does: the first question picks one of the containers
+#               (`docker ps -a`), starting it when it is stopped, and the
+#               session's target is docker:<container>. Invoke-Remote.sh (see
+#               REMOTE_SSH in ssh-helpers.sh) makes that the only difference:
+#               the panes, feeds and theme work as they do over ssh, the theme
+#               in its own colour (Set-SshTheme.sh)
 #   -t and -d   skip both and build the session for that host and directory.
 #               How a worktree made on a remote opens its session
 #               (Open-WorktreeSession.sh): the host and the directory are
@@ -47,9 +54,11 @@ target=""
 dir=""
 name_override=""
 always_ask=""
-while getopts ":at:d:n:" option; do
+docker=""
+while getopts ":aDt:d:n:" option; do
   case "$option" in
     a) always_ask="yes" ;;
+    D) docker="yes" ;;
     t) target="$OPTARG" ;;
     d) dir="$OPTARG" ;;
     n) name_override="$OPTARG" ;;
@@ -63,7 +72,8 @@ if [ -n "$dir$target" ] && { [ -z "$dir" ] || [ -z "$target" ]; }; then
 fi
 
 # fzf only for the path that picks a directory; the -t/-d path has one.
-require_tools ssh timeout tmux
+require_tools timeout tmux
+if [ -n "$docker" ] || is_docker_target "$target"; then require_tools docker; else require_tools ssh; fi
 [ -n "$dir" ] || require_tools fzf
 
 # The ControlPath sockets live in ~/.ssh (SSH_OPTS), which a fresh machine may
@@ -111,6 +121,17 @@ wait_cancellable() {
   wait "$pid"
 }
 
+# ask_container
+# The Docker counterpart of ask_target: picks one of the containers into
+# $target, as docker:<name>. Stopped ones are listed too -- connect starts them.
+ask_container() {
+  local picked
+  picked="$(docker ps -a --format $'{{.Names}}\t{{.State}}\t{{.Image}}' |
+    awk -F '\t' '{ printf "%-30s %-10s %s\n", $1, $2, $3 }' |
+    fzf --reverse --prompt='container> ' --header='New docker session')" || return 1
+  target="docker:${picked%% *}"
+}
+
 # connect
 # Connects to $target. Fails when cancelled; any other failure ends the script.
 #
@@ -133,19 +154,32 @@ wait_cancellable() {
 # host has answered; Ctrl+C still ends it, as it does any password prompt.
 connect_timeout=20
 connect() {
+  # A container is local: nothing to authenticate and no network to time out
+  # on. Only starting it, when it is stopped, and no history -- ask_container
+  # lists what there is.
+  if is_docker_target "$target"; then
+    local container="${target#docker:}"
+    if [ "$(docker container inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" != true ]; then
+      printf '\nStarting %s...\n' "$container"
+      docker start "$container" >/dev/null || die "Could not start $container"
+    fi
+    "$REMOTE_SSH" "$target" true </dev/null || die "Could not run a command in $container"
+    return 0
+  fi
+
   printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
-  timeout "$connect_timeout" ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
+  timeout "$connect_timeout" "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
     </dev/null 2>/dev/null &
   wait_cancellable $!
   case $? in
     0) ;;
     130) return 1 ;;
     124)
-      ssh "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
+      "$REMOTE_SSH" "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
         die "No answer from $target in ${connect_timeout}s; its stale connection was closed, try again"
       die "No answer from $target in ${connect_timeout}s" ;;
     *)
-      ssh "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
+      "$REMOTE_SSH" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
   esac
 
   # Only a host that connected goes into the history: a typo should not be the
@@ -165,7 +199,7 @@ devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then
 # The same question, for the -t/-d path, which has no listing to answer it as a
 # side effect. One round trip over the master connection just made.
 probe_kind() {
-  ssh "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$devenv_test")" </dev/null 2>/dev/null
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$devenv_test")" </dev/null 2>/dev/null
 }
 
 # One round trip for everything the picker needs, run under sh because the
@@ -198,10 +232,10 @@ fi'
 # out, not by the exit code.
 pick() {
   local note="${1:-}" answer root picked
-  answer="$(ssh "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
+  answer="$("$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
     IFS= read -r root || exit 1
     IFS= read -r kind || exit 1
-    picked="$(sed -u 's|^\./||' | fzf --reverse --prompt='remote> ' --header="New ssh session on $target:$root$note")" || exit 1
+    picked="$(sed -u 's|^\./||' | fzf --reverse --prompt='remote> ' --header="New session on $target:$root$note")" || exit 1
     printf '%s\t%s\t%s' "$root" "$kind" "$picked"
   })"
   [ -n "$answer" ] || return 1
@@ -218,28 +252,37 @@ pick() {
 # Otherwise: the host of the open ssh sessions, when they are all on one, is
 # tried without asking; several hosts are not guessed between. Leaving it --
 # the connection or the picker -- asks for a host after all. -a skips the guess.
+# With -D the same goes for containers: only the container sessions count
+# towards the guess, and only the host ones without it.
 if [ -n "$dir" ]; then
   connect || exit 0
   kind="$(probe_kind)"
   [ "$kind" = devenv ] || kind=plain
 else
-  hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d' | sort -u)"
+  if [ -n "$docker" ]; then
+    hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | grep '^docker:' | sort -u)"
+    ask=ask_container other="container"
+  else
+    hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d;/^docker:/d' | sort -u)"
+    ask=ask_target other="host"
+  fi
   target=
   [ -z "$always_ask" ] && [ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
   if [ -n "$target" ]; then
-    printf 'New ssh session on %s\n' "$target"
-    connect && pick ' (Esc for another host)' || { clear; target=; }
+    printf 'New session on %s\n' "$target"
+    connect && pick " (Esc for another $other)" || { clear; target=; }
   fi
   if [ -z "$target" ]; then
-    ask_target && connect && pick || exit 0
+    "$ask" && connect && pick || exit 0
   fi
 fi
 
-# <host>-<directory>. The user part is left out: it is the same on every
-# session you open. Dots and colons are the separators in tmux targets
+# <host>-<directory>, or <container>-<directory>. The user part is left out:
+# it is the same on every session you open. Dots and colons are the separators in tmux targets
 # (session:window.pane), so a host like dev.example.com becomes dev_example_com.
 # A caller with a name of its own (-n) has already spelled it that way.
 host="${target##*@}"
+host="${host#docker:}"
 name="${name_override:-$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')}"
 
 # The remote's key, unlocked here once so that no pane has to ask for it (see

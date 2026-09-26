@@ -118,7 +118,7 @@ rows_for() {
   if [ -z "$target" ]; then
     list_rows
   elif ssh_is_devenv "$1"; then
-    ssh "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
+    "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
       '~/.modules/scripts/scripts/Select-Script.sh --list' </dev/null
   else
     printf '%s has no dev-environment, so no script library\n' "${target##*@}" >&2

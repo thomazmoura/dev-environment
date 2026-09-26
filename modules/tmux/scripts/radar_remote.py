@@ -46,13 +46,22 @@ SSH_OPTS = (
 )
 
 
+# The docker exec half of Invoke-Remote.sh (see REMOTE_SSH in ssh-helpers.sh),
+# for a session opened on a local container (prefix+D): its @ssh_target is
+# docker:<container>. Through the script rather than docker exec directly so
+# a stopped container exits 255 like an unreachable host, which is what the
+# radars read as OFFLINE.
+INVOKE_REMOTE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Invoke-Remote.sh")
+
+
 def remote_argv(target: str, script: str) -> list[str]:
-    """ssh to `target` and run `script` there under sh.
+    """ssh to `target` -- or docker exec into it -- and run `script` there under sh.
 
     Under sh -c rather than handed to the login shell, as remote_directory_matches
     in ssh-helpers.sh does, because the login shell may be anything.
     """
-    return ["ssh", *SSH_OPTS, target, "sh -c " + shlex.quote(script)]
+    ssh = [INVOKE_REMOTE] if target.startswith("docker:") else ["ssh"]
+    return [*ssh, *SSH_OPTS, target, "sh -c " + shlex.quote(script)]
 
 
 class _Host:

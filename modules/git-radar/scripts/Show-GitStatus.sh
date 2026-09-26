@@ -30,4 +30,4 @@ if [ -z "$target" ]; then
 fi
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../tmux/scripts/ssh-helpers.sh"
-exec ssh "${SSH_OPTS[@]}" -q -t "$target" "bash -c $(sq "$body") bash $(sq "$root")"
+exec "$REMOTE_SSH" "${SSH_OPTS[@]}" -q -t "$target" "bash -c $(sq "$body") bash $(sq "$root")"

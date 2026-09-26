@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Gives an ssh session (prefix+N) a theme colour of its own, so a session whose
-# panes are on another machine never looks like a local one.
+# panes are on another machine never looks like a local one -- and a session
+# in a Docker container (prefix+D) another, so neither looks like the other.
 #
 # Usage: Set-SshTheme.sh [session...]
 #   Run by New-SshSession.sh as it opens a session, and from the
@@ -15,7 +16,8 @@
 #
 # How: tmux-power paints the whole theme in one colour, and does it in global
 # options. This copies the options holding that colour onto the ssh session and
-# its windows with the colour swapped for @ssh_theme_colour. Session and window
+# its windows with the colour swapped for @ssh_theme_colour (violet by default)
+# or, on a container, @docker_theme_colour (Docker's blue). Session and window
 # options shadow the global ones, so every other session keeps drawing from the
 # globals -- switching back to a local session brings its colour back with
 # nothing to undo, and the options go away with the session.
@@ -31,7 +33,8 @@ fi
 [ -n "$session" ] || exit 0
 target="=$session:"
 
-[ -n "$(tmux show-options -qv -t "$target" @ssh_target 2>/dev/null)" ] || exit 0
+remote="$(tmux show-options -qv -t "$target" @ssh_target 2>/dev/null)"
+[ -n "$remote" ] || exit 0
 
 # The options tmux-power writes the theme colour into. status-left and
 # status-right also hold the agent-radar and Workhorse segments, which the copy
@@ -50,8 +53,13 @@ mapfile -t values < <(tmux "${read_globals[@]}" 2>/dev/null)
 [ "${#values[@]}" -eq $((${#session_options[@]} + ${#window_options[@]})) ] || exit 0
 
 from="${values[-1]}"
-to="$(tmux show-options -gqv @ssh_theme_colour)"
-to="${to:-#9370db}"
+if [[ $remote == docker:* ]]; then
+  to="$(tmux show-options -gqv @docker_theme_colour)"
+  to="${to:-#2496ed}"
+else
+  to="$(tmux show-options -gqv @ssh_theme_colour)"
+  to="${to:-#9370db}"
+fi
 [[ $from == \#* ]] || exit 0
 
 # Written in one call as well, so the status line never shows a half-swapped

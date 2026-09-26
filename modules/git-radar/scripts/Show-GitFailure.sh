@@ -59,7 +59,7 @@ in_repo() {
   local line arg
   line="GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o BatchMode=yes' SSH_ASKPASS_REQUIRE=never git -C $(sq "$root")"
   for arg in "$@"; do line+=" $(sq "$arg")"; done
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" "sh -c $(sq "$(remote_agent_env)$line")" </dev/null
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" "sh -c $(sq "$(remote_agent_env)$line")" </dev/null
 }
 
 # The retry is the operation that failed, not always a fetch. Spelled out per
@@ -183,7 +183,7 @@ candidate_key() {
 # one is not a problem: remote_agent_unlock starts it.
 remote_candidate_key() {
   local probe="SSH_AUTH_SOCK=\"$REMOTE_AGENT_DIR/agent.sock\"; export SSH_AUTH_SOCK; $key_probe"
-  ssh "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" \
+  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -q "$target" \
     "sh -c $(sq "$probe") sh $(sq "$root")" </dev/null
 }
 

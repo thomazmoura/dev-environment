@@ -286,6 +286,13 @@ local one, the same feed as everywhere else. `prefix + R` passes `-L` to
 feed used to run there, where it listed the *remote's* tmux sessions -- usually
 none.)
 
+A Docker session (`prefix + D`, `New-SshSession.sh -D`) is an ssh session whose
+`@ssh_target` is `docker:<container>`. Every ssh -- the panes', and the one
+`radar_remote.remote_argv` makes to ask the host's radar -- goes through
+`modules/tmux/scripts/Invoke-Remote.sh`, which runs `docker exec` into the
+container for such a target, and exits 255 like an unreachable host when the
+container is stopped. So everything below applies to a container as it is.
+
 **A session on another host has a light grey name and a dark grey branch.**
 Which rows that is depends on where the pane is: from a local session the ssh
 rows are grey, from an ssh session the local rows -- and any other host's --
