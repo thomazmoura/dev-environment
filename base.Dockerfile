@@ -11,12 +11,6 @@ RUN set -eux; \
     gnupg \
     locales \
     tzdata; \
-  # Microsoft docs recommend installing the repository via the packages-microsoft-prod helper deb
-  # (no software-properties-common needed on recent Debian images).
-  curl -sSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o /tmp/packages-microsoft-prod.deb; \
-  dpkg -i /tmp/packages-microsoft-prod.deb; \
-  rm /tmp/packages-microsoft-prod.deb; \
-  apt-get update; \
   apt-get install -y --no-install-recommends \
     apt-utils \
     bat \
