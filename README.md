@@ -72,10 +72,9 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `neovim-base/` | NeoVim npm dependencies (e.g. the `neovim` npm package) and spell files |
 | `neovim-install/` | Downloads and installs NeoVim from GitHub releases |
 | `neovim-lsp/` | Roslyn Language Server, PowerShell Editor Services, Lua Language Server |
-| `neovim-plug/` | `vim-plug` plugin list (`plug.vimrc`) |
 | `neovim-treesitter/` | Tree-sitter CLI installer (grammars themselves are installed by `nvim-treesitter`) |
 | `node/` | Node Version Switcher (NVS) setup |
-| `nvim-config/` | NeoVim entry point (`init.vim`) |
+| `nvim-config/` | The whole NeoVim config in Lua (`init.lua`, `lua/config`, `lua/plugins` for lazy.nvim, `lazy-lock.json`), plus the VS Code and Notes-pane profiles |
 | `powershell/` | PowerShell module installers (Oh My Posh, etc.) |
 | `powershell-config/` | PowerShell profiles and Oh My Posh theme |
 | `powershell-install/` | Standalone PowerShell installer (used in Docker base) |
@@ -85,8 +84,7 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `shell/` | Bash config, git config, global gitignore, inputrc |
 | `tmux/` | tmux config and TPM (Tmux Plugin Manager) setup |
 | `universal-ctags/` | ctags installer |
-| `vim/` | All NeoVim Lua/vimrc configuration (plugins, keybindings, LSP settings) |
-| `vim-autoload/` | `vim-plug` autoload file (`plug.vim`) |
+| `vim/` | NeoVim data behind `~/.local/share/nvim/site` (spell files, swap files) |
 | `wsl2/` | WSL2-specific bashrc, tmux config and `Start-DevSession.ps1` |
 
 Config is placed by creating symlinks at the well-known paths:
@@ -108,7 +106,7 @@ The build is split into stages to maximise layer caching:
 Debian trixie + apt packages + PowerShell + .NET SDK + NeoVim + netcoredbg. Everything that needs root and changes infrequently.
 
 **`Dockerfile`** — `thomazmoura/dev-environment:latest`
-Layered on top of `:base`. Adds Node.js (via NVS), NeoVim plugins (vim-plug), Azure CLI, git delta, Tmux plugins, LSP servers, and all dotfile symlinks. Runs as the `developer` user. Container starts by executing `modules/entrypoint-config/Start-DevSession.ps1`.
+Layered on top of `:base`. Adds Node.js (via NVS), NeoVim plugins (lazy.nvim), Azure CLI, git delta, Tmux plugins, LSP servers, and all dotfile symlinks. Runs as the `developer` user. Container starts by executing `modules/entrypoint-config/Start-DevSession.ps1`.
 
 **`qmk-base.Dockerfile`** — `thomazmoura/dev-environment:qmk_base` / `:qmk`
 Same two-stage pattern but layered on `:base` instead of `:latest`. Adds QMK build dependencies (Python packages, ARM toolchain) and Rust.
@@ -123,7 +121,7 @@ Same two-stage pattern but layered on `:base` instead of `:latest`. Adds QMK bui
 3. Installs `fzf` from GitHub releases (newer than the apt version)
 4. Creates `fd` as an alias for `fdfind`
 5. Creates a symlink from `~/.modules` to this repo's `modules/` directory
-6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, vim-plug, Azure CLI, delta, agent-radar, tmux TPM, LSP)
+6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, lazy.nvim plugins, Azure CLI, delta, agent-radar, tmux TPM, LSP)
 7. Creates all config symlinks (`~/.vim`, `~/.config/nvim`, `~/.config/powershell`, `~/.shell`, etc.)
 8. Writes PowerShell environment variables to `~/.profile.ps1`
 9. Creates a symlink to `win32yank.exe` if running under WSL2

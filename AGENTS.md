@@ -18,7 +18,7 @@ There are no application tests and no compilation step to run locally. The only 
 
 - A PowerShell script (`*.ps1`) that installs or configures the tool.
 - A shell script (`*.sh`) for tools that need bash.
-- Config files (vimrc, tmux.conf, profile, etc.) that get symlinked into place.
+- Config files (init.lua, tmux.conf, profile, etc.) that get symlinked into place.
 
 **Docker** — each module is `COPY`-ed into the image at its relevant build stage.
 
@@ -36,11 +36,12 @@ Do not move or rename modules without updating every place they are referenced: 
 | `LinuxDevEnv/host-setup.sh` | Master setup script for a bare Ubuntu 24.04 host |
 | `modules/entrypoint-config/Start-DevSession.ps1` | Container startup: folders, certs, dotfile symlinks, dotnet tools |
 | `modules/wsl2/Start-DevSession.ps1` | WSL2 session startup (subset of the container entrypoint) |
-| `modules/vim/` | All NeoVim config: vimrc, Lua files, keybindings, plugin settings |
-| `modules/nvim-config/init.vim` | NeoVim entry point (sources `modules/vim/vimrc`) |
+| `modules/nvim-config/` | The whole NeoVim config in Lua: `init.lua`, `lua/config/` (options, keymaps, autocmds), `lua/plugins/` (one lazy.nvim spec per domain), `lazy-lock.json` |
+| `modules/nvim-config/lua/vscode-profile/` | vscode-neovim profile (loaded instead of the plugins when `vim.g.vscode`) |
+| `modules/nvim-config/notes.lua` | Minimal profile for the tmux Notes pane (`nvim -u ~/.config/nvim/notes.lua`) |
+| `modules/vim/` | NeoVim data only (spell files, swap files), behind `~/.local/share/nvim/site` |
 | `modules/powershell-config/` | PowerShell profiles and Oh My Posh theme |
 | `modules/shell/` | Bash config, global gitignore, inputrc, git setup scripts |
-| `modules/neovim-plug/plug.vimrc` | vim-plug plugin list |
 | `.docker-variables` | Template for environment variables (git identity, Azure org, cert paths) |
 | `.github/workflows/main.yml` | CI: builds and pushes all Docker tags on push |
 
@@ -83,7 +84,7 @@ The `Dockerfile` and `qmk-base.Dockerfile` both accept a `DockerBase` build argu
 docker build --build-arg DockerBase=thomazmoura/dev-environment:base -f Dockerfile .
 ```
 
-**NeoVim config**: All NeoVim configuration lives in `modules/vim/` (Lua and vimrc files) and `modules/nvim-config/` (entry point). Plugin declarations are in `modules/neovim-plug/plug.vimrc`. LSP server installers are in `modules/neovim-lsp/`.
+**NeoVim config**: All NeoVim configuration is Lua in `modules/nvim-config/` (`~/.config/nvim`). Plugins are managed by lazy.nvim: each file in `lua/plugins/` returns the specs for one domain (LSP, completion, git, UI...), with the plugin's keymaps in its `keys`. General options/keymaps/autocmds are in `lua/config/`. Plugins install to `~/.local/share/nvim/lazy` (outside the repo) and are pinned by the committed `lazy-lock.json`. Only specs with `cond = true` load under VS Code. LSP server installers are in `modules/neovim-lsp/`.
 
 **Environment variables**: System-wide variables (timezone, locale, TERM) are set in `/etc/environment` on the host or via `ENV` directives in Dockerfiles. User-level PowerShell variables go in `~/.profile.ps1` (created by `host-setup.sh`).
 
@@ -93,11 +94,11 @@ docker build --build-arg DockerBase=thomazmoura/dev-environment:base -f Dockerfi
 
 **Add a new tool**: Create a new directory under `modules/<tool-name>/` with an install script. Add the corresponding `COPY` line to `Dockerfile` (or `base.Dockerfile` if it needs root) and the corresponding `pwsh -File` call to `LinuxDevEnv/host-setup.sh`.
 
-**Update a NeoVim plugin**: Edit `modules/neovim-plug/plug.vimrc`. The plugin is installed via `PlugInstall` at build time; no other files need changing unless the plugin requires Lua config, which goes in `modules/vim/lua/`.
+**Add or update a NeoVim plugin**: Add a spec to the matching file in `modules/nvim-config/lua/plugins/` (config in `opts`/`config`, keymaps in `keys`). Run `:Lazy sync` (or `:Lazy update`) and commit the updated `lazy-lock.json`; Docker and `host-setup.sh` install with `Lazy! restore` from it.
 
 **Change a dotfile**: Edit the file directly in `modules/vim/`, `modules/shell/`, `modules/powershell-config/`, etc. Because the host uses a symlink to `modules/`, the change is live immediately on the host without re-running setup.
 
-**Add a new LSP server**: Edit `modules/neovim-lsp/Setup-NeoVimLSP.ps1` to download and install the server binary into `~/.language-servers/`. Then add the corresponding configuration in `modules/vim/lua/lsp-settings.lua`.
+**Add a new LSP server**: Edit `modules/neovim-lsp/Setup-NeoVimLSP.ps1` to download and install the server binary into `~/.language-servers/`. Then add the corresponding configuration (and the name in `vim.lsp.enable`) in `modules/nvim-config/lua/plugins/lsp.lua`.
 
 **Add a Linux host utility**: Create a script in `LinuxDevEnv/` for utilities specific to the physical machine (terminal emulators, display server tweaks, systemd services). These are not part of the Docker image.
 

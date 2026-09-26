@@ -10,11 +10,11 @@ RUN chmod +x /home/developer/.modules/node/Setup-NVS.ps1 && pwsh -NoProfile -Com
 COPY --chown=developer:developer modules/neovim-base /home/developer/.modules/neovim-base
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-base/neovim-setup.ps1
 
-# NeoVim Plug Modules installation
-RUN mkdir -p /home/developer/.local/share/nvim/site/autoload
-COPY --chown=developer:developer modules/vim-autoload /home/developer/.local/share/nvim/site/autoload
-COPY --chown=developer:developer modules/neovim-plug/plug.vimrc /home/developer/.modules/neovim-plug/plug.vimrc
-RUN pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -c '/home/developer/neovim/bin/nvim -n -u /home/developer/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
+# NeoVim config and plugins (lazy.nvim, pinned by lazy-lock.json). The site
+# folder has to exist first: the config keeps its swap files there.
+COPY --chown=developer:developer modules/vim /home/developer/.local/share/nvim/site
+COPY --chown=developer:developer modules/nvim-config /home/developer/.config/nvim
+RUN /home/developer/neovim/bin/nvim --headless "+Lazy! restore" +qa || /home/developer/neovim/bin/nvim --headless "+Lazy! restore" +qa
 
 # Azure-CLI extensions installation
 COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
@@ -74,12 +74,9 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-lsp/Setup-NeoVimLSP.ps
 # Shell config folders and .files
 RUN pwsh -c "New-Item -ItemType SymbolicLink -Path /home/developer/.vim -Target /home/developer/.local/share/nvim/site"
 COPY --chown=developer:developer DockerUbuntu/bashrc /home/developer/.bashrc
-COPY --chown=developer:developer DockerUbuntu/vimrc /home/developer/.config/nvim/init.vim
 
 COPY --chown=developer:developer modules/shell /home/developer/.shell
 COPY --chown=developer:developer modules/powershell-config /home/developer/.config/powershell
-COPY --chown=developer:developer modules/nvim-config /home/developer/.config/nvim
-COPY --chown=developer:developer modules/vim /home/developer/.local/share/nvim/site
 
 # Container startup configuration
 COPY --chown=developer:developer modules/entrypoint-config /home/developer/.modules/entrypoint

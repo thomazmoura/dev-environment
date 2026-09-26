@@ -6,7 +6,7 @@ set -euo pipefail
 # tmux and NeoVim on the dev machine stay transparent for Ghostty and WezTerm,
 # and switch to opaque backgrounds (focused pane lighter, the rest darker) when
 # the client attaching is Termux -- see modules/tmux/scripts/Set-PaneBackground.sh
-# and modules/vim/lua/pane-background.lua. Termux can't be told apart from the
+# and modules/nvim-config/lua/config/pane_background.lua. Termux can't be told apart from the
 # other side (same TERM as WezTerm, no TERM_PROGRAM over ssh), so it announces
 # itself: ssh sends LC_TERMINAL=Termux, which the default `AcceptEnv LANG LC_*`
 # of Ubuntu's and Debian's sshd lets through.

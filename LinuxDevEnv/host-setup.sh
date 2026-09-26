@@ -116,12 +116,8 @@ pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1
 pwsh -NoProfile -File $HOME/.modules/neovim-base/neovim-setup.ps1
 
 # Tree-sitter CLI (required by nvim-treesitter's main branch, and by the
-# :TSUpdate that runs as part of PlugInstall below)
+# :TSUpdate that runs when lazy.nvim installs it below)
 pwsh -NoProfile -File $HOME/.modules/neovim-treesitter/Install-TreeSitterCli.ps1
-
-# NeoVim Plug Modules installation
-pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site/autoload -Target $modules_path/vim-autoload"
-pwsh -NoProfile -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' || pwsh -Command '& $HOME/neovim/bin/nvim -n -u $HOME/.modules/neovim-plug/plug.vimrc -i NONE +"PlugInstall" +"qa"' 
 
 # Azure-CLI extensions installation
 export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh && $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh
@@ -221,6 +217,10 @@ fi
 
 pwsh -NoProfile -Command "New-Item -Type Directory -Path $HOME/.local/share/nvim -Force"
 pwsh -NoProfile -Command "New-Item -Type SymbolicLink -Path $HOME/.local/share/nvim/site -Target $modules_path/vim"
+
+# NeoVim plugins (lazy.nvim, pinned by modules/nvim-config/lazy-lock.json).
+# Needs both the ~/.config/nvim and the site symlinks above.
+$HOME/neovim/bin/nvim --headless "+Lazy! restore" +qa || $HOME/neovim/bin/nvim --headless "+Lazy! restore" +qa
 
 # Spell files (needs the site symlink above, since it writes through it)
 pwsh -NoProfile -File $HOME/.modules/neovim-base/Install-SpellFiles.ps1

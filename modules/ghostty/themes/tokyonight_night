@@ -1,5 +1,5 @@
 # tokyonight_night — vendored from folke/tokyonight.nvim (extras/ghostty).
-# Copied rather than symlinked because modules/vim/.plugged is git-ignored.
+# Copied rather than symlinked because the plugin lives outside the repo (~/.local/share/nvim/lazy).
 
 palette = 0=#15161e
 palette = 1=#f7768e

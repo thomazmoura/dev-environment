@@ -311,10 +311,13 @@ if [ -d "$HOME/.bashgit" ]; then
 	source ~/.bashgit/gitprompt.sh
 fi
 
-# FZF plugins
+# FZF plugins: from an old ~/.fzf checkout (vim-plug used to install one), or
+# else from the fzf binary itself (0.48+)
 if [ -d "$HOME/.fzf" ]; then
   source "$HOME/.fzf/shell/key-bindings.bash"
   source "$HOME/.fzf/shell/completion.bash"
+elif command -v fzf >/dev/null && fzf --bash >/dev/null 2>&1; then
+  eval "$(fzf --bash)"
 fi
 
 # Aliases

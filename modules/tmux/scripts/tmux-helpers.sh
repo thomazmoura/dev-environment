@@ -199,12 +199,12 @@ pane_kind() {
       ;;
     Notes)
       # prefix+n and the layout's notes feed (Set-NeovimLayout.sh): NeoVim
-      # on the repository's .notes, with the notes profile (vim/notes.vimrc) --
+      # on the repository's .notes, with the notes profile (nvim-config/notes.lua) --
       # bare but for tmux navigation and a transparent background -- or, on an
       # ssh host without the modules, NORC. The root is found where the
       # command runs, so the same string serves a local pane and a remote one.
       # Not in PANE_KINDS either.
-      local profile="~/.local/share/nvim/site/notes.vimrc"
+      local profile="~/.config/nvim/notes.lua"
       [ -n "$bare" ] && profile="NORC"
       kind_command="nvim -u $profile \"\$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.notes\""
       kind_no_pwsh="no-pwsh"
