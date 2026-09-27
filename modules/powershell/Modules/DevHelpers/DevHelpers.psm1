@@ -851,9 +851,9 @@ function Exit-Session() {
 # Switches to the node version of the .node-version (or .nvmrc) in scope, or to
 # LTS when there is none. Not run by the profile -- a prompt hook costs every
 # shell, and most never touch node -- but by the pane commands that need node:
-# NeoVim (LSP servers and Copilot) and the Copilot CLI, in
-# modules/tmux/scripts/tmux-helpers.sh, modules/tmux/common.conf and
-# modules/herdr/scripts/workspace-actions.sh.
+# the Copilot CLI and herdr, in modules/tmux/scripts/tmux-helpers.sh,
+# modules/tmux/common.conf and modules/herdr/scripts/Start-Herdr.sh. NeoVim
+# does not need it: its LSP servers and Copilot run on their own node.
 function Use-NodeVersion() {
   $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
   nvs use auto

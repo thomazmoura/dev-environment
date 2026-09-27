@@ -1,8 +1,6 @@
 . "$HOME/.modules/powershell/Check-Failure.ps1"
 
-Write-Output "Make node available to the script"
-& $HOME/.nvs/nvs.ps1 use lts
-
+Write-Output "`n->> Installing the node-based Language Servers (with their own node)"
 . "$HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1"
 
 Write-Output "`n->> Creating default Language Servers folder"

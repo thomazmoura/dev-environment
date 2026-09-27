@@ -2,36 +2,60 @@ param(
   [switch] $ForcarAtualizacao
 )
 
+# The node-based language servers live in their own prefix and run on their own
+# node (~/.language-servers/node/node), the way Copilot runs on ~/.nvs/copilot-node.
+# They only read a project's node_modules, so a project pinned to an old node by
+# its .node-version still gets servers that need a current one -- and NeoVim
+# starts without switching node or checking packages first
+# (modules/nvim-config/lua/plugins/lsp.lua).
+
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 
-# Verifies if there is any .node-version on levels below and change to it if found
-# This is useful to open NeoVim with the correct node version on .NET + Angular projects
-$nodeVersionFile = fd -H .node-version -d 2
-if( $nodeVersionFile ) {
-  #nvs use (cat $nodeVersionFile)
-}
+$Prefix = "$HOME/.language-servers/node"
+$Marker = "$Prefix/.installed"
 
-$NodeVersion = node --version
-$InstalledNodeVersionsFolder = "$HOME/.installed-node-versions"
-$NodeVersionCache = "$InstalledNodeVersionsFolder/$NodeVersion"
-
-if( !($ForcarAtualizacao) -and (Test-Path $NodeVersionCache) ) {
-  Write-Verbose "`n-->> Packages already installed"
+if( !($ForcarAtualizacao) -and (Test-Path $Marker) ) {
+  Write-Verbose "`n-->> Language server packages already installed"
   return;
 }
 
-if( !(Test-Path $InstalledNodeVersionsFolder) ) {
-  New-Item -ItemType Directory $InstalledNodeVersionsFolder -Force
+$Nvs = "$HOME/.nvs/nvs.ps1"
+& $Nvs add lts
+$NodeExe = & $Nvs which lts | Select-Object -Last 1
+if( !$NodeExe -or !(Test-Path $NodeExe) ) {
+  # nvs could not resolve lts (e.g. offline): the newest node already installed
+  $NodeExe = Get-ChildItem "$HOME/.nvs/node" -Directory |
+    Sort-Object { [version]$_.Name } |
+    Select-Object -Last 1 |
+    ForEach-Object { "$($_.FullName)/x64/bin/node" }
 }
-New-Item -ItemType File -Path $NodeVersionCache -Force
+if( !$NodeExe -or !(Test-Path $NodeExe) ) {
+  Write-Error "No node found for the language servers. Install one with nvs (modules/node/Setup-NVS.ps1)."
+  return
+}
 
-npm install --global 'vscode-langservers-extracted'
-npm install --global 'typescript-language-server'
-npm install --global '@angular/language-server'
-npm install --global 'yaml-language-server'
-npm install --global 'vim-language-server'
-npm install --global 'emmet-ls'
-npm install --global '@cucumber/language-server'
+New-Item -ItemType Directory $Prefix -Force | Out-Null
+New-Item -ItemType SymbolicLink -Path "$Prefix/node" -Target $NodeExe -Force | Out-Null
+$env:PATH = "$(Split-Path $NodeExe):$env:PATH"
+
+# A local install (not --global): the servers land in node_modules/.bin and
+# typescript at the top of node_modules, where ngserver probes for it (7 is
+# the Go port, without the tsserverlibrary both servers load)
+npm install --prefix $Prefix `
+  'typescript@<7' `
+  'vscode-langservers-extracted' `
+  'typescript-language-server' `
+  '@angular/language-server' `
+  'yaml-language-server' `
+  'vim-language-server' `
+  'emmet-ls' `
+  '@cucumber/language-server'
+
+# The marker is a receipt for a successful install, so a failed one is retried
+if( $LASTEXITCODE -eq 0 ) {
+  New-Item -ItemType File -Path $Marker -Force | Out-Null
+} else {
+  Write-Warning "npm install failed with exit code $LASTEXITCODE. Not marking the language servers as installed."
+}
 
 $stopwatch.Stop(); Write-Verbose "`n-->> Node package installation took: $($stopwatch.ElapsedMilliseconds)"
-

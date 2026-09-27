@@ -182,13 +182,9 @@ pane_kind() {
   case "$kind" in
     NeoVim)
       # No no-exit: quitting NeoVim closes its pane, as quitting an agent does,
-      # instead of leaving a pwsh prompt where the editor was.
-      if [ -n "$bare" ]; then
-        kind_command="nvim"
-      else
-        # Node for the LSP servers and Copilot (Use-NodeVersion, DevHelpers.psm1).
-        kind_command='Use-NodeVersion && ~/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim'
-      fi
+      # instead of leaving a pwsh prompt where the editor was. No node to pick
+      # first: the LSP servers and Copilot bring their own (lsp.lua, ai.lua).
+      kind_command="nvim"
       ;;
     "NeoVim (NORC)")
       # prefix+E: NeoVim without the vimrc or plugins, so no LSP packages to

@@ -97,7 +97,7 @@ new_tab() { # <workspace_id> <cwd> <label> <--focus|--no-focus>
 # and must: its -Command is only profile setup, so without it the tab would
 # open and vanish in the same breath. Exiting that pwsh still closes the tab.
 # The others get PWSH_LEAN=1, as in tmux-helpers.sh:pwsh_invocation.
-NVIM_COMMAND="PWSH_LEAN=1 pwsh -Command 'Use-NodeVersion && $HOME/.modules/neovim-lsp/Install-LanguageServerNodePackages.ps1 && nvim' && exit"
+NVIM_COMMAND="PWSH_LEAN=1 pwsh -Command 'nvim' && exit"
 TERMINAL_COMMAND="pwsh -NoExit -Command 'psgit && psfzf && Build-DotnetProjectIfNeeded' && exit"
 TESTS_COMMAND='PWSH_LEAN=1 pwsh -Command "cd \"*Testes/\" && dwt"; exit'
 FRONTEND_COMMAND='PWSH_LEAN=1 pwsh -Command "cd \"*Angular\" && nvs use auto && Install-NpmIfNeeded && Start-Frontend"; exit'

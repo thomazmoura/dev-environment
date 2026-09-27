@@ -1,5 +1,25 @@
 local home = vim.env.HOME
 
+-- The node-based servers: their own prefix and node, from
+-- modules/neovim-lsp/Install-LanguageServerNodePackages.ps1. Started through
+-- that node, not the one on PATH, so a project pinned to an old node (its
+-- .node-version) still gets them -- they only read its node_modules.
+local node_lsp = home .. '/.language-servers/node'
+local node = node_lsp .. '/node'
+local function node_server(bin, ...)
+  return { node, node_lsp .. '/node_modules/.bin/' .. bin, ... }
+end
+
+-- The @angular/core version in the project's package.json, as nvim-lspconfig's
+-- angularls does: ngserver adapts to older projects with it. Matched as text,
+-- since older package.json files are not always strict JSON.
+local function angular_core_version(root)
+  local ok, lines = pcall(vim.fn.readfile, root .. '/package.json')
+  if not ok then return '' end
+  local version = table.concat(lines, '\n'):match('"@angular/core"%s*:%s*"[^"%d]*(%d+%.%d+%.%d+)')
+  return version or ''
+end
+
 -- Diagnostics: one line per diagnostic under the code (virtual_lines) or all
 -- of them at the end of the line (virtual_text), toggled with <Leader>l
 local function diagnostic_config(lines)
@@ -93,12 +113,52 @@ return {
         },
       })
 
+      for name, cmd in pairs({
+        jsonls = node_server('vscode-json-language-server', '--stdio'),
+        cssls = node_server('vscode-css-language-server', '--stdio'),
+        html = node_server('vscode-html-language-server', '--stdio'),
+        ts_ls = node_server('typescript-language-server', '--stdio'),
+        yamlls = node_server('yaml-language-server', '--stdio'),
+        vimls = node_server('vim-language-server', '--stdio'),
+        emmet_ls = node_server('emmet-ls', '--stdio'),
+        cucumber_language_server = node_server('cucumber-language-server', '--stdio'),
+      }) do
+        vim.lsp.config(name, { cmd = cmd })
+      end
+
       -- angularls claims every typescript and html buffer: only start it when
-      -- there is an Angular workspace (not calling on_dir means "don't attach")
+      -- there is an Angular workspace (not calling on_dir means "don't attach").
+      -- Before Angular 15 its templates come out full of false errors, so
+      -- those projects make do with ts_ls.
+      local warned_node_modules = {}
       vim.lsp.config('angularls', {
         root_dir = function(bufnr, on_dir)
           local root = vim.fs.root(bufnr, { 'angular.json', 'nx.json' })
-          if root then on_dir(root) end
+          if not root then return end
+          local major = tonumber(angular_core_version(root):match('^%d+'))
+          if major and major < 15 then return end
+          if not vim.uv.fs_stat(root .. '/node_modules') and not warned_node_modules[root] then
+            warned_node_modules[root] = true
+            vim.notify('No node_modules in ' .. root .. ': Angular LSP is limited until '
+              .. '`npm install` runs there with the project\'s node (the Frontend pane, prefix+a)',
+              vim.log.levels.WARN)
+          end
+          on_dir(root)
+        end,
+        -- ngserver needs TypeScript >= 5.0: the project's when it is new
+        -- enough, else the servers' own. @angular/language-service, though,
+        -- must be the one ngserver was released with -- a project's older
+        -- copy lacks the API it calls.
+        cmd = function(dispatchers, config)
+          local root = config.root_dir
+          local servers = node_lsp .. '/node_modules'
+          local ngserver = servers .. '/@angular/language-server'
+          return vim.lsp.rpc.start({
+            node, ngserver .. '/bin/ngserver', '--stdio',
+            '--tsProbeLocations', table.concat({ root .. '/node_modules', servers }, ','),
+            '--ngProbeLocations', table.concat({ ngserver .. '/node_modules', servers }, ','),
+            '--angularCoreVersion', angular_core_version(root),
+          }, dispatchers)
         end,
       })
 
