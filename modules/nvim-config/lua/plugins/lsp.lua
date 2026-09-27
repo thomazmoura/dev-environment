@@ -20,6 +20,45 @@ local function angular_core_version(root)
   return version or ''
 end
 
+local function angular_major(root)
+  return tonumber(angular_core_version(root):match('^%d+'))
+end
+
+-- Angular 11 to 14: the ngserver of the project's own major, on the node it
+-- supports, from modules/neovim-lsp/Install-AngularLanguageServer.ps1. It is
+-- installed in the background the first time such a project opens; the
+-- buffers opened meanwhile start the server when it is done.
+local legacy_angular = home .. '/.language-servers/angular/'
+local legacy_installs = {} -- major -> the starts waiting for its install
+local legacy_failed = {}
+local function with_legacy_angular(major, start)
+  local marker = legacy_angular .. major .. '/.installed'
+  if vim.uv.fs_stat(marker) then return start() end
+  if legacy_failed[major] then return end
+  if legacy_installs[major] then
+    table.insert(legacy_installs[major], start)
+    return
+  end
+  legacy_installs[major] = { start }
+  vim.notify('Installing the Angular ' .. major .. ' language server...', vim.log.levels.INFO)
+  vim.system({
+    'pwsh', '-NoProfile', '-File',
+    home .. '/.modules/neovim-lsp/Install-AngularLanguageServer.ps1', '-Major', tostring(major),
+  }, { text = true }, vim.schedule_wrap(function(result)
+    local starts = legacy_installs[major]
+    legacy_installs[major] = nil
+    if result.code ~= 0 or not vim.uv.fs_stat(marker) then
+      legacy_failed[major] = true
+      local output = vim.trim((result.stderr or '') .. '\n' .. (result.stdout or ''))
+      vim.notify('Angular ' .. major .. ' language server install failed:\n'
+        .. output:sub(-1500), vim.log.levels.ERROR)
+      return
+    end
+    vim.notify('Angular ' .. major .. ' language server installed', vim.log.levels.INFO)
+    for _, waiting in ipairs(starts) do waiting() end
+  end))
+end
+
 -- Diagnostics: one line per diagnostic under the code (virtual_lines) or all
 -- of them at the end of the line (virtual_text), toggled with <Leader>l
 local function diagnostic_config(lines)
@@ -128,29 +167,48 @@ return {
 
       -- angularls claims every typescript and html buffer: only start it when
       -- there is an Angular workspace (not calling on_dir means "don't attach").
-      -- Before Angular 15 its templates come out full of false errors, so
-      -- those projects make do with ts_ls.
+      -- The current ngserver fills templates before Angular 15 with false
+      -- errors: 11 to 14 get the release of their own major, older projects
+      -- make do with ts_ls.
       local warned_node_modules = {}
       vim.lsp.config('angularls', {
         root_dir = function(bufnr, on_dir)
           local root = vim.fs.root(bufnr, { 'angular.json', 'nx.json' })
           if not root then return end
-          local major = tonumber(angular_core_version(root):match('^%d+'))
-          if major and major < 15 then return end
+          local major = angular_major(root)
+          if major and major < 11 then return end
           if not vim.uv.fs_stat(root .. '/node_modules') and not warned_node_modules[root] then
             warned_node_modules[root] = true
             vim.notify('No node_modules in ' .. root .. ': Angular LSP is limited until '
               .. '`npm install` runs there with the project\'s node (the Frontend pane, prefix+a)',
               vim.log.levels.WARN)
           end
-          on_dir(root)
+          if major and major < 15 then
+            with_legacy_angular(major, function()
+              if vim.api.nvim_buf_is_valid(bufnr) then on_dir(root) end
+            end)
+          else
+            on_dir(root)
+          end
         end,
         -- ngserver needs TypeScript >= 5.0: the project's when it is new
         -- enough, else the servers' own. @angular/language-service, though,
         -- must be the one ngserver was released with -- a project's older
-        -- copy lacks the API it calls.
+        -- copy lacks the API it calls. The same goes for the older majors,
+        -- whose ngserver wants the project's TypeScript 4 (or its prefix's).
         cmd = function(dispatchers, config)
           local root = config.root_dir
+          local major = angular_major(root)
+          if major and major < 15 then
+            local prefix = legacy_angular .. major
+            local servers = prefix .. '/node_modules'
+            local ngserver = servers .. '/@angular/language-server'
+            return vim.lsp.rpc.start({
+              prefix .. '/node', ngserver .. '/bin/ngserver', '--stdio',
+              '--tsProbeLocations', table.concat({ root .. '/node_modules', servers }, ','),
+              '--ngProbeLocations', table.concat({ ngserver .. '/node_modules', servers }, ','),
+            }, dispatchers)
+          end
           local servers = node_lsp .. '/node_modules'
           local ngserver = servers .. '/@angular/language-server'
           return vim.lsp.rpc.start({
