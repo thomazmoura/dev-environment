@@ -159,6 +159,19 @@ new_pane() {
   printf '%s' "$pane"
 }
 
+# new_window <target> <label> <command>
+# new_pane, but in a new window of <target>'s session -- at the next free index,
+# like tmux's own new-window -- instead of a split. Prints the new pane id.
+new_window() {
+  local target=$1 label=$2 command=$3
+  local session pane
+  session="$(tmux display-message -p -t "$target" '#{session_id}')"
+  pane="$(tmux new-window -t "$session:" -c "$(tmux display-message -p -t "$target" '#{pane_current_path}')" -P -F '#{pane_id}')"
+  label_pane "$pane" "$label"
+  tmux send-keys -t "$pane" "$(closing_line "$command")" C-m
+  printf '%s' "$pane"
+}
+
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
