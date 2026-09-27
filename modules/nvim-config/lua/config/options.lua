@@ -31,9 +31,11 @@ opt.laststatus = 2
 
 opt.mouse = 'a'
 opt.termguicolors = true
+-- The command line with the insert-mode bar, so <Esc> to its normal mode
+-- (config/cmdline_normal.lua) shows
 opt.guicursor = {
-  'n-v-c:block',
-  'i-ci-ve:ver25',
+  'n-v:block',
+  'c-i-ci-ve:ver25',
   'r-cr:hor20',
   'o:hor50',
   'a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor',
