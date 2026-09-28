@@ -81,6 +81,10 @@ return {
         local ok, wh = pcall(require, 'workhorse')
         return ok and wh.lualine.get() or ''
       end
+      local section_c = { workhorse }
+      -- Only where the paperboy spec loads (its cond needs $PAPERBOY_EWS_URL)
+      local ok_pb, paperboy = pcall(require, 'paperboy')
+      if ok_pb then table.insert(section_c, paperboy.get_component()) end
       local function encoding()
         return string.format('%s %s', vim.bo.fileencoding, vim.bo.bomb and 'BOM' or '')
       end
@@ -97,7 +101,7 @@ return {
         sections = {
           lualine_a = { 'mode' },
           lualine_b = { 'diagnostics', { 'filename', path = 1 } },
-          lualine_c = { workhorse },
+          lualine_c = section_c,
           lualine_x = {
             { noice.mode.get, cond = noice.mode.has, color = { fg = '#ff9e64' } },
             { noice.search.get, cond = noice.search.has, color = { fg = '#ff9e64' } },

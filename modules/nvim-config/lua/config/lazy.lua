@@ -19,6 +19,9 @@ require('lazy').setup({
     -- surround and the like); everything else is the terminal NeoVim's
     cond = not vim.g.vscode,
   },
+  -- My own plugins load from their checkout in ~/code when there is one
+  -- (~/code/workhorse.nvim...), and from GitHub otherwise (Docker, other hosts)
+  dev = { path = '~/code', patterns = { 'thomazmoura' }, fallback = true },
   install = { colorscheme = { 'tokyonight-storm', 'habamax' } },
   -- Updates are deliberate (:Lazy update, then commit lazy-lock.json)
   checker = { enabled = false },

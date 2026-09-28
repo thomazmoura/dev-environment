@@ -1,7 +1,6 @@
--- Plugins of my own
-local spotlight_checkout = vim.fn.expand('~/code/spotlight-dimmer')
+-- Plugins of my own. The checkout in ~/code wins when present (`dev` in
+-- config/lazy.lua), GitHub otherwise
 local spotlight_subdir = 'SpotlightDimmer.NeovimPlugin'
-local spotlight_local = vim.uv.fs_stat(spotlight_checkout .. '/' .. spotlight_subdir) ~= nil
 
 return {
   -- Azure DevOps work items
@@ -84,12 +83,24 @@ return {
     },
   },
 
+  -- Exchange unread count in lualine and :Paperboy inbox. Only where
+  -- $PAPERBOY_EWS_URL / $PAPERBOY_EMAIL are set (the plugin reads them itself)
+  {
+    'thomazmoura/paperboy.nvim',
+    cond = not vim.g.vscode and vim.env.PAPERBOY_EWS_URL ~= nil,
+    event = 'VeryLazy',
+    cmd = { 'Paperboy', 'PaperboyRefresh', 'PaperboyStatus' },
+    keys = {
+      { '<Leader>mi', '<cmd>Paperboy inbox<cr>', desc = 'Paperboy: inbox' },
+    },
+    opts = {},
+  },
+
   -- SpotlightDimmer: dims every split but the focused one through the desktop
-  -- overlay (a no-op outside tmux/ssh). The local checkout wins when present.
+  -- overlay (a no-op outside tmux/ssh).
   -- Over ssh config/ssh_title.lua owns 'titlestring', hence manage_title = false.
   {
     'thomazmoura/spotlight-dimmer',
-    dir = spotlight_local and spotlight_checkout or nil,
     lazy = false,
     config = function(plugin)
       vim.opt.rtp:append(plugin.dir .. '/' .. spotlight_subdir)
