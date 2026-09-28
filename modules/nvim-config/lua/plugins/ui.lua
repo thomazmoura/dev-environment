@@ -60,6 +60,8 @@ return {
         { view = 'notify', filter = { event = 'msg_showmode' } },
         -- No "written" message on every save
         { filter = { event = 'msg_show', kind = '', find = 'written' }, opts = { skip = true } },
+        -- Nor auto-save.nvim's "AutoSave: saved at ..."
+        { filter = { event = 'msg_show', find = '^AutoSave: saved' }, opts = { skip = true } },
       },
       views = {
         notify = { replace = true },
