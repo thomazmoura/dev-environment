@@ -92,6 +92,8 @@ return {
     cmd = { 'Paperboy', 'PaperboyRefresh', 'PaperboyStatus' },
     keys = {
       { '<Leader>mi', '<cmd>Paperboy inbox<cr>', desc = 'Paperboy: inbox' },
+      { '<Leader>mI', '<cmd>Paperboy all<cr>', desc = 'Paperboy: e-mails of all folders' },
+      { '<Leader>mt', '<cmd>Paperboy folders<cr>', desc = 'Paperboy: folder tree' },
     },
     opts = {},
   },

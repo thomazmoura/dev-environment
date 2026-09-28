@@ -175,7 +175,7 @@ new_window() {
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
-PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code")
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Paperboy")
 
 # pane_kind <pane> <kind>
 # Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
@@ -236,6 +236,15 @@ pane_kind() {
       else
         kind_command="Use-NodeVersion && copilot --max-ai-credits 500"
       fi
+      ;;
+    Workhorse | Paperboy)
+      # NeoVim opened on workhorse.nvim's last query or paperboy.nvim's inbox
+      # (nvim-config/lua/plugins/personal.lua). Through pwsh like NeoVim, whose
+      # profile is what sets $PAPERBOY_EWS_URL and the Azure DevOps settings.
+      # Single quotes: pwsh_invocation wraps the whole command in double ones.
+      local startup="Workhorse resume"
+      [ "$kind" = Paperboy ] && startup="Paperboy inbox"
+      kind_command="nvim -c '$startup'"
       ;;
     Codex) kind_command="codex" ;;
     "Open Code") kind_command="nvs use latest && opencode" ;;
