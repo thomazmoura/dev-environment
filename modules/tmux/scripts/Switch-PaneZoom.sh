@@ -8,7 +8,8 @@
 #          Toggles the partial zoom of <pane>'s window.
 #        Switch-PaneZoom.sh --restore <pane>
 #          Undoes the partial zoom of <pane>'s window, if it has one. Run by
-#          prefix+X and Set-NeovimLayout.sh before they touch the window.
+#          prefix+X, Set-NeovimLayout.sh and C-j/C-k/C-l before they touch
+#          the window.
 #        Switch-PaneZoom.sh --sweep
 #          Run by the hooks in common.conf (and by Restore-PickerPane.sh):
 #          - a zoomed window whose zoomed pane has closed, or that got a pane
