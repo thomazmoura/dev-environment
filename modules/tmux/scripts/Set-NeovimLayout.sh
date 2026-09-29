@@ -73,6 +73,10 @@ shift $((OPTIND - 1))
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
 
+# A window zoomed with prefix+z is zoomed out first: the layout is worked out
+# from, and repairs, the panes of the whole window, the hidden ones included.
+"$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Switch-PaneZoom.sh" --restore "$top"
+
 # The home layout takes a window only when nothing in it is anyone's work: every
 # pane is a radar-column pane or a picker still waiting for an answer, or the
 # window already is a home layout, which is repaired. Anything else -- NeoVim,

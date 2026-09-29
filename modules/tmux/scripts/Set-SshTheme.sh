@@ -71,12 +71,14 @@ for option in "${session_options[@]}"; do
   write+=(set-option -t "$target" "$option" "${values[i++]//"$from"/"$to"}" \;)
 done
 window_values=("${values[@]:i}")
-while IFS= read -r window; do
+while IFS='|' read -r window stash_for; do
+  # A prefix+z stash draws nothing in the status bar; see Switch-PaneZoom.sh.
+  [ -z "$stash_for" ] || continue
   i=0
   for option in "${window_options[@]}"; do
     write+=(set-option -w -t "$window" "$option" "${window_values[i++]//"$from"/"$to"}" \;)
   done
-done < <(tmux list-windows -t "$target" -F '#{window_id}' 2>/dev/null)
+done < <(tmux list-windows -t "$target" -F '#{window_id}|#{@zoom_origin}' 2>/dev/null)
 
 # Windows opened in the session later are themed as they arrive. This hook is
 # the session's own, so assigning it replaces nothing of anyone else's.

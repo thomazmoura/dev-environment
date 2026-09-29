@@ -35,6 +35,11 @@ die() { exit 0; }
 
 dead="${1:-}"
 
+# A window zoomed with prefix+z whose zoomed pane has just closed gets its
+# stashed panes back first: without them it looks like only the feeds are
+# left, and the stash would be stranded.
+"$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Switch-PaneZoom.sh" --sweep || true
+
 # only_feeds <window> [except]
 # True when every live pane of <window> but <except> is a Git or Agents feed or
 # the notes pane --
