@@ -93,6 +93,23 @@ def context_percentage(context):
     return used * window / compact_threshold(window)
 
 
+def context_tokens(context):
+    """The tokens the context holds now, in thousands, e.g. 85K. The current
+    request's input (fresh, cache writes and cache reads) is what fills the
+    context; without it, the window share Claude reports stands in."""
+    usage = context.get("current_usage") or {}
+    keys = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+    if any(usage.get(key) is not None for key in keys):
+        tokens = sum(usage.get(key) or 0 for key in keys)
+    else:
+        used = context.get("used_percentage")
+        window = context.get("context_window_size")
+        if used is None or not window:
+            return None
+        tokens = used * window / 100
+    return f"{round(tokens / 1000)}K"
+
+
 def duration(seconds):
     """42m, 1h12m, 4d3h -- the two largest units, for a narrow status line."""
     minutes = max(0, int(seconds)) // 60
@@ -112,11 +129,13 @@ def clock(timestamp):
     return time.strftime("%H:%M", time.localtime(timestamp))
 
 
-def percentage_segment(icon, label, percentage, resets_at=None):
+def percentage_segment(icon, label, percentage, resets_at=None, detail=None):
     if percentage is None:
         return f"{icon} {label}{DASH}"
     color, prefix = level(percentage)
     text = f"{prefix}{icon} {label}{round(percentage)}%"
+    if detail is not None:
+        text += f" {detail}"
     if resets_at is not None:
         text += f" {duration(resets_at - time.time())}"
     return paint(text, color)
@@ -148,7 +167,7 @@ def main():
         segments.append(VIM_ICONS.get(mode, mode))
 
     context = session.get("context_window") or {}
-    segments.append(percentage_segment(CONTEXT, "Context ", context_percentage(context)))
+    segments.append(percentage_segment(CONTEXT, "Context ", context_percentage(context), detail=context_tokens(context)))
 
     limits = session.get("rate_limits") or {}
     for icon, label, key in ((FIVE_HOUR, "5h ", "five_hour"), (SEVEN_DAY, "7d ", "seven_day")):
