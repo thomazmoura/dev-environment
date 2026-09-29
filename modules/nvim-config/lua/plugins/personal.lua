@@ -95,6 +95,8 @@ return {
       { '<Leader>mI', '<cmd>Paperboy all<cr>', desc = 'Paperboy: e-mails of all folders' },
       { '<Leader>mt', '<cmd>Paperboy folders<cr>', desc = 'Paperboy: folder tree' },
       { '<Leader>mc', '<cmd>Paperboy contacts<cr>', desc = 'Paperboy: contacts' },
+      { '<Leader>mn', '<cmd>Paperboy compose<cr>', desc = 'Paperboy: new e-mail' },
+      { '<Leader>md', '<cmd>Paperboy drafts<cr>', desc = 'Paperboy: drafts' },
     },
     opts = {},
   },

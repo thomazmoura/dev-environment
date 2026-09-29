@@ -13,7 +13,6 @@ vim.g.maplocalleader = ' '
 require('config.options')
 require('config.filetypes')
 require('config.commands')
-require('config.macros')
 require('config.lazy')
 
 if vim.g.vscode then
