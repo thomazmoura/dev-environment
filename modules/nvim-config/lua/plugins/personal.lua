@@ -98,7 +98,8 @@ return {
       { '<Leader>mn', '<cmd>Paperboy compose<cr>', desc = 'Paperboy: new e-mail' },
       { '<Leader>md', '<cmd>Paperboy drafts<cr>', desc = 'Paperboy: drafts' },
     },
-    opts = {},
+    -- Secrets in the separate "paperboy" keyring, locked again right after reading
+    opts = { credential_lookup = { collection = "paperboy" } },
   },
 
   -- SpotlightDimmer: dims every split but the focused one through the desktop

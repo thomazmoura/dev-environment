@@ -4,7 +4,8 @@
 # of the window, a picker pane that asks what it should be -- NeoVim, a
 # terminal or one of the coding agents (Select-PaneKind.sh) -- and turns into
 # it. With -f the rest of the window is NeoVim over a terminal running the
-# project's setup command instead.
+# project's setup command instead. With -H it is the home layout: Paperboy's
+# inbox on the left half of the rest and Workhorse's last query on the right.
 #
 # A project that keeps a .notes file at the root of its repository gets a third
 # pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
@@ -28,14 +29,20 @@
 # pane is left alone and the layout is built around it; prefix+Space opens a new
 # picker pane when one is wanted.
 #
-# Usage: Set-NeovimLayout.sh [-f] [-n] [target]
+# Usage: Set-NeovimLayout.sh [-f | -H] [-n] [target]
 #   -f       force the NeoVim layout (prefix+V): NeoVim instead of the picker,
 #            plus a missing terminal row under NeoVim, and a missing NeoVim
 #            right beside the radar column even when other panes have taken
 #            its place.
+#   -H       the home layout (prefix+H): Paperboy and Workhorse side by side
+#            instead of the picker, each brought back when missing. Unlike the
+#            other two it never builds around other work: a window holding
+#            anything but the radar column and an unanswered picker gets a new
+#            window with the layout instead, and the picker is turned into
+#            Paperboy.
 #   -n       the target is the only pane of a window the caller has just
 #            created, still an idle shell: it becomes the picker (NeoVim with
-#            -f) rather than being built around.
+#            -f, Paperboy with -H) rather than being built around.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
@@ -51,10 +58,12 @@ source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
 die() { warn "$@"; }
 
 force=""
+home=""
 new_window=""
-while getopts ":fn" option; do
+while getopts ":fnH" option; do
   case "$option" in
     f) force="yes" ;;
+    H) home="yes" ;;
     n) new_window="yes" ;;
     *) die "Set-NeovimLayout.sh: unknown option -$OPTARG" ;;
   esac
@@ -63,6 +72,27 @@ shift $((OPTIND - 1))
 
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
+
+# The home layout takes a window only when nothing in it is anyone's work: every
+# pane is a radar-column pane or a picker still waiting for an answer, or the
+# window already is a home layout, which is repaired. Anything else -- NeoVim,
+# an agent, a terminal, a pane with no role at all -- stays as it is, and the
+# layout is built in a new window, which is then a fresh one (-n). Checked
+# before the window is marked a layout window below, so a busy window this
+# leaves alone is not marked either.
+if [ -n "$home" ]; then
+  force=""
+  if [ -z "$new_window" ]; then
+    roles="$(tmux list-panes -t "$top" -F '#{@layout_role}')"
+    if ! grep -qxE 'paperboy|workhorse' <<<"$roles" &&
+      grep -qvxE 'git|agents|notes|picker' <<<"$roles"; then
+      session="$(tmux display-message -p -t "$top" '#{session_id}')"
+      path="$(tmux display-message -p -t "$top" '#{pane_current_path}')"
+      pane="$(tmux new-window -t "$session:" -c "$path" -P -F '#{pane_id}')"
+      exec "$(readlink -f "${BASH_SOURCE[0]}")" -H -n "$pane"
+    fi
+  fi
+fi
 
 # A laid-out window is never left with nothing to work in: when its last pane
 # but the feeds closes, a picker takes that pane's place (Restore-PickerPane.sh,
@@ -108,6 +138,16 @@ picker_command="bash ~/.modules/tmux/scripts/Select-PaneKind.sh"
 editor_line="$(closing_line "$nvim_command")"
 picker_line="$(closing_line "$picker_command")"
 
+# The home layout's two panes, as a new one runs them -- where the session does,
+# like NeoVim, since both are NeoVim (pane_kind's Paperboy and Workhorse).
+paperboy_command="" workhorse_command=""
+if [ -n "$home" ]; then
+  pane_kind "$top" Paperboy
+  paperboy_command="$(pane_command "$top" "$kind_command" "$kind_no_exit")"
+  pane_kind "$top" Workhorse
+  workhorse_command="$(pane_command "$top" "$kind_command" "$kind_no_exit")"
+fi
+
 # The notes pane, as a new one runs it. Like NeoVim it runs where the session
 # does, on the remote in an ssh session; only a window with the radar column
 # has a place for it.
@@ -146,14 +186,14 @@ notes_height_pct=25
 terminal_height_pct=16
 
 # @layout_role is what tells this layout's panes apart from lookalikes. Labels
-# can't: prefix+% opens more "Terminal" panes, and prefix+r/R open "Agents"
-# and "Git" panes of their own.
+# can't: prefix+% opens more "Terminal" panes, prefix+r/R open "Agents"
+# and "Git" panes of their own, and the picker opens Paperboy and Workhorse.
 mark_role() {
   tmux set -p -t "$1" @layout_role "$2"
 }
 
 # find_layout_panes
-# Sets git, agents, notes, terminal, neovim and picker to the pane ids holding those
+# Sets git, agents, notes, terminal, neovim, picker, paperboy and workhorse to the pane ids holding those
 # roles in the target's window, or to empty for a role nobody holds. The
 # picker's role is its own only until it is answered: Select-PaneKind.sh hands
 # it on to neovim, or drops it for anything else.
@@ -165,7 +205,7 @@ mark_role() {
 # terminal beside it isn't taken -- and the panes found that way get their
 # roles stamped so later runs don't need to guess.
 find_layout_panes() {
-  git="" agents="" notes="" terminal="" neovim="" picker=""
+  git="" agents="" notes="" terminal="" neovim="" picker="" paperboy="" workhorse=""
   local id left pane_top role label
   local -a unmarked=()
   local panes
@@ -181,11 +221,13 @@ find_layout_panes() {
       terminal) terminal=$id ;;
       neovim) neovim=$id ;;
       picker) picker=$id ;;
+      paperboy) paperboy=$id ;;
+      workhorse) workhorse=$id ;;
       *) unmarked+=("$id|$left|$pane_top|$label") ;;
     esac
   done <<<"$panes"
 
-  [ -z "$git$agents$notes$terminal$neovim$picker" ] || return 0
+  [ -z "$git$agents$notes$terminal$neovim$picker$paperboy$workhorse" ] || return 0
 
   local neovim_left="" neovim_top="" terminal_top=""
   for pane in "${unmarked[@]}"; do
@@ -241,9 +283,13 @@ find_layout_panes
 # radar column beside what is already there (and, with -f, NeoVim between the
 # two).
 fresh=""
-if [ -n "$new_window" ] && [ -z "$git$agents$notes$terminal$neovim$picker" ]; then
+if [ -n "$new_window" ] && [ -z "$git$agents$notes$terminal$neovim$picker$paperboy$workhorse" ]; then
   fresh="yes"
-  if [ -z "$force" ]; then
+  if [ -n "$home" ]; then
+    paperboy=$top
+    label_pane "$paperboy" "Paperboy"
+    mark_role "$paperboy" paperboy
+  elif [ -z "$force" ]; then
     picker=$top
     label_pane "$picker" "Picker"
     mark_role "$picker" picker
@@ -304,7 +350,10 @@ fi
 main_split() {
   local target=$1
   shift
-  if [ -n "$force" ]; then
+  if [ -n "$home" ]; then
+    paperboy="$(new_pane "$target" "Paperboy" "$paperboy_command" "$@")"
+    mark_role "$paperboy" paperboy
+  elif [ -n "$force" ]; then
     neovim="$(new_pane "$target" "NeoVim" "$nvim_command" "$@")"
     mark_role "$neovim" neovim
   else
@@ -312,7 +361,31 @@ main_split() {
     mark_role "$picker" picker
   fi
 }
-if [ -z "$neovim$picker" ]; then
+# The home layout's main pane is Paperboy. By the check at the top, a window
+# without it or Workhorse holds only the radar column and, maybe, a picker: the
+# picker is turned into Paperboy where it stands, and a window with no picker
+# gets Paperboy split off beside the column, as the picker would be.
+if [ -n "$home" ]; then
+  if [ -z "$paperboy$workhorse" ] && [ -n "$picker" ]; then
+    paperboy=$picker picker=""
+    path="$(tmux display-message -p -t "$paperboy" '#{pane_current_path}')"
+    tmux respawn-pane -k -t "$paperboy" -c "$path"
+    label_pane "$paperboy" "Paperboy"
+    mark_role "$paperboy" paperboy
+    tmux send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+  elif [ -z "$paperboy$workhorse" ] && [ -n "$radars" ]; then
+    main_split "$git" -h -f
+  fi
+  # Each half is brought back beside the other: Workhorse on Paperboy's right,
+  # Paperboy on Workhorse's left.
+  if [ -n "$paperboy" ] && [ -z "$workhorse" ]; then
+    workhorse="$(new_pane "$paperboy" "Workhorse" "$workhorse_command" -h -l 50%)"
+    mark_role "$workhorse" workhorse
+  elif [ -z "$paperboy" ] && [ -n "$workhorse" ]; then
+    paperboy="$(new_pane "$workhorse" "Paperboy" "$paperboy_command" -h -b -l 50%)"
+    mark_role "$paperboy" paperboy
+  fi
+elif [ -z "$neovim$picker" ]; then
   if [ -n "$terminal" ]; then
     if [ "$(tmux display-message -p -t "$terminal" '#{pane_top}')" = 0 ]; then
       main_split "$terminal" -v -b
@@ -380,8 +453,18 @@ if [ -n "$radars" ]; then
 fi
 [ -z "$terminal" ] || fit_pane "$terminal" -y $((window_height * terminal_height_pct / 100))
 
+# Paperboy takes half of what the radar column leaves, less the border between
+# it and Workhorse; Workhorse gets the rest.
+if [ -n "$paperboy" ] && [ -n "$workhorse" ]; then
+  content=$window_width
+  [ -z "$radars" ] || content=$((window_width - window_width * git_width_pct / 100 - 1))
+  fit_pane "$paperboy" -x $(((content - 1) / 2))
+fi
+
 if [ -n "$fresh" ]; then
-  if [ -n "$picker" ]; then
+  if [ -n "$home" ]; then
+    tmux send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+  elif [ -n "$picker" ]; then
     tmux send-keys -t "$picker" "$picker_line" C-m
   else
     tmux send-keys -t "$neovim" "$editor_line" C-m
@@ -392,4 +475,4 @@ fi
 # panes of the radar column by most-recently-active. Touching the git feed
 # makes that C-h land on Git instead of on the agent feed.
 [ -z "$git" ] || tmux select-pane -t "$git"
-tmux select-pane -t "${neovim:-${picker:-$top}}"
+tmux select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"

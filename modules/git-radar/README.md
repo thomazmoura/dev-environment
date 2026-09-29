@@ -94,8 +94,16 @@ feed (as if the pane were closed and reopened), `R` does that and restarts the
 sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
 it and `P` pushes it, `c` commits it, `s` shows its status, `h` its history,
-`m` merges its branch into another, `q` or `d` kills the selected session after
-asking, `Ctrl-C` closes the pane.
+`m` merges its branch into another, `H` marks it as the home session, `q` or
+`d` kills the selected session after asking, `Ctrl-C` closes the pane.
+
+**The home session** is the one `prefix + h` switches to from anywhere. `H`
+marks the selected row's session (and, pressed on it again, unmarks it), and
+every feed then draws a home icon (nf-fa-home) left of that session's name.
+The mark is tmux's global `@home_session` option -- for bindings and formats --
+saved to `~/.cache/tmux/home-session` too, which is what the feed reads (a file
+read, not a tmux call per sample) and what puts the option back after a tmux
+server restart. See `modules/tmux/scripts/Set-HomeSession.sh`.
 
 `c` opens a popup with the repository's `git status` and asks: `y` stages
 everything (untracked files included) and commits, with `$EDITOR` opening in

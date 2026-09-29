@@ -47,7 +47,13 @@ the pane were closed and reopened), R does that and restarts the sampler behind
 it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
 it, c commits it, s shows its status, h its history, m merges its branch into
-another, q or d kills the selected session after asking, Ctrl-C closes the pane.
+another, H marks it as the home session (or unmarks it), q or d kills the
+selected session after asking, Ctrl-C closes the pane.
+
+The home session is the one prefix+h switches to, and its row carries a home
+icon left of its name, in every session's feed. The mark is kept by
+modules/tmux/scripts/Set-HomeSession.sh, which H runs; this pane reads it from
+the file that script saves it to rather than from tmux -- see home_session.
 
 c opens a popup with the repository's `git status` and asks: y stages
 everything and commits, with $EDITOR opening in the popup for the message, and
@@ -294,6 +300,16 @@ FAILED_GLYPH_COLOUR = curses.COLOR_RED
 # one thing on the row that never needs acting on.
 CLEAN_GLYPH = "\u2713"  # ✓
 
+# Beside the name of the home session (H, prefix+h). nf-fa-home: a Nerd Font
+# glyph, one cell wide in the patched fonts the terminals here use.
+HOME_GLYPH = "\uf015"
+# Where Set-HomeSession.sh saves the mark. Read here instead of asking tmux for
+# @home_session: a file read is free, a tmux call ~14ms a feed a sample.
+HOME_FILE = os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"),
+    "tmux", "home-session",
+)
+
 # The errors that mean "no usable credential", as opposed to "no network" or "no
 # such remote". Only these are worth offering a key for, and they are the same
 # whichever of the three commands hit them.
@@ -478,6 +494,30 @@ def sample() -> list:
     for next time. See radar_cache.RadarCache.sample_cached.
     """
     return feed.sample_cached()
+
+
+def home_session() -> str:
+    """The home session's name, or "" when none is marked."""
+    try:
+        with open(HOME_FILE, encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        return ""
+
+
+def toggle_home(session: str) -> None:
+    """Mark a session as home, or unmark it if it already is.
+
+    Set-HomeSession.sh does the work, so tmux's @home_session and the file stay
+    one decision; it then nudges the sampler, which is what makes every other
+    feed redraw with the icon moved.
+    """
+    subprocess.run(
+        [os.path.join(str(gitr.SHARED_SCRIPTS), "Set-HomeSession.sh"), session],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
 
 
 def agent_generation() -> float:
@@ -1078,7 +1118,7 @@ def draw_confirm(stdscr, session: str, use_colour: bool, palette) -> None:
 
 
 def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, band,
-                  current: str, home: str, agents=None):
+                  current: str, home: str, agents=None, home_session: str = ""):
     """The two lines of one entry, as (text, attribute) segments.
 
     Widths are decided per row rather than per column: the counters are measured
@@ -1131,7 +1171,11 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         attr = coloured(AGENT_STATE_COLOUR.get(state, curses.COLOR_WHITE)) if use_colour else body
         agent_cells.append((f"{state_cli.agent_cli().GLYPH}{count}", attr | curses.A_BOLD))
         agent_width += len(agent_cells[-1][0])
-    name_room = width - state_cli.RAIL_WIDTH - 3
+    # The home icon goes between the marker and the name, and takes its room
+    # from the name.
+    home_cell = [(f"{HOME_GLYPH} ", name_attr)] if repo.session == home_session else []
+    home_width = sum(len(text) for text, _ in home_cell)
+    name_room = width - state_cli.RAIL_WIDTH - 3 - home_width
     if agent_width:
         name_room -= agent_width + 1
     # Cut from the middle, not the end: an ssh session's name starts with its
@@ -1142,10 +1186,11 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     first = [
         (gutter, rail_attr),
         (f"{state_cli.marker(repo)} ", marker_attr),
+        *home_cell,
         (name, name_attr),
     ]
     if agent_width:
-        used = state_cli.RAIL_WIDTH + 2 + len(name)
+        used = state_cli.RAIL_WIDTH + 2 + home_width + len(name)
         gap = width - 1 - used - agent_width
         if gap >= 1:
             first.append((" " * gap, body))
@@ -1211,7 +1256,7 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
 
 def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
          focused: bool, current: str, home: str, pending: str = "",
-         agents: dict | None = None) -> None:
+         agents: dict | None = None, home_session: str = "") -> None:
     if pending:
         draw_confirm(stdscr, pending, use_colour, palette)
         return
@@ -1233,7 +1278,7 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
         line = offset * ui.ROW_LINES
         top, bottom = _row_segments(
             repo, chosen, width, palette, use_colour, band, current, home,
-            (agents or {}).get(repo.session),
+            (agents or {}).get(repo.session), home_session,
         )
         fill = band if chosen else None
         ui.draw_line(stdscr, line, width, top, fill)
@@ -1327,6 +1372,7 @@ def run(stdscr, interval: float) -> str:
 
     repos = sample()
     agents = state_cli.agent_summaries()
+    marked = home_session()
     # On this pane's own row, not on row 0. Every session has a feed of its own,
     # and the row worth having under the cursor in it is the session you are in
     # -- the same row the rail already marks. See SELF_KEY for the arrivals that
@@ -1352,7 +1398,7 @@ def run(stdscr, interval: float) -> str:
     # second tick waiting for the next one to notice reads as a dead keypress.
     seen_notes = dict(notes)
     draw(stdscr, repos, selected, use_colour, palette, band, focus.focused, current,
-         home, pending, agents)
+         home, pending, agents, marked)
 
     try:
         while True:
@@ -1465,6 +1511,13 @@ def run(stdscr, interval: float) -> str:
             elif key == ord("m"):
                 if repos:
                     start_merge(repos[selected])
+            elif key == ord("H"):
+                if repos:
+                    session = repos[selected].session
+                    toggle_home(session)
+                    # Shown now rather than on the sample the script asks for.
+                    marked = "" if marked == session else session
+                    redraw = True
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same
@@ -1503,6 +1556,7 @@ def run(stdscr, interval: float) -> str:
                 anchor = repos[selected].session if repos else ""
                 repos = sample()
                 agents = state_cli.agent_summaries()
+                marked = home_session()
                 selected = index_of(repos, anchor, selected)
                 if not homed:
                     selected = index_of(repos, current, selected)
@@ -1519,7 +1573,7 @@ def run(stdscr, interval: float) -> str:
 
             if redraw:
                 draw(stdscr, repos, selected, use_colour, palette, band,
-                     focus.focused, current, home, pending, agents)
+                     focus.focused, current, home, pending, agents, marked)
     finally:
         # Stop asking for focus events before handing the terminal back: the
         # next thing to run in this pane did not ask for them and would read
