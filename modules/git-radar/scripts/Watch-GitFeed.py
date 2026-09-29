@@ -505,6 +505,16 @@ def home_session() -> str:
         return ""
 
 
+def home_first(repos: list, session: str) -> list:
+    """The rows with the home session's moved to the top, the rest in order.
+
+    Only this pane's order: the session picker and everywhere else keep the
+    sampler's. The home session is the one you come back to, so it is the one
+    row worth a fixed place.
+    """
+    return sorted(repos, key=lambda repo: repo.session != session)
+
+
 def toggle_home(session: str) -> None:
     """Mark a session as home, or unmark it if it already is.
 
@@ -1173,7 +1183,9 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         agent_width += len(agent_cells[-1][0])
     # The home icon goes between the marker and the name, and takes its room
     # from the name.
-    home_cell = [(f"{HOME_GLYPH} ", name_attr)] if repo.session == home_session else []
+    # Two spaces, not one: the glyph is drawn wider than the one cell it is
+    # counted as, and spills over a single space onto the name.
+    home_cell = [(f"{HOME_GLYPH}  ", name_attr)] if repo.session == home_session else []
     home_width = sum(len(text) for text, _ in home_cell)
     name_room = width - state_cli.RAIL_WIDTH - 3 - home_width
     if agent_width:
@@ -1370,9 +1382,9 @@ def run(stdscr, interval: float) -> str:
     # and a dark grey branch.
     home = gitr.current_host()
 
-    repos = sample()
-    agents = state_cli.agent_summaries()
     marked = home_session()
+    repos = home_first(sample(), marked)
+    agents = state_cli.agent_summaries()
     # On this pane's own row, not on row 0. Every session has a feed of its own,
     # and the row worth having under the cursor in it is the session you are in
     # -- the same row the rail already marks. See SELF_KEY for the arrivals that
@@ -1517,6 +1529,10 @@ def run(stdscr, interval: float) -> str:
                     toggle_home(session)
                     # Shown now rather than on the sample the script asks for.
                     marked = "" if marked == session else session
+                    # Re-read so an unmarked row goes back to its place; the
+                    # cursor follows the row it was on.
+                    repos = home_first(sample(), marked)
+                    selected = index_of(repos, session, selected)
                     redraw = True
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
@@ -1554,9 +1570,9 @@ def run(stdscr, interval: float) -> str:
             # typed. The question names its own session anyway.
             if not pending and (fresh or now - last_sample >= interval):
                 anchor = repos[selected].session if repos else ""
-                repos = sample()
-                agents = state_cli.agent_summaries()
                 marked = home_session()
+                repos = home_first(sample(), marked)
+                agents = state_cli.agent_summaries()
                 selected = index_of(repos, anchor, selected)
                 if not homed:
                     selected = index_of(repos, current, selected)

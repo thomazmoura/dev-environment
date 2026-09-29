@@ -100,6 +100,8 @@ it and `P` pushes it, `c` commits it, `s` shows its status, `h` its history,
 **The home session** is the one `prefix + h` switches to from anywhere. `H`
 marks the selected row's session (and, pressed on it again, unmarks it), and
 every feed then draws a home icon (nf-fa-home) left of that session's name.
+Its row is always the first in the feed -- the rest keep session order, and
+the `prefix + ?` picker is not reordered.
 The mark is tmux's global `@home_session` option -- for bindings and formats --
 saved to `~/.cache/tmux/home-session` too, which is what the feed reads (a file
 read, not a tmux call per sample) and what puts the option back after a tmux
