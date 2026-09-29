@@ -84,9 +84,6 @@ return {
         return ok and wh.lualine.get() or ''
       end
       local section_c = { workhorse }
-      -- Only where the paperboy spec loads (its cond needs $PAPERBOY_EWS_URL)
-      local ok_pb, paperboy = pcall(require, 'paperboy')
-      if ok_pb then table.insert(section_c, paperboy.get_component()) end
       local function encoding()
         return string.format('%s %s', vim.bo.fileencoding, vim.bo.bomb and 'BOM' or '')
       end
