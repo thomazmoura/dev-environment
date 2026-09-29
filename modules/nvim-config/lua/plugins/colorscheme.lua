@@ -4,6 +4,9 @@ return {
   priority = 1000,
   opts = {
     style = 'storm',
+    -- lazy.nvim makes tokyonight emit only the groups of installed plugins;
+    -- workhorse's tag_title_colors (plugins/personal.lua) use the MiniIcons* ones
+    plugins = { mini_icons = true },
     on_highlights = function(hl)
       local function set(group, attrs)
         hl[group] = vim.tbl_extend('force', hl[group] or {}, attrs)
