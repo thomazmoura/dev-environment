@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# Pulls this dev-environment clone and reloads the tmux config.
+# Pulls this dev-environment clone and reloads the tmux config, or with
+# --no-pull only reloads it.
 #
-# Bound to prefix+u as a small popup in modules/tmux/common.conf. Closes by
-# itself when everything worked; a failed pull (dirty tree, diverged branch, no
-# network) holds the popup open on git's message instead.
+# Bound to prefix+U (pull and reload) and prefix+u (--no-pull) as a small popup
+# in modules/tmux/common.conf. Closes by itself when everything worked; a
+# failed pull (dirty tree, diverged branch, no network) holds the popup open on
+# git's message instead.
 #
 # The clone is found from this script's own real path rather than from a fixed
 # ~/code/dev-environment: ~/.modules is a symlink into the clone on the host and
 # in WSL (LinuxDevEnv/host-setup.sh, modules/wsl2/Start-DevSession.ps1), so
 # resolving it lands inside the repository wherever it was cloned. The Docker
-# image copies modules/ in instead, so there is no clone to pull there.
+# image copies modules/ in instead, so there is no clone to pull there (but
+# --no-pull still reloads).
 #
 # The reload is prefix+I's -- TPM's bindings/install_plugins: reload the config,
 # install any plugin it now lists, reload again. That binding is not called
@@ -21,19 +24,26 @@ set -uo pipefail
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
 
-require_tools git tmux
+pull=1
+[ "${1:-}" = --no-pull ] && pull=""
 
-repo="$(git -C "$scripts" rev-parse --show-toplevel 2>/dev/null)" \
-  || die "~/.modules is not a git clone here (the Docker image copies it in) -- nothing to pull."
+require_tools tmux
+[ -z "$pull" ] || require_tools git
 
 tpm="$HOME/.tmux/plugins/tpm"
 [ -d "$tpm" ] || die "TPM not found at $tpm"
 
-printf 'Pulling %s\n\n' "$repo"
-git -C "$repo" pull --ff-only || die "
-git pull failed -- nothing was reloaded."
+if [ -n "$pull" ]; then
+  repo="$(git -C "$scripts" rev-parse --show-toplevel 2>/dev/null)" \
+    || die "~/.modules is not a git clone here (the Docker image copies it in) -- nothing to pull."
 
-printf '\nReloading tmux config\n'
+  printf 'Pulling %s\n\n' "$repo"
+  git -C "$repo" pull --ff-only || die "
+git pull failed -- nothing was reloaded."
+  printf '\n'
+fi
+
+printf 'Reloading tmux config\n'
 # TPM's helpers are not written for `set -u`, hence the subshell.
 (
   set +u
@@ -43,4 +53,8 @@ printf '\nReloading tmux config\n'
   reload_tmux_environment
 ) || die "Reloading the tmux config failed."
 
-tmux display-message "dev-environment updated to $(git -C "$repo" log -1 --format='%h %s') and tmux config reloaded"
+if [ -n "$pull" ]; then
+  tmux display-message "dev-environment updated to $(git -C "$repo" log -1 --format='%h %s') and tmux config reloaded"
+else
+  tmux display-message "tmux config reloaded"
+fi
