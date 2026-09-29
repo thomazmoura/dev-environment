@@ -64,6 +64,12 @@ RUN mkdir -p /home/developer/.claude/skills \
       skill="${skill%/}"; ln -sfn "$skill" "/home/developer/.claude/skills/$(basename "$skill")"; \
     done
 
+# Claude Code status line (the vim mode as a Nerd Font icon, in place of the
+# built-in "-- INSERT --"). Only the statusLine key of settings.json is set.
+COPY --chown=developer:developer modules/claude /home/developer/.modules/claude
+RUN chmod +x /home/developer/.modules/claude/statusline.py \
+ && pwsh -NoProfile -File /home/developer/.modules/claude/Install-ClaudeStatusLine.ps1
+
 # Dotnet tools instalation script
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
 

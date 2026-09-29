@@ -170,6 +170,12 @@ for skill in "$modules_path"/skills/*/; do
   pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.claude/skills/$(basename "$skill") -Target $skill"
 done
 
+# Claude Code status line (the vim mode as a Nerd Font icon, in place of the
+# built-in "-- INSERT --"). The script runs in place out of $HOME/.modules;
+# only the statusLine key of ~/.claude/settings.json is set.
+chmod +x $HOME/.modules/claude/statusline.py
+pwsh -NoProfile -File $HOME/.modules/claude/Install-ClaudeStatusLine.ps1
+
 # NeoVim LSP Configuration
 pwsh -NoProfile -File $HOME/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
 
