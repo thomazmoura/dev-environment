@@ -100,6 +100,16 @@ border=()
 # `popup` is the alias in common.conf, so the geometry stays the one every
 # picker uses (and Invoke-Popup.sh's spotlight expects). %q because the popup's
 # command goes through a shell.
-tmux popup "${target[@]}" "${border[@]}" \
+#
+# With -E the popup blocks until the shell ends and exits with the shell's own
+# status: pwsh's last $LASTEXITCODE, ssh's 255 on a dropped connection. That is
+# no failure of this script, but run-shell would report it anyway ("... returned
+# 2") in whichever pane gets the focus back, which has nothing to do with it. So
+# the status is dropped, and only what tmux itself says -- the popup could not
+# open -- goes to the status line, on the client that asked for it.
+if ! error="$(tmux popup "${target[@]}" "${border[@]}" \
   -d "$dir" \
-  "$(printf '%q ' "$HOME/.modules/tmux/scripts/Invoke-Popup.sh") $command"
+  "$(printf '%q ' "$HOME/.modules/tmux/scripts/Invoke-Popup.sh") $command" 2>&1)" && [ -n "$error" ]; then
+  tmux display-message "${target[@]}" "Popup shell: $error"
+fi
+exit 0

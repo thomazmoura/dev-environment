@@ -45,7 +45,7 @@
 set -euo pipefail
 
 # As tmux-helpers.sh's; not sourced, for a faster start on a navigation key.
-warn() { tmux display-message "$*"; exit 1; }
+warn() { tmux display-message "$*"; exit 0; }
 
 # One run at a time: the hooks fire on every split and closed pane --
 # this script's own included -- and two runs putting the same window back

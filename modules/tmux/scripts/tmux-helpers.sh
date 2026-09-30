@@ -26,7 +26,9 @@ die() { printf '%s\n' "$*" >&2; read -rsn1 -p "Press any key to close..." _; exi
 
 # warn puts the message on the tmux status line, which is the only thing a
 # backgrounded run-shell can still write to once its pane context is gone.
-warn() { tmux display-message "$*"; exit 1; }
+# It exits 0 all the same: run-shell reports any other status ("... returned 1")
+# in whichever pane is current, on top of the message already shown.
+warn() { tmux display-message "$*"; exit 0; }
 
 require_tools() {
   local tool
