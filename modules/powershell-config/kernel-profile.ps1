@@ -52,6 +52,20 @@ if (!$global:LeanProfile) {
     # where C-Space is the prefix, it is C-Space twice.
     Set-PSReadLineKeyHandler -Chord "Ctrl+@" -Function MenuComplete
 
+    # Ctrl+C on an empty line ends pwsh; with something typed it still cancels
+    # the line. PSReadLine only sees keys at the prompt, so a running command
+    # still gets Ctrl+C as an interrupt. Environment.Exit rather than typing
+    # `exit` for you, which would land in the history. This is also what
+    # closes the tmux popup shell (New-PopupShell.sh).
+    $cancelLineOrExit = {
+      $line = $null; $cursor = $null
+      [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+      if ($line) { [Microsoft.PowerShell.PSConsoleReadLine]::CancelLine() }
+      else { [Environment]::Exit(0) }
+    }
+    Set-PSReadLineKeyHandler -Chord "Ctrl+c" -ViMode Insert -ScriptBlock $cancelLineOrExit
+    Set-PSReadLineKeyHandler -Chord "Ctrl+c" -ViMode Command -ScriptBlock $cancelLineOrExit
+
     # The native prompt is two lines: PSReadLine has to redraw from the line above.
     Set-PSReadLineOption -ExtraPromptLineCount 1
 
