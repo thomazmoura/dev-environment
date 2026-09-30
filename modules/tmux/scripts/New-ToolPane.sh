@@ -24,7 +24,8 @@
 #                 already has it -- the plain terminals (prefix+% and prefix+")
 #                 pass "terminal", so the first one opened in a window without a
 #                 layout terminal becomes the row prefix+v resizes
-#                 (Set-NeovimLayout.sh)
+#                 (Set-NeovimLayout.sh) -- and, split below (-v), opens at
+#                 that row's height instead of half the pane it split
 #
 # Example, as used by the binding for prefix+t then C:
 #   New-ToolPane.sh -t "#{pane_id}" "Claude Code" "claude --resume"
@@ -96,12 +97,29 @@ if [ -n "$requires" ]; then
     line="$(notice_command "There is no $requires folder in $path")"
 fi
 
+# Checked before the split: afterwards the window holds the new pane, which
+# has no role yet either way.
+first_of_role=""
+if [ -n "$role" ] &&
+  ! tmux list-panes -t "$origin" -F '#{@layout_role}' | grep -qxF "$role"; then
+  first_of_role="yes"
+fi
+
+# The first terminal below (prefix+") is the window's terminal row, so it opens
+# at the height prefix+v would give it rather than at half the pane it split.
+# A bare -l is a count of rows, not a share of the pane being split, so the
+# row's share of the window can be worked out here and the split opens at that
+# size -- no half-height pane flashing up before a resize-pane shrinks it. A
+# pane too short for it just gives what it has (tmux caps the split).
+if [ -n "$first_of_role" ] && [ "$role" = terminal ] && [ "$direction" = -v ] &&
+  [ "${#size[@]}" -eq 0 ]; then
+  window_height="$(tmux display-message -p -t "$origin" '#{window_height}')"
+  size=(-l $((window_height * TERMINAL_HEIGHT_PCT / 100)))
+fi
+
 pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
 
-if [ -n "$role" ] &&
-  ! tmux list-panes -t "$pane" -F '#{@layout_role}' | grep -qxF "$role"; then
-  tmux set -p -t "$pane" @layout_role "$role"
-fi
+[ -z "$first_of_role" ] || tmux set -p -t "$pane" @layout_role "$role"
 
 if [ -n "$print_id" ]; then
   printf '%s\n' "$pane"

@@ -80,6 +80,11 @@ notice_command() {
 }
 
 # --- Panes -------------------------------------------------------------------
+# The standard layout's terminal row, as a percentage of the window's height:
+# prefix+v fits the row back to it (Set-NeovimLayout.sh), and prefix+" opens
+# the first terminal of a window at it (New-ToolPane.sh -r terminal -v).
+TERMINAL_HEIGHT_PCT=16
+
 # Titles a pane twice over: `select-pane -T` is what the pane border shows, and
 # @pane_label is what Select-Pane.sh reads. Both are needed -- the border title
 # is rewritten by any program that emits OSC 2 (pwsh does), while the option

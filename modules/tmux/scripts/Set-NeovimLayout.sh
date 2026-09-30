@@ -187,7 +187,7 @@ git_feed="$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
 git_width_pct=12
 agents_height_pct=40
 notes_height_pct=25
-terminal_height_pct=16
+terminal_height_pct=$TERMINAL_HEIGHT_PCT
 
 # @layout_role is what tells this layout's panes apart from lookalikes. Labels
 # can't: prefix+% opens more "Terminal" panes, prefix+r/R open "Agents"
