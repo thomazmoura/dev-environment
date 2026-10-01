@@ -25,7 +25,8 @@
 #                 pass "terminal", so the first one opened in a window without a
 #                 layout terminal becomes the row prefix+v resizes
 #                 (Set-NeovimLayout.sh) -- and, split below (-v), opens at
-#                 that row's height instead of half the pane it split
+#                 that row's height under the whole content area (everything
+#                 right of the radar column), whichever pane -t names
 #
 # Example, as used by the binding for prefix+t then C:
 #   New-ToolPane.sh -t "#{pane_id}" "Claude Code" "claude --resume"
@@ -115,6 +116,15 @@ if [ -n "$first_of_role" ] && [ "$role" = terminal ] && [ "$direction" = -v ] &&
   [ "${#size[@]}" -eq 0 ]; then
   window_height="$(tmux display-message -p -t "$origin" '#{window_height}')"
   size=(-l $((window_height * TERMINAL_HEIGHT_PCT / 100)))
+
+  # And it runs under the whole content area, whichever pane the binding
+  # fired in (content_row in tmux-helpers.sh). A partial zoom (prefix+z) has
+  # the content stashed away: it is undone first.
+  if [ -n "$(tmux display-message -p -t "$origin" '#{@zoom_stash}')" ]; then
+    "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Switch-PaneZoom.sh" --restore "$origin"
+  fi
+  content_row "$origin"
+  size+=("${content_row_args[@]}")
 fi
 
 pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"

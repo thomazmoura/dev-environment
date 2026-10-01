@@ -31,7 +31,7 @@
 #
 # Usage: Set-NeovimLayout.sh [-f | -H] [-n] [target]
 #   -f       force the NeoVim layout (prefix+V): NeoVim instead of the picker,
-#            plus a missing terminal row under NeoVim, and a missing NeoVim
+#            plus a missing terminal row under the whole content area, and a missing NeoVim
 #            right beside the radar column even when other panes have taken
 #            its place.
 #   -H       the home layout (prefix+H): Paperboy and Workhorse side by side
@@ -405,8 +405,8 @@ fi
 # so the user's panes move right rather than going anywhere. -f alone would put
 # it at the far edge of the window instead. Without the column, it goes left of
 # the pane the binding fired in. A terminal that is missing too is split off
-# first, so the row runs under both NeoVim and the pane it pushes aside rather
-# than under NeoVim alone.
+# first, so the row runs under the whole content area (content_row in
+# tmux-helpers.sh) -- NeoVim included -- rather than under NeoVim alone.
 if [ -z "$neovim" ] && [ -n "$force" ]; then
   beside=$top
   if [ -n "$radars" ]; then
@@ -416,7 +416,8 @@ if [ -z "$neovim" ] && [ -n "$force" ]; then
   fi
   if [ -n "$beside" ]; then
     if [ -z "$terminal" ]; then
-      terminal="$(new_pane "$beside" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%")"
+      content_row "$beside"
+      terminal="$(new_pane "$beside" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}")"
       mark_role "$terminal" terminal
     fi
     neovim="$(new_pane "$beside" "NeoVim" "$nvim_command" -h -b)"
@@ -425,16 +426,11 @@ if [ -z "$neovim" ] && [ -n "$force" ]; then
 fi
 
 # Only -f (prefix+V) brings a missing terminal back; prefix+v leaves it closed.
-# It goes under NeoVim, or, once NeoVim is gone, under the pane the binding
-# fired in -- unless that is the radar column, which has no room for it.
+# It goes under the whole content area, whichever pane the binding fired in.
 if [ -z "$terminal" ] && [ -n "$force" ]; then
-  anchor=${neovim:-$top}
-  if [ "$anchor" = "$git" ] || [ "$anchor" = "$agents" ] || [ "$anchor" = "$notes" ]; then
-    tmux display-message "No NeoVim pane: run prefix+V from the pane the terminal should go under"
-  else
-    terminal="$(new_pane "$anchor" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%")"
-    mark_role "$terminal" terminal
-  fi
+  content_row "$top"
+  terminal="$(new_pane "$top" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}")"
+  mark_role "$terminal" terminal
 fi
 
 # Put the fixed sizes back. On a fresh window this only evens out rounding

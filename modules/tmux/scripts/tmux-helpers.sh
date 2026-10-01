@@ -85,6 +85,54 @@ notice_command() {
 # the first terminal of a window at it (New-ToolPane.sh -r terminal -v).
 TERMINAL_HEIGHT_PCT=16
 
+# content_row <pane>
+# Sets content_row_args to the split-window arguments, after the -v and -l,
+# that put a new row under the whole content area of <pane>'s window --
+# every pane right of the radar column -- whichever pane is split: the first
+# terminal of prefix+" (New-ToolPane.sh) and prefix+V (Set-NeovimLayout.sh).
+#
+# tmux can't split a part of a row of panes, so the split goes under the whole
+# window (-f), column included, and the column panes are moved straight back to
+# the left edge (-f -h -b), full height again, at the sizes they had. new_pane
+# hands its split arguments to tmux as they are, so the moves ride along after
+# a ";" in the split's own command list: tmux does not redraw in between, and
+# the squeezed column never shows. -d leaves the focus on the new row. Without
+# a column the whole window is the content area, and -f alone does it.
+content_row() {
+  local window=$1 id left width height role first anchor i
+  local -a column=() widths=() heights=() top_row=()
+  content_row_args=(-f)
+  while IFS='|' read -r id left width height role _; do
+    case "$role" in
+      git | agents | notes) [ "$left" != 0 ] || { column+=("$id") widths+=("$width") heights+=("$height"); } ;;
+    esac
+  done < <(tmux list-panes -t "$window" -F '#{pane_id}|#{pane_left}|#{pane_width}|#{pane_height}|#{@layout_role}|#{pane_top}' |
+    sort -t'|' -k6,6n)
+  [ "${#column[@]}" -gt 0 ] || return 0
+  anchor="$(tmux list-panes -t "$window" -F '#{pane_id} #{pane_left} #{pane_top}' |
+    awk -v left=$((widths[0] + 1)) '$2 == left && $3 == 0 { print $1; exit }')"
+  [ -n "$anchor" ] || return 0
+
+  first=${column[0]}
+  content_row_args+=(";" move-pane -d -f -h -b -l "${widths[0]}" -s "$first" -t "$anchor")
+  # The rest go under the first from the bottom up, each split off it, so each
+  # takes its own height from the first, which is left the remainder.
+  for ((i = ${#column[@]} - 1; i > 0; i--)); do
+    content_row_args+=(";" move-pane -d -v -l "${heights[i]}" -s "${column[i]}" -t "$first")
+  done
+  # Putting the column back takes its width unevenly from the content panes,
+  # so the ones along the top get the widths they had back -- all but the
+  # last, which is left what remains.
+  while read -r id width; do
+    top_row+=("$id $width")
+  done < <(tmux list-panes -t "$window" -F '#{pane_left} #{pane_top} #{pane_id} #{pane_width}' |
+    awk -v column="${widths[0]}" '$1 > column && $2 == 0 { print $1, $3, $4 }' | sort -n | cut -d' ' -f2-)
+  for ((i = 0; i < ${#top_row[@]} - 1; i++)); do
+    read -r id width <<<"${top_row[i]}"
+    content_row_args+=(";" resize-pane -x "$width" -t "$id")
+  done
+}
+
 # Titles a pane twice over: `select-pane -T` is what the pane border shows, and
 # @pane_label is what Select-Pane.sh reads. Both are needed -- the border title
 # is rewritten by any program that emits OSC 2 (pwsh does), while the option
