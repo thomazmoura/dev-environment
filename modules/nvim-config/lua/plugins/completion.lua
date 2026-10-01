@@ -37,7 +37,12 @@ return {
     },
     cmdline = {
       keymap = { preset = 'cmdline' },
-      completion = { menu = { auto_show = true } },
+      -- cmdline has its own defaults (preselect = true), so mirror insert mode:
+      -- the first <Tab> selects the first item instead of skipping it
+      completion = {
+        menu = { auto_show = true },
+        list = { selection = { preselect = false, auto_insert = true } },
+      },
     },
   },
 }

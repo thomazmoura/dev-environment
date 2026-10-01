@@ -20,6 +20,27 @@ autocmd('BufEnter', {
   end,
 })
 
+-- Select again what visual mode had when Ctrl+hjkl left it (plugins/tmux.lua),
+-- from the same anchor to the same cursor, so o and the next motion still
+-- work from the right end. Not if the window shows another buffer by now.
+function M.restore_selection(selection)
+  if vim.api.nvim_get_current_buf() ~= selection.buffer then return end
+  vim.fn.setpos('.', selection.anchor)
+  vim.cmd('normal! ' .. selection.mode)
+  vim.fn.setpos('.', selection.cursor)
+end
+
+autocmd('WinEnter', {
+  group = group('SelectionRestore'),
+  callback = function()
+    local selection = vim.w.restore_selection
+    if selection then
+      vim.w.restore_selection = nil
+      M.restore_selection(selection)
+    end
+  end,
+})
+
 -- Conceal per buffer.
 --
 -- 'conceallevel' and 'concealcursor' are window-local, so when markview sets
