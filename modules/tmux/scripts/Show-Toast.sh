@@ -5,11 +5,15 @@
 #   Show-Toast.sh --dismiss [id]        # every toast, or just that one
 #
 #   level    waiting | done | error | info (default). Sets the emoji and colour.
-#   seconds  how long it stays, 1 to 20 (default 10). Every toast times out:
-#            a toast is a nudge, not a to-do list -- agent-radar's own status
-#            segment is what keeps track of who is still waiting.
+#   seconds  how long it stays; 0 keeps it until dismissed. Default 10, or 0
+#            for waiting -- an agent blocked on you should not time out.
 #   id       a toast with the same id replaces the old one instead of stacking,
 #            so agent-radar passes the pane id and an agent never shows twice.
+#
+# Two tmux options choose the animation, each `on`, `off` or a list of levels:
+#   @toast_spinner  a spinner before the emoji            default: on
+#   @toast_pulse    the background blinks between two     default: waiting done
+#                   shades of the level's colour
 #
 # prefix+Escape dismisses them all (common.conf). Several toasts show side by
 # side, newest first, at the start of status-right (tmux.conf).
@@ -31,7 +35,6 @@ dir="${XDG_RUNTIME_DIR:-/tmp}/tmux-toast-$(id -u)"
 lock="$dir/.lock"
 frame_delay=0.2
 max_text=60
-max_seconds=20
 
 # Redraws every client's status line now rather than at the next
 # status-interval, in one tmux call however many clients are attached. A tmux
@@ -45,10 +48,19 @@ publish() {
   tmux "${args[@]}" 2>/dev/null || true
 }
 
-# One toast as a status-line segment. The spinner and the background, which
-# alternates between two shades of the level's colour, are what catch the eye:
-# the text alone is easy to miss in a status line that already changes every
-# second.
+# Whether an animation option ($1, its value) covers a level ($2): `on` for
+# every level, `off` for none, otherwise a space-separated list of levels.
+applies() {
+  case " $1 " in
+    " on "|*" $2 "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# One toast as a status-line segment. The text alone is easy to miss in a
+# status line that already changes every second, so something moves: the
+# spinner, and for the toasts that mean "your turn" (waiting, done) the
+# background too, which blinks between two shades of the level's colour.
 render() {
   local level="$1" text="$2" frame="$3" emoji bright dim bg
   local spinner=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
@@ -58,22 +70,28 @@ render() {
     error)   emoji="🔥" bright="#d9730d" dim="#7a3f06" ;;
     *)       emoji="💬" bright="#3d59a1" dim="#243663" ;;
   esac
-  bg="$bright"
-  (( frame / 3 % 2 )) && bg="$dim"
-  printf '#[fg=#ffffff,bg=%s,bold] %s %s %s #[default] ' \
-    "$bg" "${spinner[frame % ${#spinner[@]}]}" "$emoji" "$text"
+  bg="$bright" spin=""
+  applies "$pulse" "$level" && (( frame / 3 % 2 )) && bg="$dim"
+  applies "$spinner_levels" "$level" && spin="${spinner[frame % ${#spinner[@]}]} "
+  printf '#[fg=#ffffff,bg=%s,bold] %s%s %s #[default] ' "$bg" "$spin" "$emoji" "$text"
 }
 
 # Draws until no toast is left. Newest first: the toast that just arrived is
 # the one you have not seen.
 animate() {
-  local frame=0 file expiry level text segment files
+  local frame=0 file expiry level text segment files pulse spinner_levels
+  # Read once rather than per frame, which would triple the tmux calls; a change
+  # applies from the next animator, i.e. the next toast after these are gone.
+  # Unset (empty) means the default.
+  pulse="$(tmux show -gqv @toast_pulse 2>/dev/null || true)"
+  spinner_levels="$(tmux show -gqv @toast_spinner 2>/dev/null || true)"
+  pulse="${pulse:-waiting done}" spinner_levels="${spinner_levels:-on}"
   while :; do
     segment=""
     mapfile -t files < <(ls -t "$dir" 2>/dev/null)
     for file in "${files[@]}"; do
       { read -r expiry level; IFS= read -r text; } < "$dir/$file" 2>/dev/null || continue
-      if (( expiry <= EPOCHSECONDS )); then
+      if (( expiry != 0 && expiry <= EPOCHSECONDS )); then
         rm -f -- "$dir/$file"
         continue
       fi
@@ -133,10 +151,9 @@ shift $((OPTIND - 1))
 text="$*"
 [ -n "$text" ] || { echo "Show-Toast.sh: no message" >&2; exit 2; }
 
-[[ "$seconds" =~ ^[0-9]+$ ]] || seconds=10
-(( seconds < 1 )) && seconds=1
-(( seconds > max_seconds )) && seconds=$max_seconds
-expiry=$((EPOCHSECONDS + seconds))
+[ -n "$seconds" ] || { [ "$level" = waiting ] && seconds=0 || seconds=10; }
+expiry=0
+(( seconds > 0 )) && expiry=$((EPOCHSECONDS + seconds))
 
 # One line, no longer than a status segment can afford, and with `#` doubled so
 # the status line prints it instead of reading it as the start of a style.

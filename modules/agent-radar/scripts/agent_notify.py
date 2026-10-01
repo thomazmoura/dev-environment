@@ -173,9 +173,9 @@ class TmuxAction:
     """An animated toast in the status line, via modules/tmux/scripts/Show-Toast.sh.
 
     The toast id is the pane id, so an agent that goes waiting -> done replaces
-    its own toast instead of stacking a second one. Every toast times out
-    (Show-Toast.sh caps it at 20s); waiting gets the longest, and resolve()
-    takes it down early once the agent is no longer blocked.
+    its own toast instead of stacking a second one. A waiting toast is sticky
+    and is taken down by resolve() once the agent is no longer blocked --
+    answering the prompt clears it without prefix+Escape.
 
     It does not keep the sampler alive: a toast is only seen by an attached
     client, and an attached client's status bar already keeps the sampler
@@ -187,7 +187,7 @@ class TmuxAction:
     TIMEOUT = 5.0
     SCRIPT = radar.SHARED_SCRIPTS / "Show-Toast.sh"
     LEVEL = {radar.BLOCKED: "waiting", radar.DONE: "done"}
-    SECONDS = {radar.BLOCKED: 20, radar.DONE: 10}
+    SECONDS = {radar.BLOCKED: 0, radar.DONE: 20}
 
     def enabled(self) -> bool:
         return shutil.which("tmux") is not None and os.access(self.SCRIPT, os.X_OK)
