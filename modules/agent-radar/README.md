@@ -542,6 +542,7 @@ notification action:
 | --- | --- | --- |
 | `telegram` | `BOT_TOKEN` and `CHAT_ID` are set | the same bot as `~/.local/bin/send_notification.sh`, sent from Python so the payload is real JSON |
 | `desktop` | `notify-send` exists and there is a session bus or display | `waiting` is sent `critical`, so GNOME keeps it on screen; `done` times out normally |
+| `tmux` | `tmux` is on the PATH | an animated toast at the start of status-right (`modules/tmux/scripts/Show-Toast.sh`); `waiting` lasts 20s (less once the agent is no longer blocked), `done` 10s; `prefix Esc` clears them |
 
 The sampler inherits these variables from tmux's global environment
 (`tmux show-environment -g`), not from your current shell. If you change them,
@@ -565,12 +566,15 @@ respawned sampler neither repeats what it sent nor forgets what it saw.
 
 **Lifetime changes with it.** The sampler usually exits 90s after the last reader
 goes away. That is also the moment you walk away from tmux, and the point of a
-notification is to reach you then. So while any action is enabled, the sampler
-keeps running until the tmux server itself exits.
+notification is to reach you then. So while any action other than `tmux` is
+enabled, the sampler keeps running until the tmux server itself exits. The
+`tmux` toast is only seen by an attached client, whose status bar keeps the
+sampler running anyway (`keeps_alive = False`).
 
 ```sh
 scripts/agent_notify.py --test               # a made-up "waiting" through every action
 scripts/agent_notify.py --test done --session notas
+AGENT_RADAR_NOTIFY=tmux scripts/agent_notify.py --test   # just the toast
 AGENT_RADAR_NOTIFY=desktop                   # only these actions (comma-separated)
 AGENT_RADAR_NOTIFY=off                       # none; the sampler idle-exits as before
 ```

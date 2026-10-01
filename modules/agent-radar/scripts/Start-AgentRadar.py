@@ -130,7 +130,7 @@ def run(interval: float) -> int:
             # which is the case they exist for.
             print("agent-radar: code changed, restarting", file=sys.stderr, flush=True)
             feed.CACHE.restart_daemon(lock, interval)
-        if not notifier.active and feed.last_read_age() > feed.IDLE_EXIT_SECONDS:
+        if not notifier.keeps_sampler_alive and feed.last_read_age() > feed.IDLE_EXIT_SECONDS:
             # Everyone detached. Leave the last snapshot on disk: it is stale by
             # definition and every reader checks the age, so it cannot be
             # mistaken for live data, and the next consumer respawns us.

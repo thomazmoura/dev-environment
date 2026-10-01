@@ -169,8 +169,49 @@ class DesktopAction:
         subprocess.run(argv, check=True, capture_output=True, timeout=self.TIMEOUT)
 
 
+class TmuxAction:
+    """An animated toast in the status line, via modules/tmux/scripts/Show-Toast.sh.
+
+    The toast id is the pane id, so an agent that goes waiting -> done replaces
+    its own toast instead of stacking a second one. Every toast times out
+    (Show-Toast.sh caps it at 20s); waiting gets the longest, and resolve()
+    takes it down early once the agent is no longer blocked.
+
+    It does not keep the sampler alive: a toast is only seen by an attached
+    client, and an attached client's status bar already keeps the sampler
+    running.
+    """
+
+    name = "tmux"
+    keeps_alive = False
+    TIMEOUT = 5.0
+    SCRIPT = radar.SHARED_SCRIPTS / "Show-Toast.sh"
+    LEVEL = {radar.BLOCKED: "waiting", radar.DONE: "done"}
+    SECONDS = {radar.BLOCKED: 20, radar.DONE: 10}
+
+    def enabled(self) -> bool:
+        return shutil.which("tmux") is not None and os.access(self.SCRIPT, os.X_OK)
+
+    def send(self, event: Event) -> None:
+        text = event.title if not event.body else f"{event.title} · {event.body}"
+        argv = [
+            str(self.SCRIPT),
+            "-i", event.pane_id,
+            "-l", self.LEVEL.get(event.state, "info"),
+            "-t", str(self.SECONDS.get(event.state, 10)),
+            text,
+        ]
+        subprocess.run(argv, check=True, capture_output=True, timeout=self.TIMEOUT)
+
+    def resolve(self, pane_id: str) -> None:
+        subprocess.run(
+            [str(self.SCRIPT), "--dismiss", pane_id],
+            check=True, capture_output=True, timeout=self.TIMEOUT,
+        )
+
+
 # Every action there is. The one list to extend.
-ACTIONS = [TelegramAction(), DesktopAction()]
+ACTIONS = [TelegramAction(), DesktopAction(), TmuxAction()]
 
 
 def enabled_actions(actions: list | None = None) -> list:
@@ -216,6 +257,11 @@ class Notifier:
     def active(self) -> bool:
         return bool(self.actions)
 
+    @property
+    def keeps_sampler_alive(self) -> bool:
+        """Whether the sampler should outlive its last reader for these actions."""
+        return any(getattr(action, "keeps_alive", True) for action in self.actions)
+
     def _load(self) -> dict | None:
         try:
             return json.loads(self.path.read_text())
@@ -230,7 +276,16 @@ class Notifier:
         previous = self._load()
         now = time.time()
         current, events = {}, []
+        # Panes that were blocked and no longer are: answered, interrupted, or
+        # closed. Only actions that keep something on screen care (resolve()).
+        resolved = [
+            pane_id
+            for pane_id, entry in (previous or {}).items()
+            if entry.get("state") == radar.BLOCKED
+        ]
         for pane in panes:
+            if pane.state == radar.BLOCKED and pane.pane_id in resolved:
+                resolved.remove(pane.pane_id)
             entry = (previous or {}).get(pane.pane_id, {})
             sent_state, sent_at = entry.get("sent_state"), entry.get("sent_at", 0.0)
 
@@ -261,6 +316,13 @@ class Notifier:
 
         for event in events:
             self.dispatch(event)
+        # A pane that went straight from blocked to done just had its toast
+        # replaced; resolving it too would race the new one off the screen.
+        announced = {event.pane_id for event in events}
+        for pane_id in (p for p in resolved if p not in announced):
+            for action in self.actions:
+                if hasattr(action, "resolve"):
+                    self._pool.submit(_resolve, action, pane_id)
         return events
 
     def dispatch(self, event: Event) -> None:
@@ -283,6 +345,17 @@ def _send(action, event: Event) -> bool:
             flush=True,
         )
         return False
+
+
+def _resolve(action, pane_id: str) -> None:
+    try:
+        action.resolve(pane_id)
+    except Exception as error:  # noqa: BLE001
+        print(
+            f"agent-radar: {action.name} resolve failed for {pane_id}: {error!r}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 # --- CLI ---------------------------------------------------------------------
