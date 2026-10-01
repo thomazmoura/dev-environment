@@ -5,6 +5,8 @@
 # minute. The file holds the count, "!" after a failed request or "🔒" once
 # Exchange rejected the password, and is gone while the daemon is not running,
 # which shows an orange envelope with a lock: prefix+M still has to be pressed.
+# The segment is only drawn where $PAPERBOY_EWS_URL is configured
+# (@paperboy_enabled, set by Set-StatusSegments.sh).
 #
 # Only bash builtins: tmux runs this on every status refresh, so reading the
 # file must not cost a process of its own (no cat).
