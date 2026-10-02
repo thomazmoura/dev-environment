@@ -29,7 +29,7 @@
 # pane is left alone and the layout is built around it; prefix+Space opens a new
 # picker pane when one is wanted.
 #
-# Usage: Set-NeovimLayout.sh [-f | -H] [-n] [target]
+# Usage: Set-NeovimLayout.sh [-f | -H] [-n] [-k] [target]
 #   -f       force the NeoVim layout (prefix+V): NeoVim instead of the picker,
 #            plus a missing terminal row under the whole content area, and a missing NeoVim
 #            right beside the radar column even when other panes have taken
@@ -43,13 +43,17 @@
 #   -n       the target is the only pane of a window the caller has just
 #            created, still an idle shell: it becomes the picker (NeoVim with
 #            -f, Paperboy with -H) rather than being built around.
+#   -k       keep the focus where it is, for the automatic repairs
+#            (Repair-Layouts.sh): the user is typing somewhere and the layout
+#            changing around them shouldn't take their keys elsewhere.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
 # Used by the prefix+v / prefix+V bindings and, with -n, by New-CodeSession.sh,
 # New-SshSession.sh and vtmux (DevHelpers.psm1), which build a session and
 # then hand it here so a new project always opens the same way -- on the
-# remote, for an ssh session.
+# remote, for an ssh session. Without arguments, by Repair-Layouts.sh whenever a
+# laid-out window is resized or loses a pane.
 set -euo pipefail
 
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
@@ -60,18 +64,33 @@ die() { warn "$@"; }
 force=""
 home=""
 new_window=""
-while getopts ":fnH" option; do
+keep_focus=""
+while getopts ":fnHk" option; do
   case "$option" in
     f) force="yes" ;;
     H) home="yes" ;;
     n) new_window="yes" ;;
+    k) keep_focus="yes" ;;
     *) die "Set-NeovimLayout.sh: unknown option -$OPTARG" ;;
   esac
 done
 shift $((OPTIND - 1))
 
+# One run at a time: the hooks run Repair-Layouts.sh on every resize and closed
+# pane, alongside prefix+v and Restore-PickerPane.sh, and two runs repairing the
+# same window would both open its missing panes. Repair-Layouts.sh holds the
+# lock for the whole sweep and says so, and -H's exec below keeps it held.
+if [ -z "${TMUX_LAYOUT_LOCKED:-}" ]; then
+  exec 9>"${TMUX_TMPDIR:-/tmp}/tmux-layout-$(id -u).lock"
+  flock -w 30 9 || true
+  export TMUX_LAYOUT_LOCKED=1
+fi
+
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
+# The pane the user is in, for -k to put the focus back on: every split below
+# takes it.
+active="$(tmux list-panes -t "$top" -F '#{?pane_active,#{pane_id},}' | grep -m1 .)"
 
 # A window zoomed with prefix+z is zoomed out first: the layout is worked out
 # from, and repairs, the panes of the whole window, the hidden ones included.
@@ -473,6 +492,16 @@ fi
 
 # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
 # panes of the radar column by most-recently-active. Touching the git feed
-# makes that C-h land on Git instead of on the agent feed.
-[ -z "$git" ] || tmux select-pane -t "$git"
-tmux select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"
+# makes that C-h land on Git instead of on the agent feed. With -k the focus
+# only goes back where it was, if a split took it.
+if [ -n "$keep_focus" ]; then
+  [ "$(tmux list-panes -t "$top" -F '#{?pane_active,#{pane_id},}' | grep -m1 .)" = "$active" ] ||
+    tmux select-pane -t "$active" 2>/dev/null || true
+else
+  [ -z "$git" ] || tmux select-pane -t "$git"
+  tmux select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"
+fi
+
+# What Repair-Layouts.sh compares against to tell whether the window has
+# changed since: the layout as this run left it.
+tmux set -w -t "$top" @layout_fitted "$(tmux display-message -p -t "$top" '#{window_layout}')"
