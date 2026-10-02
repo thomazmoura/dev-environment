@@ -1136,6 +1136,13 @@ function New-VerticalTmuxSession {
       land where they will still be after attaching rather than being scaled up
       from tmux's default 80x24.
 
+      The home session -- the one marked with H in the Git pane -- is opened
+      too, first, so it is always there to come back to with prefix+h. It gets
+      the home layout (Paperboy | Workhorse, Set-NeovimLayout.sh -H) in the
+      directory Set-HomeSession.sh saved next to the mark, or $CODE_FOLDER/<name>
+      for a mark saved before it kept one. Picking the home session's own
+      project opens it just once, with the picker layout like any other.
+
     .PARAMETER ExitOnCancel
       Exit the whole pwsh process with 130 -- fzf's own code for Esc/ctrl-c --
       when the project picker is aborted, instead of just returning.
@@ -1160,6 +1167,15 @@ function New-VerticalTmuxSession {
 		# tmux session names cannot contain dots -- they separate session:window.pane.
 		$currentDirectory = ($pwd.Path.Split("/") | Select-Object -Last 1).Replace(".", "_")
 		$size = $Host.UI.RawUI.WindowSize
+		$homeFile = "$(if($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } else { "$HOME/.cache" })/tmux/home-session"
+		if([IO.File]::Exists($homeFile)) {
+			$homeSession = [IO.File]::ReadAllText($homeFile).Trim()
+			$homePath = if([IO.File]::Exists("$homeFile-path")) { [IO.File]::ReadAllText("$homeFile-path").Trim() } else { "$env:CODE_FOLDER/$homeSession" }
+			if($homeSession -and $homeSession -ne $currentDirectory -and [IO.Directory]::Exists($homePath)) {
+				tmux new-session -d -s $homeSession -c $homePath -x $size.Width -y $size.Height
+				& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -H -n "${homeSession}:"
+			}
+		}
 		tmux new-session -d -s $currentDirectory -c $location -x $size.Width -y $size.Height
 		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -n "${currentDirectory}:"
 		tmux attach-session -t $currentDirectory
