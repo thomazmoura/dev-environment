@@ -119,8 +119,18 @@ pwsh -NoProfile -File $HOME/.modules/neovim-base/neovim-setup.ps1
 # :TSUpdate that runs when lazy.nvim installs it below)
 pwsh -NoProfile -File $HOME/.modules/neovim-treesitter/Install-TreeSitterCli.ps1
 
-# Azure-CLI extensions installation
-export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh && $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh
+# Azure-CLI and its extensions. The pipx venv runs on the system python3, so an
+# OS upgrade that moves to a new Python leaves az unable to import its own
+# packages; reinstall it then, since `pipx install` sees it installed and stops
+export PATH="$HOME/.local/bin:$PATH"
+if ! az --version >/dev/null 2>&1; then
+  if pipx list --short 2>/dev/null | grep -q '^azure-cli '; then
+    pipx reinstall azure-cli
+  else
+    pipx install azure-cli
+  fi
+fi
+chmod +x $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh && $HOME/.modules/azure-cli-extensions/azure-extensions-setup.sh
 
 # Delta diff installation
 pwsh -NoProfile -File $HOME/.modules/git/delta-setup.ps1

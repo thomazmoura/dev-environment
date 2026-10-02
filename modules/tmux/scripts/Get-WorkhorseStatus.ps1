@@ -105,7 +105,27 @@ if ($null -ne $cached) {
 
 # Fetch work items from saved query
 try {
-    $queryResult = az boards query --id $QueryId --output json 2>$null
+    # az always warns on stderr that it doesn't support Azure DevOps Server, so
+    # stderr is only shown when az fails: its last line, which names the error
+    $errorFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $queryResult = az boards query --id $QueryId --output json 2>$errorFile
+        $azExitCode = $LASTEXITCODE
+        $azError = Get-Content $errorFile |
+            Where-Object { $_.Trim() -and $_ -notmatch '^WARNING:' } |
+            Select-Object -Last 1
+    }
+    finally {
+        Remove-Item $errorFile -Force -ErrorAction SilentlyContinue
+    }
+
+    if ($azExitCode -ne 0 -and $azError) {
+        $display = Get-TruncatedTitle -Title "az: $($azError.Trim())" -MaxLength $MaxTitleLength
+        Set-CachedResult -Display $display -Success $false
+        Write-Output $display
+        exit 0
+    }
+
     if (-not $queryResult) {
         $display = 'Unable to get query results. Check the connection to the Azure DevOps Server/Service'
         Set-CachedResult -Display $display -Success $false
