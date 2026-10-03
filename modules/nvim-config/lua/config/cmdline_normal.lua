@@ -5,7 +5,8 @@
 -- second <Esc> cancels. Macros keep the plain <Esc>.
 local map = vim.keymap.set
 
--- The look of noice's popup, taken on <Esc> for the CmdwinEnter that follows
+-- The look of noice's popup, taken on <Esc> for the command-line window that
+-- follows
 local popup
 
 -- noice's cmdline popup: a content window inside a nui border window
@@ -64,15 +65,25 @@ map('c', '<Esc>', function()
   return vim.o.cedit
 end, { expr = true, desc = 'Command line in normal mode' })
 
+local group = vim.api.nvim_create_augroup('cmdline_normal', { clear = true })
+
 vim.api.nvim_create_autocmd('CmdwinEnter', {
-  group = vim.api.nvim_create_augroup('cmdline_normal', { clear = true }),
+  group = group,
   callback = function(args)
     map('n', '<Esc>', '<cmd>quit<cr>', { buffer = args.buf, desc = 'Cancel command line' })
+  end,
+})
 
+-- The float takes the popup's place as soon as the window has its buffer, not
+-- on CmdwinEnter: noice redraws (and flushes) before that, which would flash
+-- the usual split with the history at the bottom.
+vim.api.nvim_create_autocmd('BufEnter', {
+  group = group,
+  callback = function(args)
     -- Opened by q: (or without noice): the usual split with the history
+    if not popup or vim.fn.getcmdwintype() == '' then return end
     local p = popup
     popup = nil
-    if not p then return end
 
     local win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_config(win, {
