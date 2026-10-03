@@ -123,21 +123,20 @@ def duration(seconds):
 
 
 def clock(timestamp):
-    """The local time a moment falls on, e.g. 14:37. The cache expiry shows as
-    a time of day rather than a countdown because Claude only re-runs this on
-    events, so a countdown goes stale while the session sits idle."""
+    """The local time a moment falls on, e.g. 14:37. The cache expiry and the
+    5h reset show as a time of day rather than a countdown because Claude only
+    re-runs this on events, so a countdown goes stale while the session sits
+    idle."""
     return time.strftime("%H:%M", time.localtime(timestamp))
 
 
-def percentage_segment(icon, label, percentage, resets_at=None, detail=None):
+def percentage_segment(icon, label, percentage, detail=None):
     if percentage is None:
         return f"{icon} {label}{DASH}"
     color, prefix = level(percentage)
     text = f"{prefix}{icon} {label}{round(percentage)}%"
     if detail is not None:
         text += f" {detail}"
-    if resets_at is not None:
-        text += f" {duration(resets_at - time.time())}"
     return paint(text, color)
 
 
@@ -170,9 +169,16 @@ def main():
     segments.append(percentage_segment(CONTEXT, "Context ", context_percentage(context), detail=context_tokens(context)))
 
     limits = session.get("rate_limits") or {}
-    for icon, label, key in ((FIVE_HOUR, "5h ", "five_hour"), (SEVEN_DAY, "7d ", "seven_day")):
+    # The 5h window resets within the day, so its reset reads best as a time
+    # of day; the 7d one can be days away, so it stays a countdown.
+    for icon, label, key, when in (
+        (FIVE_HOUR, "5h ", "five_hour", clock),
+        (SEVEN_DAY, "7d ", "seven_day", lambda resets_at: duration(resets_at - time.time())),
+    ):
         window = limits.get(key) or {}
-        segments.append(percentage_segment(icon, label, window.get("used_percentage"), window.get("resets_at")))
+        resets_at = window.get("resets_at")
+        reset = when(resets_at) if resets_at is not None else None
+        segments.append(percentage_segment(icon, label, window.get("used_percentage"), detail=reset))
 
     segments.append(cache_segment(session.get("prompt_cache")))
 
