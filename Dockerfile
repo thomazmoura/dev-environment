@@ -16,10 +16,6 @@ COPY --chown=developer:developer modules/vim /home/developer/.local/share/nvim/s
 COPY --chown=developer:developer modules/nvim-config /home/developer/.config/nvim
 RUN /home/developer/neovim/bin/nvim --headless "+Lazy! restore" +qa || /home/developer/neovim/bin/nvim --headless "+Lazy! restore" +qa
 
-# Azure-CLI extensions installation
-COPY --chown=developer:developer modules/azure-cli-extensions /home/developer/.modules/azure-cli-extensions
-RUN export PATH="$HOME/.local/bin:$PATH" && pipx install azure-cli && chmod +x /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh && /home/developer/.modules/azure-cli-extensions/azure-extensions-setup.sh
-
 # Delta diff installation
 COPY --chown=developer:developer modules/git /home/developer/.modules/git
 RUN pwsh -NoProfile -File /home/developer/.modules/git/delta-setup.ps1
