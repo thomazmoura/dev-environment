@@ -60,6 +60,7 @@ one detached sampler per machine (Start-GitRadar.py / Start-AgentRadar.py)
   4. `Test-Fixtures.sh`: regression check over `fixtures/`. Run it after every rule change.
 - **Claude Code hook** (optional second witness): `hooks/Set-AgentRadarState.sh`, registered by `Install-AgentRadarHooks.sh`.
 - **Notifications** (`agent_notify.py`, `--test` to try it): fire when an agent enters `waiting`/`done`.
+  - Actions: `telegram`, `desktop`, `tmux`. Each is on when its requirement is met. `AGENT_RADAR_NOTIFY=telegram,tmux` (or `off`) narrows them per machine. Set it in the untracked `~/.profile`/`~/.profile.ps1`, not in the repo. See the README's "Notifications" section.
   - Telegram needs `BOT_TOKEN` and `CHAT_ID` in the **sampler's** environment. The sampler is detached and started by whichever consumer notices it's missing, so check where that process got its environment when notifications don't arrive.
 
 ## Verifying

@@ -542,11 +542,32 @@ notification action:
 | --- | --- | --- |
 | `telegram` | `BOT_TOKEN` and `CHAT_ID` are set | the same bot as `~/.local/bin/send_notification.sh`, sent from Python so the payload is real JSON |
 | `desktop` | `notify-send` exists and there is a session bus or display | `waiting` is sent `critical`, so GNOME keeps it on screen; `done` times out normally |
-| `tmux` | `tmux` is on the PATH | an animated toast at the start of status-right (`modules/tmux/scripts/Show-Toast.sh`); `waiting` lasts 20s (less once the agent is no longer blocked), `done` 10s; `prefix Esc` clears them |
+| `tmux` | `tmux` is on the PATH | an animated toast at the start of status-right (`modules/tmux/scripts/Show-Toast.sh`); `waiting` stays until the agent is no longer blocked, `done` lasts 20s; `prefix Esc` clears them |
+
+Every action whose requirement is met is on. `AGENT_RADAR_NOTIFY` narrows them
+to a comma-separated list of names, or `off` for none. Which actions a machine
+uses is host configuration, not repo configuration: set it in the untracked
+`~/.profile` (and `~/.profile.ps1`), next to `BOT_TOKEN` and `CHAT_ID`. For
+example, a desktop that should only send Telegram messages and tmux toasts uses:
+
+```sh
+export AGENT_RADAR_NOTIFY='telegram,tmux'
+```
 
 The sampler inherits these variables from tmux's global environment
-(`tmux show-environment -g`), not from your current shell. If you change them,
-restart the sampler.
+(`tmux show-environment -g`), not from your current shell. Each action is
+checked once, when the sampler starts. So after a change, update tmux and
+restart the sampler from tmux's environment:
+
+```sh
+tmux set-environment -g AGENT_RADAR_NOTIFY telegram,tmux
+kill "$(pgrep -f '^/usr/bin/python3 .*Start-AgentRadar\.py')"
+tmux run-shell -b "setsid python3 ~/.modules/agent-radar/scripts/Start-AgentRadar.py --interval 1.0 </dev/null >>~/.cache/agent-radar/daemon.log 2>&1 &"
+```
+
+Starting it yourself matters. Any consumer can respawn a missing sampler, and
+an Agents pane opened before the change passes on its own older environment.
+Check the variable with `tr '\0' '\n' < /proc/<pid>/environ`.
 
 Notifications fire even while the pane is on screen. The radar itself never
 shows `done` for a pane you watched finish -- it lands straight in `idle` -- so
