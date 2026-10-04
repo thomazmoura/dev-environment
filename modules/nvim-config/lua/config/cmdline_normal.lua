@@ -62,6 +62,7 @@ end
 map('c', '<Esc>', function()
   if vim.fn.reg_executing() ~= '' or vim.fn.getcmdwintype() ~= '' then return '<C-c>' end
   popup = noice_popup()
+  if popup then popup.origin = vim.api.nvim_get_current_win() end
   return vim.o.cedit
 end, { expr = true, desc = 'Command line in normal mode' })
 
@@ -104,10 +105,28 @@ vim.api.nvim_create_autocmd('BufEnter', {
       style = 'minimal', focusable = false, zindex = 201,
     })
     vim.wo[cover].winhighlight = p.winhighlight
+
+    -- A float the command line came from (Workhorse's, say) is no longer the
+    -- current window, so it takes NormalNC, which the transparent background
+    -- leaves without a color: it keeps its own Normal until the window closes
+    local origin = p.origin
+    local origin_whl
+    if origin and vim.api.nvim_win_is_valid(origin)
+        and vim.api.nvim_win_get_config(origin).relative ~= '' then
+      origin_whl = vim.wo[origin].winhighlight
+      local normal = origin_whl:match('Normal:([^,]+)') or 'NormalFloat'
+      vim.wo[origin].winhighlight = (origin_whl ~= '' and origin_whl .. ',' or '') .. 'NormalNC:' .. normal
+    end
+
     vim.api.nvim_create_autocmd('BufWinLeave', {
       buffer = args.buf,
       once = true,
-      callback = function() pcall(vim.api.nvim_win_close, cover, true) end,
+      callback = function()
+        pcall(vim.api.nvim_win_close, cover, true)
+        if origin_whl then
+          pcall(function() vim.wo[origin].winhighlight = origin_whl end)
+        end
+      end,
     })
 
     -- Insert goes back to the command line, with the cursor where it was here
