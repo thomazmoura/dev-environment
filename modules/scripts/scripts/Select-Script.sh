@@ -3,10 +3,13 @@
 #
 #   Show-Example.sh   bash   Prints where it ran, as a shape to copy
 #
-# Bound to prefix+s as a popup, with prefix+- then s opening the pane below
-# instead of on the right, and prefix+S running it right there
-# in the picker's popup (see modules/tmux/common.conf). Meant to be run from a
-# tmux binding so the split happens in the client that opened it.
+# Bound to prefix+s, which splits a pane off to the right with the picker in
+# it, and prefix+- then s, which splits it below: the pane is where the script
+# will run, so you see where before you choose, and choosing turns that same
+# pane into the script's -- labelled with its name -- the way the layout's
+# picker pane turns into a tool (Select-PaneKind.sh). Esc closes it. prefix+S
+# instead asks in a popup and runs the script right there in it (see
+# modules/tmux/common.conf).
 #
 # The list is whatever is in modules/scripts/library -- no registry to keep in
 # step, no metadata file: a script is listed because it is there, and it is
@@ -30,9 +33,12 @@
 # Invoke-Script.sh next to them, are the remote's. A remote without this
 # dev-environment has no library to offer.
 #
-# Usage: Select-Script.sh [-v]
-#   -v                open the pane below the current one instead of to its right
-#   -p                run the script in this popup instead of a new pane; the
+# Usage: Select-Script.sh [-t <target> [-v] | -p]
+#   -t <target>       split a pane off <target> that asks, then runs the choice;
+#                     bindings pass "#{pane_id}". Without -t or -p this pane
+#                     is the one asking (what that split runs)
+#   -v                with -t: split below instead of to the right
+#   -p                ask in this popup and run the script in it too; the
 #                     binding's -d '#{pane_current_path}' is its directory
 #   --list            print the rows and exit
 #   --rows-for <pane> the rows for <pane>'s machine: --list here, or over ssh in
@@ -131,22 +137,40 @@ if [ "${1:-}" = "--rows-for" ]; then
   exit
 fi
 
-require_tools tmux fzf
-
-direction=()
+target=""
+direction="-h"
 in_popup=""
-while getopts ":vp" option; do
+while getopts ":t:vp" option; do
   case "$option" in
-    v) direction=(-v) ;;
+    t) target="$OPTARG" ;;
+    v) direction="-v" ;;
     p) in_popup="yes" ;;
     *) die "Select-Script.sh: unknown option -$OPTARG" ;;
   esac
 done
 
-# Before fzf: a popup is an overlay rather than a pane, so #{pane_id} still
-# resolves to the pane underneath it -- the one the new pane should be split
-# off. Resolved here anyway, while nothing else could have taken focus.
-origin="$(current_pane)"
+# -t: open the pane that asks, and leave the rest to it. This runs from
+# `run-shell -b`, so failures go to the status line. The picker always runs
+# here, where fzf is, even in an ssh session: the pane hands the script it
+# turns into to pane_command itself, as the layout's picker does.
+if [ -n "$target" ]; then
+  origin="$(current_pane "$target")"
+  new_pane "$origin" "Scripts" "bash ~/.modules/scripts/scripts/Select-Script.sh" \
+    "$direction" >/dev/null
+  exit 0
+fi
+
+require_tools tmux fzf
+
+# Before fzf. In the popup (-p) that is the pane underneath it, since a popup
+# is an overlay rather than a pane; otherwise it is this pane, split off the
+# one the binding fired in, so it shares that pane's directory and session --
+# and with the session, its ssh target.
+if [ -n "$in_popup" ]; then
+  origin="$(current_pane)"
+else
+  origin="$(current_pane "${TMUX_PANE:-}")"
+fi
 
 remote="$(ssh_option "$origin" @ssh_target)"
 rows="$(rows_for "$origin")" || die "Could not list the scripts${remote:+ on ${remote##*@}}"
@@ -174,12 +198,11 @@ runner="$(dirname "$(dirname "$path")")/scripts/Invoke-Script.sh"
 pwsh_quote() { printf "'%s'" "${1//\'/\'\'}"; }
 command="& $(pwsh_quote "$runner") $(pwsh_quote "$path")"
 
-# The same line a pane would get (pane_command, as New-PopupShell.sh uses it),
-# so in an ssh session the popup runs it on the remote, in the session's
+# This pane, or the popup, turns into the script: the line a new pane would get
+# (pane_command), so in an ssh session it runs on the remote, in the session's
 # directory. Invoke-Script.sh's keypress pause holds the popup open too.
-if [ -n "$in_popup" ]; then
-  exec bash -c "$(pane_command "$origin" "$command")"
+if [ -z "$in_popup" ]; then
+  label_pane "$origin" "$(basename "$path")"
+  clear
 fi
-
-"$HOME/.modules/tmux/scripts/New-ToolPane.sh" "${direction[@]}" -t "$origin" \
-  "$(basename "$path")" "$command"
+exec bash -c "$(pane_command "$origin" "$command")"

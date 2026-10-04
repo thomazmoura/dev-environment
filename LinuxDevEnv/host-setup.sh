@@ -161,7 +161,7 @@ chmod +x $HOME/.modules/agent-radar/scripts/* $HOME/.modules/agent-radar/hooks/*
 # modules/tmux/scripts/radar_cache.py.
 chmod +x $HOME/.modules/git-radar/scripts/*
 
-# scripts (your own scripts, picked from a popup with prefix + s). No
+# scripts (your own scripts, picked in a pane with prefix + s). No
 # installer either: the picker and the library run in place out of
 # $HOME/.modules, so a committed script is live without re-running this.
 chmod +x $HOME/.modules/scripts/scripts/* $HOME/.modules/scripts/library/*

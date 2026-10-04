@@ -2,9 +2,9 @@
 
 Your own scripts, kept under version control and one chord away.
 
-    prefix + s              pick one, run it in a pane on the right
+    prefix + s              pick one in a pane on the right, which then runs it
     prefix + -  then  s     the same, in a pane below
-    prefix + S              the same, run inside the picker's popup
+    prefix + S              pick one in a popup, which then runs it
 
 ```
   script> back
@@ -70,8 +70,8 @@ second would mean never seeing what it printed.
 
 ## Where it runs
 
-In the pane's current directory -- the picker splits the pane you fired it from,
-so a script that works on "the repository I am in" gets the one you are looking
+In the pane's current directory -- the picker's pane is split off the pane you
+fired it from, so a script that works on "the repository I am in" gets the one you are looking
 at. In an ssh session (`prefix + N`) it runs on the **remote**, in that session's
 directory, like every other tool pane. The list is then the **remote's** library,
 read from its own clone of this repository, so what you pick is what is there to

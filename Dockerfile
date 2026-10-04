@@ -43,7 +43,7 @@ RUN chmod +x /home/developer/.modules/agent-radar/scripts/* /home/developer/.mod
 COPY --chown=developer:developer modules/git-radar /home/developer/.modules/git-radar
 RUN chmod +x /home/developer/.modules/git-radar/scripts/*
 
-# scripts (your own scripts, picked from a popup with prefix + s).
+# scripts (your own scripts, picked in a pane with prefix + s).
 # Nothing to install -- the picker is bash plus fzf, and what it runs is
 # whatever modules/scripts/library holds.
 COPY --chown=developer:developer modules/scripts /home/developer/.modules/scripts
