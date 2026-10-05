@@ -5,6 +5,7 @@ Answers one question: **which coding agent is waiting for me right now?**
     prefix + t  then  a     popup picker -- pick an agent, jump to its pane
     prefix + t  then  A     the same list, live, in a normal pane
     prefix + r              the same live pane, chrome-free (curses, not fzf)
+    ?  in that pane         its keys (KEYS.md), rendered in a popup
     status bar              ●2●1●1  -- two waiting, one finished, one working
 
 The picker and the fzf watcher list one agent per line:

@@ -43,7 +43,8 @@ row for the rest of that tick and then for the rest of ours.
 
 Keys: j/k/g/G move, Enter jumps to the agent's pane, r reloads the
 feed (as if the pane were closed and reopened), R does that and restarts the
-sampler behind it too (as if it were killed), Ctrl-C closes the pane.
+sampler behind it too (as if it were killed), ? lists these keys
+(modules/agent-radar/KEYS.md), Ctrl-C closes the pane.
 
 Ctrl-C and nothing else, deliberately: this is a pane you leave open and type
 past, so closing it should take a gesture you cannot make by accident. q and Esc
@@ -447,6 +448,8 @@ def run(stdscr, interval: float) -> str:
             elif key in (curses.KEY_ENTER, 10, 13):
                 if panes:
                     jump(panes[selected].pane_id)
+            elif key == ord("?"):
+                ui.show_keys(os.path.join(HERE, "..", "KEYS.md"))
             elif key == curses.KEY_RESIZE:
                 redraw = True
 

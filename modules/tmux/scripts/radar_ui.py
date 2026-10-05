@@ -17,9 +17,11 @@ belongs to neither radar, and both already reach into this directory.
 from __future__ import annotations
 
 import curses
+import importlib.util
 import os
 import subprocess
 import sys
+import threading
 
 ELLIPSIS = "…"
 
@@ -169,6 +171,68 @@ def window_start(selected: int, count: int, visible: int) -> int:
 
 def visible_rows(height: int) -> int:
     return max(1, height // ROW_LINES)
+
+
+# --- Keys ----------------------------------------------------------------------
+# `?` in either feed. The list is a KEYS.md beside each radar's scripts rather
+# than a string in its feed, so it reads as a document in the repo too, and is
+# rendered in a popup -- the pane itself is a narrow column, too narrow for a key
+# and what it does on one line.
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def show_keys(keys_md: str) -> None:
+    """Open Show-RadarKeys.py on `keys_md` in a popup, without blocking.
+
+    On a thread for the reason every feed popup is: display-popup returns only
+    when the popup closes, and the feed has to keep drawing underneath it.
+    """
+
+    # Sized to the list, so it reads as a menu over the session rather than a
+    # screen in place of it -- but no bigger than the client: tmux refuses a
+    # popup that does not fit ("height too large") rather than shrinking it.
+    # Show-RadarKeys.py pages whatever is cut short.
+    width, height = "90%", "90%"
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "show_radar_keys", os.path.join(HERE, "Show-RadarKeys.py")
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with open(keys_md, encoding="utf-8") as handle:
+            columns, lines = module.size(handle.read())
+        client = subprocess.run(
+            ["tmux", "display-message", "-p", "#{client_width} #{client_height}"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        ).stdout.split()
+        width = str(min(columns, int(client[0])))
+        height = str(min(lines, int(client[1])))
+    except (OSError, ImportError, AttributeError, SyntaxError, ValueError,
+            IndexError, subprocess.SubprocessError):
+        width, height = "90%", "90%"
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", width, "-h", height, "-x", "C", "-y", "C",
+                    os.path.join(HERE, "Invoke-Popup.sh"),
+                    os.path.join(HERE, "Show-RadarKeys.py"),
+                    keys_md,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 # --- Focus -------------------------------------------------------------------

@@ -93,9 +93,11 @@ Keys: `j`/`k`/`g`/`G` move, `Enter` switches to the session, `r` reloads the
 feed (as if the pane were closed and reopened), `R` does that and restarts the
 sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
-it and `P` pushes it, `c` commits it, `s` shows its status, `h` its history,
+it and `P` pushes it, `c` commits it, `C` checks out another branch, `s` shows its status, `h` its history,
 `m` merges its branch into another, `H` marks it as the home session, `q` or
-`d` kills the selected session after asking, `Ctrl-C` closes the pane.
+`d` kills the selected session after asking, `?` lists these keys in a popup
+(rendered from `KEYS.md`, by `modules/tmux/scripts/Show-RadarKeys.py`),
+`Ctrl-C` closes the pane.
 
 **The home session** is the one `prefix + h` switches to from anywhere. `H`
 marks the selected row's session (and, pressed on it again, unmarks it), and

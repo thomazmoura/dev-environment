@@ -45,8 +45,10 @@ one detached sampler per machine (Start-GitRadar.py / Start-AgentRadar.py)
 | `m` | Merge (`Show-GitMerge.sh`) |
 | `H` | Home session |
 | `r` / `R` | Reload / restart |
-| `q`/`d` | Quit |
+| `q`/`d` | Kill the session, after asking |
+| `?` | Key list popup (`KEYS.md`) |
 
+- **A new key goes in `KEYS.md` too** (each radar has one, `git-radar/KEYS.md` and `agent-radar/KEYS.md`): it is what `?` shows, through `radar_ui.show_keys` and `Show-RadarKeys.py`. That renderer handles only `#`/`##`, prose, two-column tables and `code` spans.
 - Popup actions follow one pattern: a `start_*`/`show_*` function runs a `Show-Git*.sh` script in a tmux popup from a worker thread. Copy an existing one (`show_status` is the simplest).
 - Failures go through `failure_note` → `Show-GitFailure.sh`.
 - Operation states appear as glyphs on the row, not words.

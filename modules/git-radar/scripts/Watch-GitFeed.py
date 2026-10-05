@@ -48,8 +48,8 @@ it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
 it, c commits it, C checks out another branch, s shows its status, h its
 history, m merges its branch into another, H marks it as the home session
-(or unmarks it), q or d kills the selected session after asking, Ctrl-C closes
-the pane.
+(or unmarks it), q or d kills the selected session after asking, ? lists these
+keys (modules/git-radar/KEYS.md), Ctrl-C closes the pane.
 
 The home session is the one prefix+h switches to, and its row carries a home
 icon left of its name, in every session's feed. The mark is kept by
@@ -1586,6 +1586,8 @@ def run(stdscr, interval: float) -> str:
                     repos = home_first(sample(), marked)
                     selected = index_of(repos, session, selected)
                     redraw = True
+            elif key == ord("?"):
+                ui.show_keys(os.path.join(HERE, "..", "KEYS.md"))
             elif key in (ord("q"), ord("d")):
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same
