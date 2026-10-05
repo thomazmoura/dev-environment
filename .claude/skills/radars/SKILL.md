@@ -39,6 +39,7 @@ one detached sampler per machine (Start-GitRadar.py / Start-AgentRadar.py)
 | `f/F` | Fetch |
 | `p` / `P` | Pull / push |
 | `c` | Commit (`Show-GitCommit.sh`) |
+| `C` | Checkout a branch with `gitco` (`Show-GitCheckout.sh`) |
 | `s` | Status (`Show-GitStatus.sh`) |
 | `h` | History (`Show-GitHistory.sh`) |
 | `m` | Merge (`Show-GitMerge.sh`) |

@@ -46,9 +46,10 @@ Keys: j/k/g/G move, Enter switches to the session, r reloads the feed (as if
 the pane were closed and reopened), R does that and restarts the sampler behind
 it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
-it, c commits it, s shows its status, h its history, m merges its branch into
-another, H marks it as the home session (or unmarks it), q or d kills the
-selected session after asking, Ctrl-C closes the pane.
+it, c commits it, C checks out another branch, s shows its status, h its
+history, m merges its branch into another, H marks it as the home session
+(or unmarks it), q or d kills the selected session after asking, Ctrl-C closes
+the pane.
 
 The home session is the one prefix+h switches to, and its row carries a home
 icon left of its name, in every session's feed. The mark is kept by
@@ -290,6 +291,7 @@ PULL_GLYPH = "\u2193"    # ↓
 PUSH_GLYPH = "\u2191"    # ↑
 COMMIT_GLYPH = "\u270e"  # ✎
 MERGE_GLYPH = "\u2387"   # ⎇
+CHECKOUT_GLYPH = "\u21c4"  # ⇄
 FAILED_GLYPH = "\u2717"  # ✗
 BUSY_GLYPH_COLOUR = curses.COLOR_MAGENTA
 FAILED_GLYPH_COLOUR = curses.COLOR_RED
@@ -921,6 +923,53 @@ def start_merge(repo) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
+def start_checkout(repo) -> None:
+    """`C`. Check out another branch, picked in a popup: `gitco`, as it is.
+
+    A popup because fzf wants a tty, and busy for the reason `m` is: an f, p or
+    P meanwhile would race the checkout for index.lock. Unlike `m`, a dirty work
+    tree is not refused here -- git carries the changes along or refuses the
+    checkout itself, exactly as gitco does in a terminal.
+    """
+    key = note_key(repo)
+    current = notes.get(key)
+    if current is not None and current.busy:
+        return
+    refusal = ""
+    if repo.state == gitr.OFFLINE:
+        refusal = "cannot check out"
+    elif not repo.root:
+        refusal = "not a git repository"
+    elif repo.conflicted:
+        refusal = "conflicted"
+    if refusal:
+        notes[key] = finished(refusal)
+        return
+
+    notes[key] = Note(busy=True, glyph=CHECKOUT_GLYPH)
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitCheckout.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        notes.pop(key, None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def start_fetch(repo, interactive: bool = True) -> None:
     """f and F, which are start_op(FETCH) and nothing else."""
     start_op(repo, FETCH, interactive)
@@ -1514,6 +1563,9 @@ def run(stdscr, interval: float) -> str:
             elif key == ord("c"):
                 if repos:
                     start_commit(repos[selected])
+            elif key == ord("C"):
+                if repos:
+                    start_checkout(repos[selected])
             elif key == ord("s"):
                 if repos:
                     show_status(repos[selected])

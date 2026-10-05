@@ -132,6 +132,13 @@ fine), a target that cannot fast-forward is left alone, and a merge that
 conflicts is aborted. The row is busy (`⎇`) while the popup is open, like `c`.
 See `Show-GitMerge.sh`.
 
+`C` is `gitco` from the pwsh profile, as it is: fzf over every local and remote
+branch, and the pick is checked out. Unlike `m` it does not refuse a dirty work
+tree -- git carries the changes along or refuses the checkout itself, as it
+does in a terminal. A checkout (or Esc) closes the popup at once; a failed one
+holds it open so git's message can be read. On an ssh row it runs on the host.
+The row is busy (`⇄`) while the popup is open. See `Show-GitCheckout.sh`.
+
 **The cursor is on your row when you arrive.** Every session runs a feed of its
 own, so the row worth having under the cursor in it is that session's -- the
 same one the rail marks. It starts there and is put back there on every switch
