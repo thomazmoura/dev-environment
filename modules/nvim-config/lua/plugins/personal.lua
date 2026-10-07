@@ -83,25 +83,6 @@ return {
     },
   },
 
-  -- Exchange e-mail in Neovim (:Paperboy inbox). Only where
-  -- $PAPERBOY_EWS_URL / $PAPERBOY_EMAIL are set (the plugin reads them itself)
-  {
-    'thomazmoura/paperboy.nvim',
-    cond = not vim.g.vscode and vim.env.PAPERBOY_EWS_URL ~= nil,
-    event = 'VeryLazy',
-    cmd = { 'Paperboy', 'PaperboyStatus' },
-    keys = {
-      { '<Leader>mi', '<cmd>Paperboy inbox<cr>', desc = 'Paperboy: inbox' },
-      { '<Leader>mI', '<cmd>Paperboy all<cr>', desc = 'Paperboy: e-mails of all folders' },
-      { '<Leader>mt', '<cmd>Paperboy folders<cr>', desc = 'Paperboy: folder tree' },
-      { '<Leader>mc', '<cmd>Paperboy contacts<cr>', desc = 'Paperboy: contacts' },
-      { '<Leader>mn', '<cmd>Paperboy compose<cr>', desc = 'Paperboy: new e-mail' },
-      { '<Leader>md', '<cmd>Paperboy drafts<cr>', desc = 'Paperboy: drafts' },
-    },
-    -- Secrets in the separate "paperboy" keyring, locked again right after reading
-    opts = { credential_lookup = { collection = "paperboy" } },
-  },
-
   -- SpotlightDimmer: dims every split but the focused one through the desktop
   -- overlay (a no-op outside tmux/ssh).
   -- Over ssh config/ssh_title.lua owns 'titlestring', hence manage_title = false.
