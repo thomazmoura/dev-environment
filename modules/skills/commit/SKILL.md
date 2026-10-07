@@ -51,7 +51,7 @@ Based on the above changes, create a git commit (plus a changelog commit, see st
 4. Write a concise commit message:
    - Imperative mood (e.g., "Add feature", "Fix bug", "Update config")
    - First line under 72 characters
-   - **IMPORTANT!** No reference to Claude, AI, or automated tools
+   - **IMPORTANT!** No reference to Claude, AI, or automated tools. Amend the commit if there are any lines on the message that contain "Co-Authored-By:" or "Claude-Session:"
 5. Run `git commit -m "<message>"`
 6. If the repository has a `CHANGELOG.md` whose entries are headed `## [<hash>] - <date>` (see
    "Latest CHANGELOG entry" above), record the commit in it as a separate commit. A commit
