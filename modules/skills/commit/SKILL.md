@@ -1,9 +1,9 @@
 ---
 name: commit
 description: Stage and commit pending changes with an auto-generated message
-model: haiku
+model: sonnet
 disable-model-invocation: true
-allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git commit *) Bash(git log *) Bash(git restore --staged *) Bash(rg *) AskUserQuestion
+allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git commit *) Bash(git log *) Bash(git restore --staged *) Bash(rg *) Read Edit AskUserQuestion
 ---
 
 ## Context
@@ -12,10 +12,11 @@ allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git comm
 - Current git diff (staged and unstaged): !`git diff HEAD`
 - Current branch: !`git branch --show-current`
 - Recent commits: !`git log --oneline -10`
+- Latest CHANGELOG entry: !`rg -m1 -n '^## \[' CHANGELOG.md || echo 'no CHANGELOG.md with hash entries'`
 
 ## Your task
 
-Based on the above changes, create a single git commit:
+Based on the above changes, create a git commit (plus a changelog commit, see step 6):
 
 1. Stage all changes, including new files, using `git add .`
 2. Scan what is now staged for sensitive information. Run both commands exactly as written:
@@ -52,6 +53,15 @@ Based on the above changes, create a single git commit:
    - First line under 72 characters
    - **IMPORTANT!** No reference to Claude, AI, or automated tools
 5. Run `git commit -m "<message>"`
+6. If the repository has a `CHANGELOG.md` whose entries are headed `## [<hash>] - <date>` (see
+   "Latest CHANGELOG entry" above), record the commit in it as a separate commit. A commit
+   cannot contain its own hash (amending changes it), so never amend for this. Skip this step
+   when the commit only touched `CHANGELOG.md`, `README.md` or `AGENTS.md`.
+   - Get the hash and date with `git log -1 --format='%h %ad' --date=short`.
+   - `Read` the top of `CHANGELOG.md`, then `Edit` a new entry above the latest one, matching the
+     existing format: `## [<hash>] - <date>`, then `### Added` / `### Changed` / `### Fixed`
+     sections with one bullet per user-visible change, written from the diff.
+   - Run `git add CHANGELOG.md` and `git commit -m "Update changelog"`.
 
 Only make tool calls. Do not output any text — the one exception is the `AskUserQuestion` call when
 the scan flags something.
