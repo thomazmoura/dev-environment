@@ -3,8 +3,9 @@
 # prefix+E and prefix+Space.
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
-# (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents), and
-# the pane turns into whatever is chosen. Enter straight away picks NeoVim.
+# (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents,
+# Workhorse and Paperboy, the script library), and the pane turns into whatever
+# is chosen -- Scripts into prefix+s's script picker, asking right here. Enter straight away picks NeoVim.
 # Set-NeovimLayout.sh starts it in the main pane of every new session, so a
 # session opens on Git, Agents and this question rather than on a NeoVim you
 # may not want.
@@ -20,7 +21,8 @@
 # the picker into a pane that is already there.
 #
 # In an ssh session (prefix+N) the picker itself runs here, where fzf is, and
-# the chosen tool runs on the remote like every other pane (pane_command).
+# the chosen tool runs on the remote like every other pane (pane_command) --
+# but for Scripts, a picker too, which runs here and does that itself.
 #
 # Usage: Select-PaneKind.sh [-t <target>] [-v | -w] [kind]
 #   -t <target>   with a kind: the pane the split is relative to; bindings pass
@@ -66,7 +68,11 @@ if [ -n "$kind" ]; then
     exit 0
   fi
   pane_kind "$origin" "$kind" || warn "Select-PaneKind.sh: unknown kind $kind"
-  open "$kind" "$(pane_command "$origin" "$kind_command" "$kind_no_exit" "$kind_no_pwsh")"
+  if [ -n "$kind_local" ]; then
+    open "$kind" "$kind_command"
+  else
+    open "$kind" "$(pane_command "$origin" "$kind_command" "$kind_no_exit" "$kind_no_pwsh")"
+  fi
   exit 0
 fi
 
@@ -94,4 +100,7 @@ if [ "$(tmux display-message -p -t "$pane" '#{@layout_role}')" = picker ]; then
 fi
 
 clear
+if [ -n "$kind_local" ]; then
+  exec bash -c "$kind_command"
+fi
 exec bash -c "$(pane_command "$pane" "$kind_command" "$kind_no_exit")"

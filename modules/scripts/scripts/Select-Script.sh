@@ -7,7 +7,8 @@
 # it, and prefix+- then s, which splits it below: the pane is where the script
 # will run, so you see where before you choose, and choosing turns that same
 # pane into the script's -- labelled with its name -- the way the layout's
-# picker pane turns into a tool (Select-PaneKind.sh). Esc closes it. prefix+S
+# picker pane turns into a tool (Select-PaneKind.sh). Esc closes it. The
+# picker pane's Scripts kind runs it the same way in the picker's own pane. prefix+S
 # instead asks in a popup and runs the script right there in it (see
 # modules/tmux/common.conf).
 #

@@ -31,7 +31,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 
 - `new_pane` / `new_window`: every pane the bindings open goes through these.
 - `pane_command <pane> <cmd>`: the command a new pane split off `<pane>` runs. It's `pwsh_invocation` locally (`PWSH_LEAN=1 pwsh -Command`, so the profile's environment is there) and `ssh_command` when `<pane>` belongs to an ssh session. Always build commands through it, so a binding works in ssh sessions with no extra code.
-- `PANE_KINDS` / `pane_kind`: the kinds the picker pane offers (NeoVim, Terminal, Claude Code, Copilot, Codex, Open Code, Workhorse, Paperboy) and what each runs.
+- `PANE_KINDS` / `pane_kind`: the kinds the picker pane offers (NeoVim, Terminal, Claude Code, Copilot, Codex, Open Code, Workhorse, Workhorse (builds), Paperboy, Scripts) and what each runs.
 - `label_pane`: sets `@pane_label`, which layouts, zoom and pane jumping key on.
 - `die` / `warn`: fail inside a popup (waits for a key press) or as a tmux message.
 - `ssh-helpers.sh`: ssh sessions (`ssh_option`, `remote_run`, `ssh_command`, remote agent unlock). `worktree-helpers.sh`: the `prefix,t,w` worktree registry.

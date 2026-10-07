@@ -230,11 +230,11 @@ new_window() {
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
-PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Paperboy")
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "Scripts")
 
 # pane_kind <pane> <kind>
 # Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
-# pane_command. The one place these commands are spelled for the layout
+# pane_command -- or, when kind_local is set, to run here as it is, without it. The one place these commands are spelled for the layout
 # (Set-NeovimLayout.sh), the picker, prefix+e and prefix+E -- the prefix+t bindings in
 # common.conf use the same strings.
 #
@@ -247,6 +247,7 @@ pane_kind() {
   fi
   kind_no_exit=""
   kind_no_pwsh=""
+  kind_local=""
   case "$kind" in
     NeoVim)
       # No no-exit: quitting NeoVim closes its pane, as quitting an agent does,
@@ -292,17 +293,26 @@ pane_kind() {
         kind_command="Use-NodeVersion && copilot --max-ai-credits 500"
       fi
       ;;
-    Workhorse | Paperboy)
-      # NeoVim opened on workhorse.nvim's last query or paperboy.nvim's inbox
+    Workhorse | "Workhorse (builds)" | Paperboy)
+      # NeoVim opened on workhorse.nvim's last query or last pipeline, or paperboy.nvim's inbox
       # (nvim-config/lua/plugins/personal.lua). Through pwsh like NeoVim, whose
       # profile is what sets $PAPERBOY_EWS_URL and the Azure DevOps settings.
       # Single quotes: pwsh_invocation wraps the whole command in double ones.
       local startup="Workhorse resume"
+      [ "$kind" = "Workhorse (builds)" ] && startup="Workhorse builds resume"
       [ "$kind" = Paperboy ] && startup="Paperboy inbox"
       kind_command="nvim -c '$startup'"
       ;;
     Codex) kind_command="codex" ;;
     "Open Code") kind_command="nvs use latest && opencode" ;;
+    Scripts)
+      # prefix+s's script picker (modules/scripts), asking in this pane. Local,
+      # like the picker pane itself: fzf is here, and Select-Script.sh hands the
+      # chosen script to pane_command on its own, so in an ssh session it still
+      # lists and runs the remote's library.
+      kind_command="bash ~/.modules/scripts/scripts/Select-Script.sh"
+      kind_local="local"
+      ;;
     *) return 1 ;;
   esac
 }
