@@ -12,6 +12,11 @@
 # pane kind, prefix+n). Both prefix+v and prefix+V bring it back when it is
 # missing, and take it away once the file is gone.
 #
+# A window zoomed with prefix+z keeps its zoom: only the radar column beside the
+# zoomed pane is repaired -- its width and the heights of its panes put back --
+# and nothing is opened or closed, as a new pane would end the zoom. prefix+V
+# and prefix+H zoom out first and repair the whole window.
+#
 # Safe to run again on a window that already has the layout: it only creates
 # the radar panes (Git, Agents) that are missing and puts the fixed sizes back,
 # so prefix+v also repairs a layout broken by a closed pane or a stray resize.
@@ -92,9 +97,15 @@ top="$(current_pane "${1:-}")"
 # takes it.
 active="$(tmux list-panes -t "$top" -F '#{?pane_active,#{pane_id},}' | grep -m1 .)"
 
-# A window zoomed with prefix+z is zoomed out first: the layout is worked out
-# from, and repairs, the panes of the whole window, the hidden ones included.
-"$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Switch-PaneZoom.sh" --restore "$top"
+# A window zoomed with prefix+z only has its radar column fitted (see the top);
+# with -f or -H it is zoomed out first: the layout is worked out from, and
+# repairs, the panes of the whole window, the hidden ones included.
+column_only=""
+if [ -z "$force$home" ] && [ -n "$(tmux display-message -p -t "$top" '#{@zoom_stash}')" ]; then
+  column_only="yes"
+else
+  "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Switch-PaneZoom.sh" --restore "$top"
+fi
 
 # The home layout takes a window only when nothing in it is anyone's work: every
 # pane is a radar-column pane or a picker still waiting for an answer, or the
@@ -176,7 +187,7 @@ fi
 # has a place for it.
 notes_command=""
 want_notes=no
-if [ -n "$radars" ]; then
+if [ -n "$radars" ] && [ -z "$column_only" ]; then
   pane_kind "$top" Notes
   notes_command="$(pane_command "$top" "$kind_command" "$kind_no_exit" "$kind_no_pwsh")"
   # yes, no, or -- an ssh session's host could not be asked -- unknown, which
@@ -288,6 +299,25 @@ fit_pane() {
     tmux resize-pane -t "$pane" "$flag" "$cells"
 }
 
+# fit_column
+# Puts the radar column's fixed sizes back: Git's width sets the whole
+# column's; Git's height is whatever the full-height column has left above
+# Agents.
+fit_column() {
+  local window_width window_height
+  read -r window_width window_height < <(tmux display-message -p -t "$top" '#{window_width} #{window_height}')
+  fit_pane "$git" -x $((window_width * git_width_pct / 100))
+  # tmux resizes a pane by moving its bottom edge, or its top one when it is
+  # the last pane of the column. With notes, then, Git and Notes are the two
+  # that can be fitted without undoing each other, and Agents gets the rest.
+  if [ -n "$notes" ]; then
+    fit_pane "$git" -y $((window_height * (100 - agents_height_pct - notes_height_pct) / 100))
+    fit_pane "$notes" -y $((window_height * notes_height_pct / 100))
+  else
+    fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
+  fi
+}
+
 # The default layout: a radar column down the left edge -- git feed on top,
 # agent feed under it -- and the picker in what is left (NeoVim over a
 # terminal row, with -f). The
@@ -298,6 +328,15 @@ fit_pane() {
 # A remote without this dev-environment gets no radar column: there, only
 # main pane and the terminal are laid out and repaired.
 find_layout_panes
+
+# Zoomed (prefix+z): the column alone, as it stands. @layout_fitted is the
+# zoomed layout, so the window is looked at again once it zooms out.
+if [ -n "$column_only" ]; then
+  [ -z "$notes" ] || agents_height_pct=35
+  [ -z "$radars" ] || [ -z "$git" ] || [ -z "$agents" ] || fit_column
+  tmux set -w -t "$top" @layout_fitted "$(tmux display-message -p -t "$top" '#{window_layout}')"
+  exit 0
+fi
 
 # A window the caller has just created (-n), with none of the layout in it
 # yet: its one pane becomes the picker, or NeoVim with -f, and the fixed panes
@@ -453,23 +492,10 @@ if [ -z "$terminal" ] && [ -n "$force" ]; then
 fi
 
 # Put the fixed sizes back. On a fresh window this only evens out rounding
-# from the splits; on an old one it undoes stray resizes. Git's width sets the
-# whole column's; Git's height is whatever the full-height column has left
-# above Agents. The terminal's width is left alone: custom panes may share its
-# row.
+# from the splits; on an old one it undoes stray resizes. The terminal's width
+# is left alone: custom panes may share its row.
 read -r window_width window_height < <(tmux display-message -p -t "$top" '#{window_width} #{window_height}')
-if [ -n "$radars" ]; then
-  fit_pane "$git" -x $((window_width * git_width_pct / 100))
-  # tmux resizes a pane by moving its bottom edge, or its top one when it is
-  # the last pane of the column. With notes, then, Git and Notes are the two
-  # that can be fitted without undoing each other, and Agents gets the rest.
-  if [ -n "$notes" ]; then
-    fit_pane "$git" -y $((window_height * (100 - agents_height_pct - notes_height_pct) / 100))
-    fit_pane "$notes" -y $((window_height * notes_height_pct / 100))
-  else
-    fit_pane "$agents" -y $((window_height * agents_height_pct / 100))
-  fi
-fi
+[ -z "$radars" ] || fit_column
 [ -z "$terminal" ] || fit_pane "$terminal" -y $((window_height * terminal_height_pct / 100))
 
 # Paperboy takes half of what the radar column leaves, less the border between

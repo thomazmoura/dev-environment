@@ -4,8 +4,9 @@
 # window was resized -- a client attaching at another size, the terminal
 # window resized, Termux taking the windows over -- or one of its panes was
 # killed and tmux spread its space over the others. Also run when a client
-# attaches, so a window that drifted while nobody was attached is fixed right
-# away rather than at the next resize. The radar column, the
+# attaches or switches session (prefix+l, the session picker), so a window that
+# drifted while nobody was watching it is fixed right away rather than at the
+# next resize. The radar column, the
 # terminal row and the home layout's halves get their fixed sizes back, and a
 # missing feed or notes pane is reopened.
 #
@@ -14,16 +15,19 @@
 # So every window marked @layout_window is looked at, and Set-NeovimLayout.sh
 # leaves the #{window_layout} it produced in @layout_fitted -- a window whose
 # layout still matches is skipped without running anything. Also skipped:
-# zoomed windows (prefix+z or prefix+Z: the layout comes back when they zoom
-# out) and windows with a dead pane, which Restore-PickerPane.sh is still
+# windows zoomed with prefix+Z (the column is hidden too; the layout comes back
+# when they zoom out) and windows with a dead pane, which Restore-PickerPane.sh is still
 # closing or respawning -- its kill-pane fires this again afterwards.
+#
+# A window zoomed with prefix+z gets only its radar column fitted, and stays
+# zoomed (see Set-NeovimLayout.sh).
 #
 # Never moves the focus: Set-NeovimLayout.sh runs with -k.
 #
 # Usage: Repair-Layouts.sh
 #
-# Run by the window-resized, after-kill-pane and client-attached hooks in
-# modules/tmux/common.conf.
+# Run by the window-resized, after-kill-pane, client-attached and
+# client-session-changed hooks in modules/tmux/common.conf.
 set -uo pipefail
 
 lock_dir="${TMUX_TMPDIR:-/tmp}"
@@ -47,12 +51,12 @@ layout="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Set-NeovimLayout.sh"
 # '|' rather than spaces: read collapses runs of whitespace, which would shift
 # the fields of a window with no @layout_fitted yet. The layout string itself
 # holds no '|'.
-while IFS='|' read -r window layout_window zoomed stash fitted current; do
-  [ "$layout_window" = yes ] && [ "$zoomed" != 1 ] && [ -z "$stash" ] || continue
+while IFS='|' read -r window layout_window zoomed fitted current; do
+  [ "$layout_window" = yes ] && [ "$zoomed" != 1 ] || continue
   [ "$fitted" != "$current" ] || continue
   ! tmux list-panes -t "$window" -F '#{pane_dead}' 2>/dev/null | grep -qx 1 || continue
   "$layout" -k "$window" || true
 done < <(tmux list-windows -a -F \
-  '#{window_id}|#{@layout_window}|#{window_zoomed_flag}|#{@zoom_stash}|#{@layout_fitted}|#{window_layout}')
+  '#{window_id}|#{@layout_window}|#{window_zoomed_flag}|#{@layout_fitted}|#{window_layout}')
 
 exit 0
