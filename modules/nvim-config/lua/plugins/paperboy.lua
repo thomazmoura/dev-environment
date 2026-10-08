@@ -22,6 +22,8 @@ return {
         -- Added to new e-mails, replies and forwards (Markdown; its image is
         -- embedded when sending)
         signature_file = '~/Documents/Signatures/signature.md',
+        -- <Leader>ma in the compose buffer attaches a file from here
+        attachment_dirs = { '~/Documents/Attachments' },
       },
     },
   },
