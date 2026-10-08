@@ -34,6 +34,13 @@
 # pane is left alone and the layout is built around it; prefix+Space opens a new
 # picker pane when one is wanted.
 #
+# The window changes on screen once: every change -- new panes, roles, sizes,
+# focus -- is queued (queue in tmux-helpers.sh) and handed to tmux as one
+# command list, which tmux runs before it redraws. New panes are made out of
+# sight first (place_pane) and moved into place in that same list. Only
+# prefix+V, building a terminal row under a column it has just added, sends
+# the column ahead, as the row is fitted around it.
+#
 # Usage: Set-NeovimLayout.sh [-f | -H] [-n] [-k] [target]
 #   -f       force the NeoVim layout (prefix+V): NeoVim instead of the picker,
 #            plus a missing terminal row under the whole content area, and a missing NeoVim
@@ -48,9 +55,10 @@
 #   -n       the target is the only pane of a window the caller has just
 #            created, still an idle shell: it becomes the picker (NeoVim with
 #            -f, Paperboy with -H) rather than being built around.
-#   -k       keep the focus where it is, for the automatic repairs
+#   -k       leave the focus where it is, for the automatic repairs
 #            (Repair-Layouts.sh): the user is typing somewhere and the layout
-#            changing around them shouldn't take their keys elsewhere.
+#            changing around them shouldn't take their keys elsewhere. Without
+#            it the focus goes to the main pane.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
 #
@@ -93,9 +101,7 @@ fi
 
 # Resolve to a concrete pane id so we never depend on pane indexes / pane-base-index.
 top="$(current_pane "${1:-}")"
-# The pane the user is in, for -k to put the focus back on: every split below
-# takes it.
-active="$(tmux list-panes -t "$top" -F '#{?pane_active,#{pane_id},}' | grep -m1 .)"
+session="$(tmux display-message -p -t "$top" '#{session_id}')"
 
 # A window zoomed with prefix+z only has its radar column fitted (see the top);
 # with -f or -H it is zoomed out first: the layout is worked out from, and
@@ -120,10 +126,11 @@ if [ -n "$home" ]; then
     roles="$(tmux list-panes -t "$top" -F '#{@layout_role}')"
     if ! grep -qxE 'paperboy|workhorse' <<<"$roles" &&
       grep -qvxE 'git|agents|notes|picker' <<<"$roles"; then
-      session="$(tmux display-message -p -t "$top" '#{session_id}')"
       path="$(tmux display-message -p -t "$top" '#{pane_current_path}')"
-      pane="$(tmux new-window -t "$session:" -c "$path" -P -F '#{pane_id}')"
-      exec "$(readlink -f "${BASH_SOURCE[0]}")" -H -n "$pane"
+      # Made in the background and shown by the run below once its layout is
+      # done (LAYOUT_SHOW_WINDOW), so the bare window never shows.
+      pane="$(tmux new-window -d -t "$session:" -c "$path" -P -F '#{pane_id}')"
+      LAYOUT_SHOW_WINDOW=1 exec "$(readlink -f "${BASH_SOURCE[0]}")" -H -n "$pane"
     fi
   fi
 fi
@@ -132,8 +139,8 @@ fi
 # but the feeds closes, a picker takes that pane's place (Restore-PickerPane.sh,
 # from the pane-died and after-kill-pane hooks in common.conf). remain-on-exit
 # is what gives the hook a dead pane to respawn rather than a hole.
-tmux set -w -t "$top" @layout_window yes
-tmux set -w -t "$top" remain-on-exit on
+queue set -w -t "$top" @layout_window yes
+queue set -w -t "$top" remain-on-exit on
 
 # Every pane goes through pane_command, so in an ssh session (prefix+N) the
 # whole layout runs on the remote, in the session's working directory -- all but
@@ -223,7 +230,63 @@ terminal_height_pct=$TERMINAL_HEIGHT_PCT
 # can't: prefix+% opens more "Terminal" panes, prefix+r/R open "Agents"
 # and "Git" panes of their own, and the picker opens Paperboy and Workhorse.
 mark_role() {
-  tmux set -p -t "$1" @layout_role "$2"
+  queue set -p -t "$1" @layout_role "$2"
+}
+
+# stale is set once the batch moves, kills or respawns a pane, or gives one a
+# role: what tmux says about the window is then not what it will be, and
+# settle has to send the batch before anything reads the window back.
+stale=""
+settle() {
+  [ -n "$stale" ] || return 0
+  send_batch
+  close_stage
+  stale=""
+}
+
+# New panes are made in a window of their own that draws nothing in the status
+# bar (as Switch-PaneZoom.sh's stash), and moved into place with join-pane --
+# which takes the very arguments split-window would have -- in the batch.
+#
+# The window's first pane stays behind, and the window is closed after the
+# batch: a command list that moves every pane out of a window brings the tmux
+# server down (3.6, with a client attached). Closed on the way out, too, after a
+# run that failed half-way.
+stash_format='#{?window_end_flag,#{E:@status_after_windows},}'
+stage_window=""
+declare -A stage_path=()
+close_stage() {
+  [ -z "$stage_window" ] || tmux kill-window -t "$stage_window" 2>/dev/null || true
+  stage_window=""
+}
+trap close_stage EXIT
+
+# place_pane <target> <label> <role> <command> [split-window args...]
+# new_pane, queued: the pane is made out of sight, in <target>'s working
+# directory, and its move to where the split would have put it, its label, role
+# and command are queued. Sets placed to its id. <target> may be a pane queued
+# earlier.
+place_pane() {
+  local target=$1 label=$2 role=$3 command=$4 path
+  shift 4
+  path=${stage_path[$target]:-}
+  [ -n "$path" ] || path="$(tmux display-message -p -t "$target" '#{pane_current_path}')"
+  if [ -z "$stage_window" ]; then
+    # Made after the session's last window ({end}), so the formats can reach
+    # it in the same list and it never shows.
+    stage_window="$(tmux new-window -d -a -t "$session:{end}" -n layout-stage -P -F '#{window_id}' 'sleep 600' \; \
+      set -w -t "$session:{end}" window-status-format "$stash_format" \; \
+      set -w -t "$session:{end}" window-status-current-format "$stash_format")"
+  fi
+  # Tiled after each split, so a small window never runs out of room.
+  placed="$(tmux split-window -d -t "$stage_window" -c "$path" -P -F '#{pane_id}' \; \
+    select-layout -t "$stage_window" tiled)"
+  stage_path[$placed]=$path
+  queue join-pane -d -s "$placed" -t "$target" "$@"
+  queue_label "$placed" "$label"
+  mark_role "$placed" "$role"
+  queue send-keys -t "$placed" "$(closing_line "$command")" C-m
+  stale=yes
 }
 
 # find_layout_panes
@@ -288,15 +351,21 @@ find_layout_panes() {
   [ -z "$agents" ] || mark_role "$agents" agents
   [ -z "$terminal" ] || mark_role "$terminal" terminal
   [ -z "$neovim" ] || mark_role "$neovim" neovim
+  # content_row finds the column by role.
+  [ -z "$git$agents$terminal$neovim" ] || stale=yes
 }
 
 # fit_pane <pane> <-x|-y> <cells>
-# Resizes <pane> along one axis, but only when it isn't that size already.
+# Queues a resize of <pane> along one axis, but only when it isn't that size
+# already -- or, once the batch changes the panes (stale), whatever size it is
+# now. A height fit moves an edge that only its own column or row shares, but
+# a width fit -- the radar column's -- moves the panes beside it too.
 fit_pane() {
   local pane=$1 flag=$2 cells=$3 dimension=width
   [ "$flag" = "-y" ] && dimension=height
-  [ "$(tmux display-message -p -t "$pane" "#{pane_$dimension}")" = "$cells" ] ||
-    tmux resize-pane -t "$pane" "$flag" "$cells"
+  [ -z "$stale" ] && [ "$(tmux display-message -p -t "$pane" "#{pane_$dimension}")" = "$cells" ] && return 0
+  queue resize-pane -t "$pane" "$flag" "$cells"
+  [ "$flag" = "-y" ] || stale=yes
 }
 
 # fit_column
@@ -334,7 +403,8 @@ find_layout_panes
 if [ -n "$column_only" ]; then
   [ -z "$notes" ] || agents_height_pct=35
   [ -z "$radars" ] || [ -z "$git" ] || [ -z "$agents" ] || fit_column
-  tmux set -w -t "$top" @layout_fitted "$(tmux display-message -p -t "$top" '#{window_layout}')"
+  queue set -w -F -t "$top" @layout_fitted '#{window_layout}'
+  send_batch
   exit 0
 fi
 
@@ -349,24 +419,26 @@ if [ -n "$new_window" ] && [ -z "$git$agents$notes$terminal$neovim$picker$paperb
   fresh="yes"
   if [ -n "$home" ]; then
     paperboy=$top
-    label_pane "$paperboy" "Paperboy"
+    queue_label "$paperboy" "Paperboy"
     mark_role "$paperboy" paperboy
   elif [ -z "$force" ]; then
     picker=$top
-    label_pane "$picker" "Picker"
+    queue_label "$picker" "Picker"
     mark_role "$picker" picker
   else
     neovim=$top
-    label_pane "$neovim" "NeoVim"
+    queue_label "$neovim" "NeoVim"
     mark_role "$neovim" neovim
   fi
 fi
 
 # A notes pane that outlived its file goes before the column is rebuilt, so a
-# missing Git or Agents is not split off around it.
+# missing Git or Agents is not split off around it. Until the batch is sent it
+# is still in the window: closed names it for what reads the panes below.
+closed=""
 if [ "$want_notes" = no ] && [ -n "$notes" ]; then
-  tmux kill-pane -t "$notes"
-  notes=""
+  queue kill-pane -t "$notes"
+  closed=$notes notes="" stale=yes
 fi
 if [ "$want_notes" = yes ] || [ -n "$notes" ]; then
   agents_height_pct=35
@@ -378,27 +450,27 @@ fi
 # already has a terminal under it.
 if [ -n "$radars" ] && [ -z "$git" ]; then
   if [ -n "$agents" ]; then
-    git="$(new_pane "$agents" "Git" "$git_feed" -v -b -l $((100 - agents_height_pct))%)"
+    place_pane "$agents" "Git" git "$git_feed" -v -b -l $((100 - agents_height_pct))%
   elif [ -n "$notes" ]; then
-    git="$(new_pane "$notes" "Git" "$git_feed" -v -b -l $((100 - notes_height_pct))%)"
+    place_pane "$notes" "Git" git "$git_feed" -v -b -l $((100 - notes_height_pct))%
   else
-    git="$(new_pane "$top" "Git" "$git_feed" -h -b -f -l "$git_width_pct%")"
+    place_pane "$top" "Git" git "$git_feed" -h -b -f -l "$git_width_pct%"
   fi
-  mark_role "$git" git
+  git=$placed
 fi
 
 if [ -n "$radars" ] && [ -z "$agents" ]; then
   if [ -n "$notes" ]; then
-    agents="$(new_pane "$notes" "Agents" "$agent_feed" -v -b -l $((100 - notes_height_pct))%)"
+    place_pane "$notes" "Agents" agents "$agent_feed" -v -b -l $((100 - notes_height_pct))%
   else
-    agents="$(new_pane "$git" "Agents" "$agent_feed" -v -l "$agents_height_pct%")"
+    place_pane "$git" "Agents" agents "$agent_feed" -v -l "$agents_height_pct%"
   fi
-  mark_role "$agents" agents
+  agents=$placed
 fi
 
 if [ "$want_notes" = yes ] && [ -z "$notes" ]; then
-  notes="$(new_pane "$agents" "Notes" "$notes_command" -v -l "$notes_height_pct%")"
-  mark_role "$notes" notes
+  place_pane "$agents" "Notes" notes "$notes_command" -v -l "$notes_height_pct%"
+  notes=$placed
 fi
 
 # A missing main pane is only brought back when nothing has taken its place:
@@ -413,14 +485,14 @@ main_split() {
   local target=$1
   shift
   if [ -n "$home" ]; then
-    paperboy="$(new_pane "$target" "Paperboy" "$paperboy_command" "$@")"
-    mark_role "$paperboy" paperboy
+    place_pane "$target" "Paperboy" paperboy "$paperboy_command" "$@"
+    paperboy=$placed
   elif [ -n "$force" ]; then
-    neovim="$(new_pane "$target" "NeoVim" "$nvim_command" "$@")"
-    mark_role "$neovim" neovim
+    place_pane "$target" "NeoVim" neovim "$nvim_command" "$@"
+    neovim=$placed
   else
-    picker="$(new_pane "$target" "Picker" "$picker_command" "$@")"
-    mark_role "$picker" picker
+    place_pane "$target" "Picker" picker "$picker_command" "$@"
+    picker=$placed
   fi
 }
 # The home layout's main pane is Paperboy. By the check at the top, a window
@@ -431,29 +503,32 @@ if [ -n "$home" ]; then
   if [ -z "$paperboy$workhorse" ] && [ -n "$picker" ]; then
     paperboy=$picker picker=""
     path="$(tmux display-message -p -t "$paperboy" '#{pane_current_path}')"
-    tmux respawn-pane -k -t "$paperboy" -c "$path"
-    label_pane "$paperboy" "Paperboy"
+    queue respawn-pane -k -t "$paperboy" -c "$path"
+    queue_label "$paperboy" "Paperboy"
     mark_role "$paperboy" paperboy
-    tmux send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+    queue send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+    stale=yes
   elif [ -z "$paperboy$workhorse" ] && [ -n "$radars" ]; then
     main_split "$git" -h -f
   fi
   # Each half is brought back beside the other: Workhorse on Paperboy's right,
   # Paperboy on Workhorse's left.
   if [ -n "$paperboy" ] && [ -z "$workhorse" ]; then
-    workhorse="$(new_pane "$paperboy" "Workhorse" "$workhorse_command" -h -l 50%)"
-    mark_role "$workhorse" workhorse
+    place_pane "$paperboy" "Workhorse" workhorse "$workhorse_command" -h -l 50%
+    workhorse=$placed
   elif [ -z "$paperboy" ] && [ -n "$workhorse" ]; then
-    paperboy="$(new_pane "$workhorse" "Paperboy" "$paperboy_command" -h -b -l 50%)"
-    mark_role "$paperboy" paperboy
+    place_pane "$workhorse" "Paperboy" paperboy "$paperboy_command" -h -b -l 50%
+    paperboy=$placed
   fi
 elif [ -z "$neovim$picker" ]; then
+  # Read before the batch is sent, which only adds to the column -- its notes
+  # pane aside, left out by name: neither moves the terminal's top edge.
   if [ -n "$terminal" ]; then
     if [ "$(tmux display-message -p -t "$terminal" '#{pane_top}')" = 0 ]; then
       main_split "$terminal" -v -b
     fi
   elif [ -n "$radars" ] &&
-    [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents" -e "$notes")" = 0 ]; then
+    [ "$(tmux list-panes -t "$top" -F '#{pane_id}' | grep -cvxF -e "$git" -e "$agents" -e "$notes" -e "${closed:-none}")" = 0 ]; then
     main_split "$git" -h -f
   fi
 fi
@@ -465,7 +540,13 @@ fi
 # the pane the binding fired in. A terminal that is missing too is split off
 # first, so the row runs under the whole content area (content_row in
 # tmux-helpers.sh) -- NeoVim included -- rather than under NeoVim alone.
+#
+# Both read the window back -- where the column ends, what is in the top row --
+# so whatever the batch has changed so far is sent first (settle). That is a
+# screen update of its own only where this run has opened or closed panes
+# already: a column it has just added.
 if [ -z "$neovim" ] && [ -n "$force" ]; then
+  settle
   beside=$top
   if [ -n "$radars" ]; then
     column_right="$(tmux display-message -p -t "$git" '#{pane_right}')"
@@ -475,20 +556,21 @@ if [ -z "$neovim" ] && [ -n "$force" ]; then
   if [ -n "$beside" ]; then
     if [ -z "$terminal" ]; then
       content_row "$beside"
-      terminal="$(new_pane "$beside" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}")"
-      mark_role "$terminal" terminal
+      place_pane "$beside" "Terminal" terminal "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}"
+      terminal=$placed
     fi
-    neovim="$(new_pane "$beside" "NeoVim" "$nvim_command" -h -b)"
-    mark_role "$neovim" neovim
+    place_pane "$beside" "NeoVim" neovim "$nvim_command" -h -b
+    neovim=$placed
   fi
 fi
 
 # Only -f (prefix+V) brings a missing terminal back; prefix+v leaves it closed.
 # It goes under the whole content area, whichever pane the binding fired in.
 if [ -z "$terminal" ] && [ -n "$force" ]; then
+  settle
   content_row "$top"
-  terminal="$(new_pane "$top" "Terminal" "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}")"
-  mark_role "$terminal" terminal
+  place_pane "$top" "Terminal" terminal "$terminal_command" -v -l "$terminal_height_pct%" "${content_row_args[@]}"
+  terminal=$placed
 fi
 
 # Put the fixed sizes back. On a fresh window this only evens out rounding
@@ -508,26 +590,27 @@ fi
 
 if [ -n "$fresh" ]; then
   if [ -n "$home" ]; then
-    tmux send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+    queue send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
   elif [ -n "$picker" ]; then
-    tmux send-keys -t "$picker" "$picker_line" C-m
+    queue send-keys -t "$picker" "$picker_line" C-m
   else
-    tmux send-keys -t "$neovim" "$editor_line" C-m
+    queue send-keys -t "$neovim" "$editor_line" C-m
   fi
 fi
 
 # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
 # panes of the radar column by most-recently-active. Touching the git feed
-# makes that C-h land on Git instead of on the agent feed. With -k the focus
-# only goes back where it was, if a split took it.
-if [ -n "$keep_focus" ]; then
-  [ "$(tmux list-panes -t "$top" -F '#{?pane_active,#{pane_id},}' | grep -m1 .)" = "$active" ] ||
-    tmux select-pane -t "$active" 2>/dev/null || true
-else
-  [ -z "$git" ] || tmux select-pane -t "$git"
-  tmux select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"
+# makes that C-h land on Git instead of on the agent feed. With -k nothing is
+# selected: every pane above is placed with -d, so the focus never moved.
+if [ -z "$keep_focus" ]; then
+  [ -z "$git" ] || queue select-pane -t "$git"
+  queue select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"
 fi
+# The window -H made in the background, now that there is something in it.
+[ -z "${LAYOUT_SHOW_WINDOW:-}" ] || queue select-window -t "$top"
 
 # What Repair-Layouts.sh compares against to tell whether the window has
-# changed since: the layout as this run left it.
-tmux set -w -t "$top" @layout_fitted "$(tmux display-message -p -t "$top" '#{window_layout}')"
+# changed since: the layout as this run left it. -F expands it when tmux gets
+# to it, after everything queued before it.
+queue set -w -F -t "$top" @layout_fitted '#{window_layout}'
+send_batch

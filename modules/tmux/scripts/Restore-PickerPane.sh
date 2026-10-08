@@ -72,15 +72,17 @@ if [ -n "$dead" ]; then
   # respawn-pane reruns the pane's own command: none, for every pane new_pane
   # or a new session opens, which means the user's login shell -- the shell
   # new_pane types into, for its profile's environment. Anything else gets
-  # that shell explicitly.
+  # that shell explicitly. One command list, so the pane turns into the
+  # picker in one screen update.
   if [ -n "$start" ]; then
-    tmux respawn-pane -t "$dead" "exec ${SHELL:-bash} -l"
+    queue respawn-pane -t "$dead" "exec ${SHELL:-bash} -l"
   else
-    tmux respawn-pane -t "$dead"
+    queue respawn-pane -t "$dead"
   fi
-  label_pane "$dead" Picker
-  tmux set -p -t "$dead" @layout_role picker
-  tmux send-keys -t "$dead" "$(closing_line "bash ~/.modules/tmux/scripts/Select-PaneKind.sh")" C-m
+  queue_label "$dead" Picker
+  queue set -p -t "$dead" @layout_role picker
+  queue send-keys -t "$dead" "$(closing_line "bash ~/.modules/tmux/scripts/Select-PaneKind.sh")" C-m
+  send_batch
   exit 0
 fi
 

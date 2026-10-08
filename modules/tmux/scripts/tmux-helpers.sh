@@ -96,8 +96,10 @@ TERMINAL_HEIGHT_PCT=16
 # the left edge (-f -h -b), full height again, at the sizes they had. new_pane
 # hands its split arguments to tmux as they are, so the moves ride along after
 # a ";" in the split's own command list: tmux does not redraw in between, and
-# the squeezed column never shows. -d leaves the focus on the new row. Without
-# a column the whole window is the content area, and -f alone does it.
+# the squeezed column never shows. The same arguments work after a join-pane,
+# which is how Set-NeovimLayout.sh puts its new row in. -d leaves the focus on
+# the new row. Without a column the whole window is the content area, and -f
+# alone does it.
 content_row() {
   local window=$1 id left width height role first anchor i
   local -a column=() widths=() heights=() top_row=()
@@ -138,8 +140,32 @@ content_row() {
 # is rewritten by any program that emits OSC 2 (pwsh does), while the option
 # stays put for the lifetime of the pane.
 label_pane() {
-  tmux select-pane -t "$1" -T "$2"
-  tmux set -p -t "$1" @pane_label "$2"
+  tmux select-pane -t "$1" -T "$2" \; set -p -t "$1" @pane_label "$2"
+}
+
+# --- Batches -----------------------------------------------------------------
+# Every tmux call that changes something is a screen update of its own -- even
+# setting a user option redraws every client -- so a script that splits,
+# labels, resizes and records in separate calls shows each step on its way to
+# the result. tmux runs a command list before it redraws, so whatever is queued
+# here reaches the screen in one go. As Switch-PaneZoom.sh's (which does not
+# source this file).
+#
+# queue <command...> adds a command to the batch; send_batch hands the batch to
+# tmux and empties it. tmux drops the rest of a list after a command that
+# fails, so a command queued here must be one that cannot.
+batch=()
+queue() { batch+=("$@" ";"); }
+send_batch() {
+  [ "${#batch[@]}" -eq 0 ] || tmux "${batch[@]}"
+  batch=()
+}
+
+# queue_label <pane> <label>
+# label_pane, queued.
+queue_label() {
+  queue select-pane -t "$1" -T "$2"
+  queue set -p -t "$1" @pane_label "$2"
 }
 
 # pwsh_invocation <command> [no-exit] [no-pwsh]
@@ -209,8 +235,8 @@ new_pane() {
   shift 3
   local pane
   pane="$(tmux split-window -t "$target" -c '#{pane_current_path}' -P -F '#{pane_id}' "$@")"
-  label_pane "$pane" "$label"
-  tmux send-keys -t "$pane" "$(closing_line "$command")" C-m
+  tmux select-pane -t "$pane" -T "$label" \; set -p -t "$pane" @pane_label "$label" \; \
+    send-keys -t "$pane" "$(closing_line "$command")" C-m
   printf '%s' "$pane"
 }
 

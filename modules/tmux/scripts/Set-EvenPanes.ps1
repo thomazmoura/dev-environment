@@ -145,13 +145,20 @@ $root = Read-Cell
 Set-CellSize $root $root.X $root.Y $root.Width $root.Height
 $body = Format-Cell $root
 $new = "$(Get-LayoutChecksum $body),$body"
-if ($new -ne $layout) {
-    & tmux select-layout -t $Pane $new
-}
 
+# One command list, so the window changes on screen once (tmux redraws after
+# a list, and setting an option redraws too).
+$commands = @()
+if ($new -ne $layout) {
+    $commands += 'select-layout', '-t', $Pane, $new, ';'
+}
 # A laid-out window remembers the layout Set-NeovimLayout.sh left it in, and
 # Repair-Layouts.sh redoes the layout whenever the window no longer matches.
-# This one keeps the sizes that run fits, so it is recorded as fitted too.
+# This one keeps the sizes that run fits, so it is recorded as fitted too: -F
+# expands the layout once select-layout has applied it.
 if (& tmux display-message -p -t $Pane '#{@layout_fitted}') {
-    & tmux set -w -t $Pane @layout_fitted (& tmux display-message -p -t $Pane '#{window_layout}')
+    $commands += 'set', '-w', '-F', '-t', $Pane, '@layout_fitted', '#{window_layout}', ';'
+}
+if ($commands) {
+    & tmux @commands
 }
