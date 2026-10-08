@@ -4,8 +4,6 @@ local opt = vim.opt
 -- Line numbers and guides
 opt.number = true
 opt.relativenumber = true
-opt.cursorline = true
-opt.cursorcolumn = true
 opt.colorcolumn = '120'
 opt.signcolumn = 'yes:1'
 
