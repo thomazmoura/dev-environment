@@ -18,7 +18,8 @@
 //
 // Coming back to the Ghostty window from another app flashes it too, so the
 // eye finds the cursor again. That one needs no flag: Ghostty clocks it itself
-// in iTimeFocus, and iFocus says the window still has focus.
+// in iTimeFocus, and iFocus says the window still has focus. Neither flashes
+// while the cursor is hidden (iCursorVisible: DECTCEM, not the blink phase).
 
 // sRGB -> Linear conversion (same as cursor_warp.glsl)
 vec3 sRGBToLinear(vec3 c) {
@@ -126,7 +127,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     bool flagged = all(lessThan(abs(iPalette[FLAG_INDEX].rgb - FLAG), vec3(0.5 / 255.0)));
     bool switched = flagged && tSwitch >= 0.0 && tSwitch < DURATION;
     bool regained = iFocus > 0 && tFocus >= 0.0 && tFocus < DURATION;
-    if (!switched && !regained) {
+    // A pane whose program hides the cursor (the Git and Agents feeds) has
+    // nothing to point at: Ghostty still holds the cursor from before
+    if ((!switched && !regained) || iCursorVisible == 0) {
         return;
     }
     // Both at once (a click on another pane focuses the window too): time it
