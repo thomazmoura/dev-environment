@@ -50,10 +50,11 @@ config-file = ?background.conf
 # within DURATION of a keystroke, so no unfocused animation loop needed.
 custom-shader = shaders/cursor_warp.glsl
 # Crosshair on the cursor when focus moves to another tmux pane, window,
-# session or NeoVim split. Shaders run in the order listed, each reading the
-# previous one's output, so this draws over the warp trail. tmux and NeoVim
-# signal the focus change through palette entry 16 (see the .glsl header and
-# modules/tmux/scripts/Show-PaneCrosshair.sh).
+# session or NeoVim split, or back to this window from another app. Shaders
+# run in the order listed, each reading the previous one's output, so this
+# draws over the warp trail. tmux and NeoVim signal the focus change through
+# palette entry 16 (see the .glsl header and
+# modules/tmux/scripts/Show-PaneCrosshair.sh); Ghostty clocks its own focus.
 custom-shader = shaders/pane_crosshair.glsl
 
 # --- Undercurl legibility in NeoVim (wezterm underline_*) ------------

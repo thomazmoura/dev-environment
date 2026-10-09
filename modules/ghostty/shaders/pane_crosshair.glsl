@@ -1,8 +1,9 @@
 // pane_crosshair — flashes a crosshair on the cursor when focus moves to
-// another tmux pane, window or session, or another NeoVim split, so the eye
-// finds the cursor at once. Runs as a second pass after cursor_warp.glsl
-// (see the custom-shader lines in ../config), so the warp trail lands and the
-// arms shoot out of the cursor in the same frames.
+// another tmux pane, window or session, or another NeoVim split, or when the
+// Ghostty window itself gets focus back, so the eye finds the cursor at once.
+// Runs as a second pass after cursor_warp.glsl (see the custom-shader lines in
+// ../config), so the warp trail lands and the arms shoot out of the cursor in
+// the same frames.
 //
 // A shader keeps no state between frames and Ghostty gives it no clock of
 // its own to compare against (iDate is never updated), so the trigger is
@@ -14,6 +15,10 @@
 //     itself caused. A hook that changes nothing moves no cursor, so it starts
 //     no animation.
 // Entry 16 is #000000 by default; FLAG is #010203, which no one can see.
+//
+// Coming back to the Ghostty window from another app flashes it too, so the
+// eye finds the cursor again. That one needs no flag: Ghostty clocks it itself
+// in iTimeFocus, and iFocus says the window still has focus.
 
 // sRGB -> Linear conversion (same as cursor_warp.glsl)
 vec3 sRGBToLinear(vec3 c) {
@@ -116,11 +121,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
     #endif
 
-    float t = iTime - iTimeCursorChange;
+    float tSwitch = iTime - iTimeCursorChange;
+    float tFocus = iTime - iTimeFocus;
     bool flagged = all(lessThan(abs(iPalette[FLAG_INDEX].rgb - FLAG), vec3(0.5 / 255.0)));
-    if (!flagged || t < 0.0 || t >= DURATION) {
+    bool switched = flagged && tSwitch >= 0.0 && tSwitch < DURATION;
+    bool regained = iFocus > 0 && tFocus >= 0.0 && tFocus < DURATION;
+    if (!switched && !regained) {
         return;
     }
+    // Both at once (a click on another pane focuses the window too): time it
+    // from the later of the two
+    float t = min(switched ? tSwitch : DURATION, regained ? tFocus : DURATION);
 
     vec2 vu = normalize(fragCoord, 1.);
     // xy is the top-left corner (y up), zw the size
