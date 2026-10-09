@@ -44,7 +44,13 @@ termname=$(tmux display-message -p -c "$tty" '#{client_termname}' 2>/dev/null)
 
 NUDGE='c0/ca/f4'
 
-stamp="${XDG_RUNTIME_DIR:-/tmp}/pane-crosshair-${tty//\//_}"
+# Stamps live in a folder only this user owns: in a shared /tmp (no
+# XDG_RUNTIME_DIR, e.g. in Docker) another user could plant a symlink where a
+# stamp goes and have the writes below clobber its target.
+dir="${XDG_RUNTIME_DIR:-/tmp}/pane-crosshair-$(id -u)"
+mkdir -m 700 -p "$dir" 2>/dev/null
+[ -d "$dir" ] && [ ! -L "$dir" ] && [ -O "$dir" ] || exit 0
+stamp="$dir/${tty//\//_}"
 
 # 1 when the pane arrived in shows a cursor, 0 when its program hides it
 visible=$(tmux display-message -p -c "$tty" '#{cursor_flag}' 2>/dev/null)

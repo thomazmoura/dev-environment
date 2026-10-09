@@ -3,7 +3,7 @@ name: commit
 description: Stage and commit pending changes with an auto-generated message
 model: sonnet
 disable-model-invocation: true
-allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git commit *) Bash(git log *) Bash(git restore --staged *) Bash(rg *) Read Edit AskUserQuestion
+allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git commit *) Bash(git log *) Bash(git restore --staged *) Bash(rg *) Read(CHANGELOG.md) Edit(CHANGELOG.md) AskUserQuestion
 ---
 
 ## Context
