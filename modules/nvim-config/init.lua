@@ -25,4 +25,5 @@ else
   require('config.formatting')
   require('config.ssh_title')
   require('config.pane_background')
+  require('config.pane_crosshair')
 end
