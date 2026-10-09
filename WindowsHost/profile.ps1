@@ -285,7 +285,7 @@ function FuzzyCopy-History() {
 }
 
 function GitFuzzySearch-Branch() {
-  return git branch -a | Foreach-Object { $_.Replace('*', '').Trim() } | fzf
+  return git branch -a | Foreach-Object { $_.Substring(2) } | fzf
 }
 
 function GitFuzzyCheckout-Branch() {
