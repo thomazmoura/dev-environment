@@ -22,15 +22,20 @@ vec3 sRGBToLinear(vec3 c) {
 
 // --- CONFIGURATION ---
 vec4 CROSS_COLOR = vec4(sRGBToLinear(iCurrentCursorColor.rgb), iCurrentCursorColor.a); // same colour as the warp trail
-const float DURATION = 0.45; // total animation time, seconds
-const float GROW = 0.35; // fraction of DURATION the arms take to reach full length
-const float HALF_WIDTH_CELLS = 16.0; // horizontal arm length, cells (16 each side + cursor = 33 columns)
-const float HALF_HEIGHT_CELLS = 3.0; // vertical arm length, cells (3 each side + cursor = 7 rows)
-const float BASE_THICKNESS = 0.6; // arm thickness at the cursor, fraction of the cell (height for horizontal arms, width for vertical)
-const float TIP_THICKNESS = 0.15; // arm thickness at the tip, fraction of BASE_THICKNESS
-const float TIP_ALPHA = 0.1; // opacity at the tips, fraction of the opacity at the cursor
-const float ALPHA = 0.7; // peak opacity
-const float CELL_ASPECT = 0.5; // cell width / height, to size cells from a bar or underline cursor
+const float DURATION = 0.3; // total animation time, seconds
+// The arms close in on the cursor: each one sweeps in from its window edge
+// until it touches the cursor (the first SWEEP of DURATION, easing out like
+// the warp), then is drawn into the cursor from the edge end (the rest,
+// speeding up), so nothing is left when the animation ends.
+const float SWEEP = 0.4;
+// The arms span cursor to window edge and taper linearly with distance: full
+// cursor thickness (height for horizontal arms, width for vertical) at the
+// cursor, TIP_THICKNESS of it one whole window width/height away -- i.e. at
+// the far tip when the cursor sits at the opposite edge. A cursor mid-window
+// has two arms half that long, each ending at the thickness in between.
+const float TIP_THICKNESS = 0.5;
+const float TIP_ALPHA = 0.1; // opacity one window width/height away, fraction of the opacity at the cursor
+const float ALPHA = 0.3; // peak opacity
 const float BLUR = 1.0; // antialiasing, pixels
 const vec3 FLAG = vec3(1.0, 2.0, 3.0) / 255.0; // palette 16 while the flag is up
 const int FLAG_INDEX = 16;
@@ -85,17 +90,24 @@ float antialising(float distance, float blurAmount) {
   return 1. - smoothstep(0., normalize(vec2(blurAmount, blurAmount), 0.).x, distance);
 }
 
-// One tapered arm along `dir` (a unit axis). `base` is how far from the centre
-// the arm starts (the cell edge), `len` how far past that it reaches, `thick`
-// its half-thickness at the base. Returns the arm's alpha at p.
-float arm(vec2 p, vec2 center, vec2 dir, float base, float len, float thick) {
+// One tapered arm along `dir` (a unit axis), drawn between `near` and `far`
+// past the cursor's edge (`base` from the centre). It tapers over `span` to
+// TIP_THICKNESS of `thick`, its half-thickness at the cursor, so its shape is
+// the same whichever piece of it is showing. Returns the arm's alpha at p.
+float arm(vec2 p, vec2 center, vec2 dir, float base, float near, float far, float span, float thick) {
+    // Nothing showing (cursor against that edge, or the arm fully in): a
+    // zero-length quad would divide by zero in seg()
+    if (far - near <= 1e-5) {
+        return 0.0;
+    }
     vec2 side = vec2(-dir.y, dir.x);
-    vec2 b = center + dir * base;
-    vec2 t = center + dir * (base + len);
-    float tipThick = thick * TIP_THICKNESS;
-    float sdf = getSdfConvexQuad(p, b + side * thick, t + side * tipThick, t - side * tipThick, b - side * thick);
-    // 0 at the cell edge, 1 at the tip
-    float along = clamp(dot(p - b, dir) / max(len, 1e-6), 0.0, 1.0);
+    vec2 n = center + dir * (base + near);
+    vec2 f = center + dir * (base + far);
+    float nearThick = thick * mix(1.0, TIP_THICKNESS, near / span);
+    float farThick = thick * mix(1.0, TIP_THICKNESS, far / span);
+    float sdf = getSdfConvexQuad(p, n + side * nearThick, f + side * farThick, f - side * farThick, n - side * nearThick);
+    // 0 at the cursor, 1 one span away
+    float along = clamp((dot(p - center, dir) - base) / span, 0.0, 1.0);
     return antialising(sdf, BLUR) * mix(1.0, TIP_ALPHA, along);
 }
 
@@ -113,33 +125,33 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 vu = normalize(fragCoord, 1.);
     // xy is the top-left corner (y up), zw the size
     vec4 cursor = vec4(normalize(iCurrentCursor.xy, 1.), normalize(iCurrentCursor.zw, 0.));
+    vec2 halfSize = cursor.zw * 0.5;
+    vec2 center = cursor.xy + vec2(halfSize.x, -halfSize.y);
 
-    // The cell, whatever the cursor shape: a block is the whole cell, a bar
-    // keeps the height (NeoVim insert), an underline keeps the width (replace).
-    float cellH = max(cursor.w, cursor.z / CELL_ASPECT);
-    float cellW = cellH * CELL_ASPECT;
-    float bottom = cursor.y - cursor.w;
-    vec2 center = vec2(cursor.x + cellW * 0.5, bottom + cellH * 0.5);
+    // The window in the same space: x in [-edge.x, edge.x], y in [-1, 1]
+    vec2 edge = vec2(iResolution.x / iResolution.y, 1.0);
+    // How far an arm would run with the cursor at the opposite edge
+    vec2 span = 2.0 * edge - cursor.zw;
 
-    float grow = ease(clamp(t / (DURATION * GROW), 0.0, 1.0));
-    float fade = 1.0 - ease(clamp(t / DURATION, 0.0, 1.0));
+    // Fraction of each arm still missing at its cursor end, then at its edge end
+    float sweep = 1.0 - ease(clamp(t / (DURATION * SWEEP), 0.0, 1.0));
+    float drawIn = 1.0 - pow(clamp((t - DURATION * SWEEP) / (DURATION * (1.0 - SWEEP)), 0.0, 1.0), 2.0);
 
-    float lenX = HALF_WIDTH_CELLS * cellW * grow;
-    float lenY = HALF_HEIGHT_CELLS * cellH * grow;
-    float thickX = cellH * 0.5 * BASE_THICKNESS;
-    float thickY = cellW * 0.5 * BASE_THICKNESS;
+    float right = max(edge.x - (center.x + halfSize.x), 0.0);
+    float left = max((center.x - halfSize.x) + edge.x, 0.0);
+    float up = max(edge.y - (center.y + halfSize.y), 0.0);
+    float down = max((center.y - halfSize.y) + edge.y, 0.0);
 
     float shape = max(
-        max(arm(vu, center, vec2(1., 0.), cellW * 0.5, lenX, thickX),
-            arm(vu, center, vec2(-1., 0.), cellW * 0.5, lenX, thickX)),
-        max(arm(vu, center, vec2(0., 1.), cellH * 0.5, lenY, thickY),
-            arm(vu, center, vec2(0., -1.), cellH * 0.5, lenY, thickY)));
+        max(arm(vu, center, vec2(1., 0.), halfSize.x, right * sweep, right * drawIn, span.x, halfSize.y),
+            arm(vu, center, vec2(-1., 0.), halfSize.x, left * sweep, left * drawIn, span.x, halfSize.y)),
+        max(arm(vu, center, vec2(0., 1.), halfSize.y, up * sweep, up * drawIn, span.y, halfSize.x),
+            arm(vu, center, vec2(0., -1.), halfSize.y, down * sweep, down * drawIn, span.y, halfSize.x)));
 
-    float alpha = CROSS_COLOR.a * ALPHA * fade * shape;
+    float alpha = CROSS_COLOR.a * ALPHA * shape;
     vec4 newColor = mix(fragColor, vec4(CROSS_COLOR.rgb, fragColor.a), alpha);
 
     // punch hole on the cursor, so it stays on top
-    vec2 halfSize = cursor.zw * 0.5;
-    float sdfCursor = getSdfRectangle(vu, cursor.xy + vec2(halfSize.x, -halfSize.y), halfSize);
+    float sdfCursor = getSdfRectangle(vu, center, halfSize);
     fragColor = mix(newColor, fragColor, step(sdfCursor, 0.));
 }
