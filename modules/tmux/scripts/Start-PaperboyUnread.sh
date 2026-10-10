@@ -25,6 +25,12 @@ fail() {
 [ -n "${PAPERBOY_EWS_URL:-}" ] ||
   fail "PAPERBOY_EWS_URL and PAPERBOY_EMAIL are not set (see ~/.profile.ps1)."
 
+# The same keyring NeoVim reads (credential_lookup.collection in
+# modules/nvim-config/lua/plugins/paperboy.lua). Without it the daemon looks in
+# the default keyring, which is unlocked and has no password: it would ask for
+# it and save the typed one there, a copy any program could read.
+export PAPERBOY_KEYRING=${PAPERBOY_KEYRING:-paperboy}
+
 # On the PATH when linked there, otherwise in the checkout lazy.nvim loads the
 # plugin from (dev.path in nvim-config/lua/config/lazy.lua) or its own clone
 daemon=""

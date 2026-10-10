@@ -17,6 +17,7 @@ return {
     },
     opts = {
       -- Secrets in the separate "paperboy" keyring, locked again right after reading
+      -- (the tmux unread-count daemon is pointed at it too: Start-PaperboyUnread.sh)
       credential_lookup = { collection = 'paperboy' },
       compose = {
         -- Added to new e-mails, replies and forwards (Markdown; its image is
