@@ -6,6 +6,10 @@ opt.number = true
 opt.relativenumber = true
 opt.colorcolumn = '120'
 opt.signcolumn = 'yes:1'
+-- The default fold, sign and number columns, plus a muted arrow (LineNrWrap,
+-- plugins/colorscheme.lua) on the wrapped rows of a line; windows without
+-- numbers keep just their fold and sign columns
+opt.statuscolumn = "%C%s%{%&nu || &rnu ? (v:virtnum > 0 ? '%=%#LineNrWrap#↪ ' : '%l ') : ''%}"
 
 -- Wrapping and indentation (per-filetype exceptions live in after/ftplugin)
 opt.linebreak = true

@@ -24,6 +24,8 @@ return {
       set('LineNr', { bg = '#1a1b26' })
       set('LineNrAbove', { fg = '#777777' })
       set('LineNrBelow', { fg = '#777777' })
+      -- The arrow on wrapped rows (config/options.lua), dimmer than the numbers
+      set('LineNrWrap', { fg = '#4e5575' })
       -- Easier to read comments and faded text
       set('Comment', { fg = '#819c98' })
       set('JsonCommentError', { fg = '#819c98' })
