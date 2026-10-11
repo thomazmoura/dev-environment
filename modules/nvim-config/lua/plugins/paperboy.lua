@@ -16,8 +16,8 @@ return {
       { '<Leader>md', '<cmd>Paperboy drafts<cr>', desc = 'Paperboy: drafts' },
     },
     opts = {
-      -- Secrets in the separate "paperboy" keyring, locked again right after reading
-      -- (the tmux unread-count daemon is pointed at it too: Start-PaperboyUnread.sh)
+      -- Only for paperboy.nvim from before its vault (GitHub, until pushed): secrets in
+      -- the separate "paperboy" keyring, locked again after reading. The vault ignores it
       credential_lookup = { collection = 'paperboy' },
       compose = {
         -- Added to new e-mails, replies and forwards (Markdown; its image is

@@ -2,8 +2,9 @@
 # Starts (or restarts/stops) paperboy.nvim's unread-count daemon, whose count
 # Get-PaperboyUnread.sh shows in the status bar. Runs in a popup on prefix+M
 # (modules/tmux/common.conf): `paperboy-unread start` needs a terminal, where
-# it types the Exchange password when the keyring's own prompt is out of reach
-# (SSH, locked screen). Extra arguments (--ask, --interval N) go to `start`.
+# it asks the master password of the vault holding the Exchange password (or
+# the Exchange password itself, when the vault has none). Extra arguments
+# (--ask, --interval N) go to `start`.
 #
 # The daemon is configured by $PAPERBOY_EWS_URL and $PAPERBOY_EMAIL, which only
 # the PowerShell profile sets (~/.profile.ps1): the tmux server's environment
@@ -25,10 +26,9 @@ fail() {
 [ -n "${PAPERBOY_EWS_URL:-}" ] ||
   fail "PAPERBOY_EWS_URL and PAPERBOY_EMAIL are not set (see ~/.profile.ps1)."
 
-# The same keyring NeoVim reads (credential_lookup.collection in
-# modules/nvim-config/lua/plugins/paperboy.lua). Without it the daemon looks in
-# the default keyring, which is unlocked and has no password: it would ask for
-# it and save the typed one there, a copy any program could read.
+# Only for a paperboy-unread from before the vault: the same keyring NeoVim reads
+# (credential_lookup.collection in modules/nvim-config/lua/plugins/paperboy.lua)
+# instead of the default one, where a typed password would be saved readable.
 export PAPERBOY_KEYRING=${PAPERBOY_KEYRING:-paperboy}
 
 # On the PATH when linked there, otherwise in the checkout lazy.nvim loads the
