@@ -31,6 +31,15 @@ opt.foldlevel = 8
 opt.showmode = false
 opt.laststatus = 2
 
+-- No status bar, nor the ruler that takes its place, where NeoVim opens on a
+-- plugin's own view: the Workhorse and Paperboy panes start it with
+-- --cmd 'let g:no_statusline = 1' (tmux-helpers.sh's pane_kind), and lualine
+-- stays unloaded (plugins/ui.lua)
+if vim.g.no_statusline then
+  opt.laststatus = 0
+  opt.ruler = false
+end
+
 opt.mouse = 'a'
 opt.termguicolors = true
 -- The command line with the insert-mode bar, so <Esc> to its normal mode

@@ -323,11 +323,14 @@ pane_kind() {
       # NeoVim opened on workhorse.nvim's last query or last pipeline, or paperboy.nvim's inbox
       # (nvim-config/lua/plugins/personal.lua). Through pwsh like NeoVim, whose
       # profile is what sets $PAPERBOY_EWS_URL and the Azure DevOps settings.
-      # Single quotes: pwsh_invocation wraps the whole command in double ones.
+      # g:no_statusline drops the status bar (config/options.lua): the plugin's
+      # view is the whole pane. --cmd, not -c, so it is set before the config
+      # reads it. Single quotes: pwsh_invocation wraps the whole command in
+      # double ones.
       local startup="Workhorse resume"
       [ "$kind" = "Workhorse (builds)" ] && startup="Workhorse builds resume"
       [ "$kind" = Paperboy ] && startup="Paperboy inbox"
-      kind_command="nvim -c '$startup'"
+      kind_command="nvim --cmd 'let g:no_statusline = 1' -c '$startup'"
       ;;
     Codex) kind_command="codex" ;;
     "Open Code") kind_command="nvs use latest && opencode" ;;

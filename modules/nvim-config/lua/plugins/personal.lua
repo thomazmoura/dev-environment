@@ -11,9 +11,11 @@ return {
       local keys = {
         { '<Leader>wq', function() require('workhorse').pick_query() end, desc = 'Workhorse: pick query' },
         { '<Leader>wr', function() require('workhorse').refresh() end, desc = 'Workhorse: refresh' },
-        { '<Leader>wc', function() require('workhorse').pick_prs() end, desc = 'Workhorse: pick repo PRs' },
-        { '<Leader>wC', function() require('workhorse').resume_prs() end, desc = 'Workhorse: last repo PRs' },
       }
+      -- Mapped by the plugin itself (plugin/workhorse.lua): listed only to load it on them
+      for _, lhs in ipairs({ 'wb', 'wB', 'w<C-b>', 'wp', 'wP', 'w<C-p>', 'wR' }) do
+        table.insert(keys, { '<Leader>' .. lhs })
+      end
       local queries = {
         wT = '0ce03ce4-34b3-417b-a7d7-928d45a970dc', -- Tree
         wt = 'a7977848-adab-4453-a4cf-39c28163ac3c', -- Tree

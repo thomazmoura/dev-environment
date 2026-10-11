@@ -72,6 +72,8 @@ return {
   {
     'nvim-lualine/lualine.nvim',
     event = 'VeryLazy',
+    -- Its globalstatus would bring laststatus back (config/options.lua)
+    cond = not vim.g.no_statusline,
     dependencies = { 'folke/noice.nvim' },
     opts = function()
       local noice = require('noice').api.status
