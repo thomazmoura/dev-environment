@@ -60,6 +60,7 @@ CI behavior:
 | `~/.config/ghostty` | `ghostty/` |
 | `~/.wezterm.lua` | `wezterm/wezterm.lua` |
 | `~/.claude/skills/<name>` | `skills/<name>/` (global skills, for every project) |
+| `~/.agents/skills/<name>` | `codex-skills/<name>/` (Codex skills, installed by `Install-Skills.ps1`) |
 | `~/.modules` | `modules/` (host symlink, or the Docker COPY) |
 
 On the host, `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.conf`. The container uses `modules/tmux/tmux.conf`.

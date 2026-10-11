@@ -180,6 +180,9 @@ for skill in "$modules_path"/skills/*/; do
   pwsh -NoProfile -Command "New-Item -Force -Type SymbolicLink -Path $HOME/.claude/skills/$(basename "$skill") -Target $skill"
 done
 
+# Codex skills, adapted from Claude Code and linked so repository edits stay live.
+pwsh -NoProfile -File "$modules_path/codex-skills/Install-Skills.ps1"
+
 # Claude Code status line (the vim mode as a Nerd Font icon, in place of the
 # built-in "-- INSERT --"). The script runs in place out of $HOME/.modules;
 # only the statusLine key of ~/.claude/settings.json is set.
