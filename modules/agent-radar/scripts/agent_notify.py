@@ -19,8 +19,9 @@ sampling live.
 Adding an action: write a class with `name`, `enabled()` and `send(event)`, and
 put an instance in ACTIONS. `enabled()` is asked once, when the sampler starts,
 so an action whose configuration is missing simply sits out instead of failing
-on every tick. AGENT_RADAR_NOTIFY=telegram,desktop narrows the set by name;
-AGENT_RADAR_NOTIFY=off silences all of them.
+on every tick. The desktop action is opt-in: it stays off unless
+AGENT_RADAR_DESKTOP_NOTIFY=1. AGENT_RADAR_NOTIFY=telegram,tmux narrows the set
+by name; AGENT_RADAR_NOTIFY=off silences all of them.
 """
 
 from __future__ import annotations
@@ -65,6 +66,7 @@ AGENT_NAME = {
 }
 
 ENV_FILTER = "AGENT_RADAR_NOTIFY"
+ENV_DESKTOP = "AGENT_RADAR_DESKTOP_NOTIFY"
 
 
 @dataclass
@@ -135,7 +137,8 @@ class TelegramAction:
 
 
 class DesktopAction:
-    """A libnotify popup via notify-send.
+    """A libnotify popup via notify-send. Opt-in: off unless
+    AGENT_RADAR_DESKTOP_NOTIFY is 1/true/yes/on.
 
     Waiting is sent critical because GNOME keeps critical notifications on
     screen until dismissed -- an agent blocked on you should not scroll away.
@@ -148,6 +151,8 @@ class DesktopAction:
     ICON = {radar.BLOCKED: "dialog-question", radar.DONE: "emblem-default"}
 
     def enabled(self) -> bool:
+        if os.environ.get(ENV_DESKTOP, "").strip().lower() not in ("1", "true", "yes", "on"):
+            return False
         # No bus and no display means a headless sampler -- an ssh session, a
         # container -- where notify-send would fail on every event.
         has_session = any(

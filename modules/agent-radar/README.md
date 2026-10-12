@@ -542,17 +542,20 @@ notification action:
 | Action | Enabled when | Notes |
 | --- | --- | --- |
 | `telegram` | `BOT_TOKEN` and `CHAT_ID` are set | the same bot as `~/.local/bin/send_notification.sh`, sent from Python so the payload is real JSON |
-| `desktop` | `notify-send` exists and there is a session bus or display | `waiting` is sent `critical`, so GNOME keeps it on screen; `done` times out normally |
+| `desktop` | `AGENT_RADAR_DESKTOP_NOTIFY=1` (opt-in), `notify-send` exists and there is a session bus or display | `waiting` is sent `critical`, so GNOME keeps it on screen; `done` times out normally |
 | `tmux` | `tmux` is on the PATH | an animated toast at the start of status-right (`modules/tmux/scripts/Show-Toast.sh`); `waiting` stays until the agent is no longer blocked, `done` lasts 20s; `prefix Esc` clears them |
 
-Every action whose requirement is met is on. `AGENT_RADAR_NOTIFY` narrows them
-to a comma-separated list of names, or `off` for none. Which actions a machine
-uses is host configuration, not repo configuration: set it in the untracked
-`~/.profile` (and `~/.profile.ps1`), next to `BOT_TOKEN` and `CHAT_ID`. For
-example, a desktop that should only send Telegram messages and tmux toasts uses:
+Every action whose requirement is met is on. Desktop popups are the exception:
+they are opt-in, so without `AGENT_RADAR_DESKTOP_NOTIFY=1` a machine only gets
+tmux toasts and, if configured, Telegram messages. `AGENT_RADAR_NOTIFY` then
+narrows the enabled actions to a comma-separated list of names, or `off` for
+none. Which actions a machine uses is host configuration, not repo
+configuration: set these in the untracked `~/.profile` (and `~/.profile.ps1`),
+next to `BOT_TOKEN` and `CHAT_ID`. For example, a desktop that wants popups
+too uses:
 
 ```sh
-export AGENT_RADAR_NOTIFY='telegram,tmux'
+export AGENT_RADAR_DESKTOP_NOTIFY=1
 ```
 
 The sampler inherits these variables from tmux's global environment
@@ -561,7 +564,7 @@ checked once, when the sampler starts. So after a change, update tmux and
 restart the sampler from tmux's environment:
 
 ```sh
-tmux set-environment -g AGENT_RADAR_NOTIFY telegram,tmux
+tmux set-environment -g AGENT_RADAR_DESKTOP_NOTIFY 1
 kill "$(pgrep -f '^/usr/bin/python3 .*Start-AgentRadar\.py')"
 tmux run-shell -b "setsid python3 ~/.modules/agent-radar/scripts/Start-AgentRadar.py --interval 1.0 </dev/null >>~/.cache/agent-radar/daemon.log 2>&1 &"
 ```
@@ -597,7 +600,8 @@ sampler running anyway (`keeps_alive = False`).
 scripts/agent_notify.py --test               # a made-up "waiting" through every action
 scripts/agent_notify.py --test done --session notas
 AGENT_RADAR_NOTIFY=tmux scripts/agent_notify.py --test   # just the toast
-AGENT_RADAR_NOTIFY=desktop                   # only these actions (comma-separated)
+AGENT_RADAR_DESKTOP_NOTIFY=1 AGENT_RADAR_NOTIFY=desktop scripts/agent_notify.py --test   # just the popup
+AGENT_RADAR_NOTIFY=telegram,tmux             # only these actions (comma-separated)
 AGENT_RADAR_NOTIFY=off                       # none; the sampler idle-exits as before
 ```
 
