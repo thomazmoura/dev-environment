@@ -11,6 +11,22 @@ end, { desc = 'Clear highlights and messages' })
 
 map('n', '<Leader>q', '<cmd>q<cr>', { desc = 'Quit window' })
 
+-- Ctrl+C asks how to quit the window: (y) save and quit, (q or Ctrl+C) quit
+-- without saving, anything else cancels
+map('n', '<C-c>', function()
+  if vim.fn.getcmdwintype() ~= '' then
+    return vim.api.nvim_feedkeys(vim.keycode('<C-c>'), 'n', false)
+  end
+  vim.api.nvim_echo({ { 'Do you want to quit? (y) quit and save (q) quit without saving (n) cancel', 'Question' } }, false, {})
+  local ok, key = pcall(vim.fn.getcharstr)
+  vim.api.nvim_echo({ { '' } }, false, {})
+  if ok and key == 'y' then
+    vim.cmd('x')
+  elseif not ok or key == 'q' or key == '\3' then
+    vim.cmd('q!')
+  end
+end, { desc = 'Quit window (save / discard / cancel)' })
+
 -- Quickfix window toggle
 map('n', '<Leader>Q', function()
   local open = vim.fn.getqflist({ winid = 0 }).winid ~= 0
