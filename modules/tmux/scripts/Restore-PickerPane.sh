@@ -12,6 +12,10 @@
 # only ever respawned, so the window and the session outlive it; prefix+C-b x on
 # the picker still closes them, since kill-pane never leaves a dead pane.
 #
+# The picker never reopens itself: Esc or C-c in it just ends it, and it comes
+# through here like any other pane -- killed if the window still has a content
+# pane, respawned as a fresh picker if only the feeds are left.
+#
 # prefix+C-b x is the one close with no dead pane to hand over. The
 # after-kill-pane hook runs this without a pane: it looks through every layout
 # window for one left with only the feeds, and has Set-NeovimLayout.sh put the

@@ -6,6 +6,9 @@
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents,
 # Workhorse and Paperboy, the script library), and the pane turns into whatever
 # is chosen -- Scripts into prefix+s's script picker, asking right here. Enter straight away picks NeoVim.
+# Enter on something that is not an option asks again; Esc or C-c closes the
+# pane, and Restore-PickerPane.sh puts a new picker back if that leaves the
+# window with nothing but the Git, Agents and Notes panes.
 # Set-NeovimLayout.sh starts it in the main pane of every new session, so a
 # session opens on Git, Agents and this question rather than on a NeoVim you
 # may not want.
@@ -76,13 +79,19 @@ if [ -n "$kind" ]; then
   exit 0
 fi
 
-# No kind: this pane asks. Esc brings the list back rather than leaving an
-# empty pane in the layout's main slot; prefix+C-b x still closes it.
+# No kind: this pane asks. Enter on something that is not an option brings the
+# list back; Esc or C-c ends the script and so closes the pane. Putting a picker
+# back when that leaves the window with no content pane is the pane-died hook's
+# job (Restore-PickerPane.sh), not this loop's.
 require_tools tmux fzf
 pane="$(current_pane "${target:-${TMUX_PANE:-}}")"
 while :; do
+  status=0
   kind="$(printf '%s\n' "${PANE_KINDS[@]}" |
-    fzf --reverse --no-sort --prompt='pane> ' --header='What should this pane be?')" || continue
+    fzf --reverse --no-sort --prompt='pane> ' --header='What should this pane be?')" || status=$?
+  # 1 is fzf's "no match": Enter on a query that matches nothing. Anything
+  # else -- 130 for Esc or C-c, 2 for an error -- closes the pane.
+  [ "$status" -eq 0 ] || [ "$status" -eq 1 ] || exit 0
   [ -n "$kind" ] && pane_kind "$pane" "$kind" && break
 done
 
