@@ -2,16 +2,19 @@
 # The Workhorse and Paperboy status segments of another host, drawn in place of
 # this machine's own while prefix+C-k (Select-StatusSource.sh) has pointed the
 # status bar at that host: @status_source holds its @ssh_target, and the status
-# formats (wsl2/tmux.conf, tmux/tmux.conf) run this instead of
+# formats (wsl2/tmux.conf, tmux/tmux.conf, common.conf) run this instead of
 # Get-WorkhorseStatusCached.sh and Get-PaperboyUnread.sh.
 #
 # Usage: Get-RemoteStatus.sh <target> [max-title-length]
+#        Get-RemoteStatus.sh -p <target>
 #
-#   󰒋 host  #123 | Work item title  󰇮 4
+#   󰒋 host  #123 | Work item title        after the window list
+#   󰇮 4                                    -p: beside the agent count
 #
 # The host's name comes first, so the segments are never mistaken for local
 # ones; it turns orange when the host could not be asked, and the last answer
-# stays beside it. The segments are the host's own Get-WorkhorseStatusCached.sh
+# stays beside it. -p prints only the host's Paperboy count, from the answer
+# the call without it cached, and never asks the host itself. The segments are the host's own Get-WorkhorseStatusCached.sh
 # and Get-PaperboyUnread.sh, run there with its profile's environment
 # (remote_profile_command in ssh-helpers.sh) -- so they share that host's
 # caches -- and a segment the host is not configured for is not drawn.
@@ -21,6 +24,12 @@
 # Get-WorkhorseStatusCached.sh does with its query; a lock keeps several
 # clients from asking at once.
 set -u
+
+paperboy_only=""
+if [ "${1:-}" = -p ]; then
+  paperboy_only=1
+  shift
+fi
 
 target="${1:-}"
 max_title_length="${2:-80}"
@@ -69,6 +78,16 @@ if ($env:PAPERBOY_EWS_URL) { "@paperboy@" + ((& "$s/Get-PaperboyUnread.sh") -joi
   fi
 }
 
+if [ -n "$paperboy_only" ]; then
+  [ -f "$cache_dir/$name" ] || exit 0
+  while IFS= read -r line; do
+    case "$line" in
+      @paperboy@*) printf '%s' "${line#@paperboy@}" ;;
+    esac
+  done <"$cache_dir/$name"
+  exit 0
+fi
+
 if is_stale; then
   exec 9>"$lock"
   if flock -n 9 && is_stale; then
@@ -91,6 +110,5 @@ fi
 while IFS= read -r line; do
   case "$line" in
     @workhorse@*) printf '#[fg=#7aa2f7]%s#[fg=default] ' "${line#@workhorse@}" ;;
-    @paperboy@*) printf '%s' "${line#@paperboy@}" ;;
   esac
 done <"$answer"

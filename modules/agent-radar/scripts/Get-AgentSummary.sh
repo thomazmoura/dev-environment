@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # A one-glance agent summary for the tmux status bar, e.g.
 #
-#   ●2●1        two agents waiting on you, one working
+#   󰚩 2 󰚩 1      two agents waiting on you, one working
+#   󰚩 0          none waiting, done or working (grey)
 #
-# Idle agents are left out on purpose: a dot that is always lit teaches you to
-# stop reading the segment.
+# Idle agents are left out on purpose: a robot that is always lit teaches you
+# to stop reading the segment. The grey 0 is there so the segment never
+# vanishes and shifts the rest of the bar.
 #
-# Wired into status-right from modules/tmux/tmux.conf and modules/wsl2/tmux.conf.
-# It must be prepended AFTER TPM runs, because tmux-power assigns status-right
-# wholesale when it loads and would drop anything the config set earlier -- the
-# same ordering trap that any other status-right consumer has to work around.
+# Drawn in tmux-power's inner right segment (@tmux_power_right_y, set in the
+# plugin section of modules/tmux/common.conf).
 #
 # This no longer detects anything. Start-AgentRadar.py samples once a second for
 # the whole machine and publishes the rendered string; this reads it. That is

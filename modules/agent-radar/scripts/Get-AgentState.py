@@ -292,15 +292,25 @@ def render_ansi_summary(counts: list[tuple[str, int]]) -> str:
     return "".join(f"{ANSI[state]}{GLYPH}{count}{RESET}" for state, count in counts)
 
 
+# The status bar marks each count with a robot rather than GLYPH: there it sits
+# beside Paperboy's envelope, not in a column, so a Nerd Font icon says what is
+# being counted without any alignment to break.
+STATUS_ICON = "\U000f06a9"  # nf-md-robot
+
+
 def render_status(panes: list[radar.Pane]) -> str:
-    """A compact count per state for the tmux status bar. See SUMMARY_STATES."""
+    """A compact count per state for the tmux status bar. See SUMMARY_STATES.
+
+    With nothing to count it is a grey "󰚩 0" rather than empty: the segment
+    always takes room, so it never shifts the rest of the bar.
+    """
     parts = [
-        f"#[fg={TMUX_COLOUR[state]}]{GLYPH}{count}"
+        f"#[fg={TMUX_COLOUR[state]}]{STATUS_ICON} {count}"
         for state, count in state_counts(panes)
     ]
     if not parts:
-        return ""
-    return "".join(parts) + "#[fg=default]"
+        parts = [f"#[fg={TMUX_COLOUR[radar.UNKNOWN]}]{STATUS_ICON} 0"]
+    return " ".join(parts) + "#[fg=default]"
 
 
 def main() -> int:
