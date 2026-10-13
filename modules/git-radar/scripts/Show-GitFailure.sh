@@ -66,13 +66,18 @@ in_repo() {
 # verb rather than assembled from the argument, so this script decides what it
 # is willing to run and an unexpected verb retries nothing at all.
 #
+# pull is Invoke-GitPull.sh, as Watch-GitFeed.pull_argv runs it: its text as a
+# one-off alias, so a remote row's host needs nothing of this checkout's.
+#
 # push asks about the upstream the same way Watch-GitFeed does, and for the same
 # reason: the first attempt was the one that would have created it, so after an
 # authentication failure there is still no upstream for a plain push to find.
 retry=()
 case "$verb" in
   fetch) retry=(--no-optional-locks fetch --quiet) ;;
-  pull)  retry=(pull --ff-only --quiet) ;;
+  pull)
+    retry=(-c "alias.radar-pull=!$(cat "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Invoke-GitPull.sh")" radar-pull)
+    ;;
   push)
     if [ -n "$root" ] && ! in_repo rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
       branch=$(in_repo branch --show-current 2>/dev/null || true)

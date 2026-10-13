@@ -237,12 +237,22 @@ repository on this machine" is a work tree changed in a dozen places from one
 keystroke, and there is no version of that whose failures a row can honestly
 summarise.
 
-**`p` is `pull --ff-only`.** It fast-forwards or it refuses, which is what makes
-it safe to press in a pane you are only glancing at: it can never open a merge,
-never leave a conflicted tree and never want an editor -- and an editor is
-precisely what the no-tty rule above makes impossible to answer. A row that
-cannot fast-forward says `cannot fast-forward` and you go and do it in NeoVim,
-where you can see the conflict.
+**`p` fast-forwards, or rebases only when the rebase is known to be clean.**
+It fetches, and a branch that is only behind is fast-forwarded. One that has
+diverged -- commits to pull *and* commits to push -- has its own commits
+replayed onto the upstream in memory first, with `git merge-tree`, which touches
+neither the work tree nor a ref; only if every one applies cleanly does the real
+rebase run, and it is aborted if it stops anyway. A dirty tree or local merge
+commits are refused outright. So it is still safe to press in a pane you are
+only glancing at: it can never open a merge, never leave a conflicted tree and
+never want an editor -- and an editor is precisely what the no-tty rule above
+makes impossible to answer. A row that would conflict says `rebase would
+conflict` and you go and do it in NeoVim, where you can see the conflict.
+
+The logic is `scripts/Invoke-GitPull.sh`, but it is never run from there: its
+text is handed to git as a one-off alias (`git -c alias.radar-pull='!...'
+radar-pull`), so a remote row's host runs it over ssh without needing this
+checkout's copy, or a recent one.
 
 **`P` sets the upstream when there is none**, rather than refusing: publishing a
 branch you have never pushed is the main thing `P` is wanted for on the rows

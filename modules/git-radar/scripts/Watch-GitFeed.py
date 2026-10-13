@@ -78,10 +78,12 @@ push-all to match F: F is affordable because a fetch changes nothing and a
 fetch that cannot authenticate costs milliseconds, whereas "pull every repository
 on this machine" is a work tree changed in a dozen places from one keystroke.
 
-p is `pull --ff-only`, which is what makes it safe to run from a pane you are
-only glancing at: it fast-forwards or it refuses, so it can never open a merge,
-never leave a conflicted tree and never want an editor. A row that cannot
-fast-forward says so and you go and do it in NeoVim, where you can see it.
+p fetches and fast-forwards, and when the branch has commits of its own too, it
+rebases them onto the upstream -- but only after replaying them in memory has
+shown the rebase applies cleanly (Invoke-GitPull.sh). That is what makes it safe
+to run from a pane you are only glancing at: it can never open a merge, never
+leave a conflicted tree and never want an editor. A row that would conflict says
+so and you go and do it in NeoVim, where you can see it.
 
 None of the three can prompt, by construction -- see fetch_env. This is not
 tidiness: capturing their output is not enough to keep it off the screen, because
@@ -139,6 +141,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# What p runs -- see pull_argv.
+PULL_SCRIPT = os.path.join(HERE, "Invoke-GitPull.sh")
 sys.path.insert(0, HERE)
 
 import git_feed as feed  # noqa: E402
@@ -421,9 +425,13 @@ def fetch_argv(repo) -> list[str] | str:
 
 
 def pull_argv(repo) -> list[str] | str:
-    """`p`. Fast-forward or refuse -- see the module docstring for why only that.
+    """`p`. Fast-forward, or rebase when that is known to apply cleanly, or refuse.
 
-    Both refusals are answered from the row that is already on screen rather
+    The decision is made after the fetch, so it is Invoke-GitPull.sh's, and its
+    text travels as a one-off git alias rather than as a path: a remote row's
+    host then needs nothing of this checkout's to run it.
+
+    A detached HEAD and a missing upstream are answered from the row that is already on screen rather
     than from the network: git would say the same thing in a paragraph, several
     seconds and one ssh connection later.
 
@@ -435,7 +443,9 @@ def pull_argv(repo) -> list[str] | str:
         return "detached HEAD"
     if not repo.upstream:
         return "no upstream"
-    return git_argv(repo, "pull", "--ff-only", "--quiet")
+    with open(PULL_SCRIPT, encoding="utf-8") as handle:
+        script = handle.read()
+    return git_argv(repo, "-c", f"alias.radar-pull=!{script}", "radar-pull")
 
 
 def push_argv(repo) -> list[str] | str:

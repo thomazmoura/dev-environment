@@ -17,7 +17,7 @@ Every key acts on the selected row's repository. On a row of an ssh session
 |---|---|
 | `f` | Fetch the selected repository |
 | `F` | Fetch every listed repository |
-| `p` | Pull |
+| `p` | Pull (rebases a diverged branch when that is clean) |
 | `P` | Push |
 
 ## Popups
