@@ -2,7 +2,7 @@
 # Fuzzy-find another session and switch the client to it, with where each
 # session's repository stands beside its name.
 #
-#   ● session  ●agents  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
+#   ● session  󰚩 agents  branch  state  ⇡ahead ⇣behind +added ~modified -deleted ?untracked
 #
 # Bound to prefix+? and prefix+C-p as a popup command in
 # modules/tmux/common.conf. The current session is left out of the list: it is
@@ -17,7 +17,7 @@
 # what is left to do in them: uncommitted changes first, then commits to push,
 # then commits to pull, then clean and in sync -- unlike the feed, which keeps
 # session order. --agents adds agent-radar's status-bar summary for each
-# session after its name, idle agents included (●1●2●1), so a session with an
+# session after its name, idle agents included (󰚩 1 󰚩 2 󰚩 1), so a session with an
 # agent waiting, working or open shows it before you switch. Without git-radar the
 # list falls back to bare session names.
 #

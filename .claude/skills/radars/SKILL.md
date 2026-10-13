@@ -9,7 +9,7 @@ when_to_use: Use when asked about the Git pane, git-radar, the Agents pane, agen
 Two tools with the same architecture, both shown in the radar column of the standard tmux layout:
 
 - **Git pane** (`modules/git-radar`): where each tmux session's repo stands (branch, ahead/behind, dirty). Opened with `prefix,R`.
-- **Agents pane** (`modules/agent-radar`): which coding agent is waiting, working, done or idle, read off each agent pane's screen. Opened with `prefix,r`; popup picker `prefix,t,a`; status bar `●2●1`.
+- **Agents pane** (`modules/agent-radar`): which coding agent is waiting, working, done or idle, read off each agent pane's screen. Opened with `prefix,r`; popup picker `prefix,t,a`; status bar and `prefix,?` picker `󰚩 2 󰚩 1`.
 
 Each module's `README.md` is the deep reference (design reasons, ssh, states, rules). Read the relevant section rather than the whole file: they're 480 and 700 lines.
 
