@@ -877,6 +877,48 @@ def show_history(repo) -> None:
     threading.Thread(target=worker, daemon=True).start()
 
 
+def show_diff(repo) -> None:
+    """`S`. The diff of the pending changes, in a popup, touching nothing.
+
+    `s` with the lines rather than the file names: gitdfc for staged changes,
+    gitdf for unstaged ones, and fzf asking which when there are both -- the
+    row's counters cannot tell, so Show-GitDiff.sh does. Shaped like `s`: not
+    busy, on a thread, and refused from the row when it already knows there is
+    nothing to show (untracked files are not in either diff).
+    """
+    refusal = ""
+    if repo.state == gitr.OFFLINE:
+        refusal = "cannot show diff"
+    elif not repo.root:
+        refusal = "not a git repository"
+    elif not repo.tracked_changes:
+        refusal = "no changes"
+    if refusal:
+        notes[note_key(repo)] = finished(refusal)
+        return
+
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80%", "-h", "80%", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(HERE, "Show-GitDiff.sh"),
+                    repo.session, repo.root, repo.remote,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def start_merge(repo) -> None:
     """`m`. Merge the row's branch into one picked in a popup, and come back.
 
@@ -1579,6 +1621,9 @@ def run(stdscr, interval: float) -> str:
             elif key == ord("s"):
                 if repos:
                     show_status(repos[selected])
+            elif key == ord("S"):
+                if repos:
+                    show_diff(repos[selected])
             elif key == ord("h"):
                 if repos:
                     show_history(repos[selected])

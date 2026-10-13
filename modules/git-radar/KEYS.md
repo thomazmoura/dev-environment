@@ -27,6 +27,7 @@ Every key acts on the selected row's repository. On a row of an ssh session
 | `c` | Commit: shows the status, `y` stages everything and commits |
 | `C` | Check out another branch, picked with fzf (`gitco`) |
 | `s` | Status, read-only |
+| `S` | Diff: `gitdfc` if only staged, `gitdf` if only unstaged, asks if both |
 | `h` | History: the commit graph, `q` closes |
 | `m` | Merge this branch into another, push it, come back |
 

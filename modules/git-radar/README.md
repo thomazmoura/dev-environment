@@ -119,6 +119,13 @@ host's. See `Show-GitCommit.sh`.
 else -- no question, any key closes it. On an ssh row it too runs on the host.
 See `Show-GitStatus.sh`.
 
+`S` opens a popup with the diff of the pending changes: `gitdfc` (staged) when
+only the index has changes, `gitdf` (unstaged) when only the work tree does, and
+an fzf pick between the two when both do. The flags are spelled out, as for `h`,
+and whitespace-only changes don't count, as they don't in those diffs. Paged by
+`less`, which `q` closes. A row with no tracked changes is refused on the row.
+On an ssh row it runs on the host. See `Show-GitDiff.sh`.
+
 `h` opens a popup with the commit graph -- the same log as `git history`
 (`gith` in pwsh), spelled out so a host without the alias shows it too -- paged
 by `less`, which `q` closes. See `Show-GitHistory.sh`.

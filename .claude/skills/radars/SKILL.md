@@ -41,6 +41,7 @@ one detached sampler per machine (Start-GitRadar.py / Start-AgentRadar.py)
 | `c` | Commit (`Show-GitCommit.sh`) |
 | `C` | Checkout a branch with `gitco` (`Show-GitCheckout.sh`) |
 | `s` | Status (`Show-GitStatus.sh`) |
+| `S` | Diff, staged or unstaged (`Show-GitDiff.sh`) |
 | `h` | History (`Show-GitHistory.sh`) |
 | `m` | Merge (`Show-GitMerge.sh`) |
 | `H` | Home session |
