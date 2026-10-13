@@ -184,6 +184,9 @@ done
 # Codex skills, adapted from Claude Code and linked so repository edits stay live.
 pwsh -NoProfile -File "$modules_path/codex-skills/Install-Skills.ps1"
 
+# GitHub Copilot CLI skills, linked the same way.
+pwsh -NoProfile -File "$modules_path/copilot-skills/Install-Skills.ps1"
+
 # Claude Code status line (the vim mode as a Nerd Font icon, in place of the
 # built-in "-- INSERT --"). The script runs in place out of $HOME/.modules;
 # only the statusLine key of ~/.claude/settings.json is set.

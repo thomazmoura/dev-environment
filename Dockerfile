@@ -68,6 +68,10 @@ RUN mkdir -p /home/developer/.claude/skills \
 COPY --chown=developer:developer modules/codex-skills /home/developer/.modules/codex-skills
 RUN pwsh -NoProfile -File /home/developer/.modules/codex-skills/Install-Skills.ps1
 
+# GitHub Copilot CLI skills, installed the same way.
+COPY --chown=developer:developer modules/copilot-skills /home/developer/.modules/copilot-skills
+RUN pwsh -NoProfile -File /home/developer/.modules/copilot-skills/Install-Skills.ps1
+
 # Claude Code status line (the vim mode as a Nerd Font icon, in place of the
 # built-in "-- INSERT --"). Only the statusLine key of settings.json is set.
 COPY --chown=developer:developer modules/claude /home/developer/.modules/claude
