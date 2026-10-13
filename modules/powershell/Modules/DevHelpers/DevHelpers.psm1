@@ -1138,7 +1138,8 @@ function New-VerticalTmuxSession {
 
       The home session -- the one marked with H in the Git pane -- is opened
       too, first, so it is always there to come back to with prefix+h. It gets
-      the home layout (Paperboy | Workhorse, Set-NeovimLayout.sh -H) in the
+      the home layout (Paperboy | Workhorse, or whichever of them is set up --
+      Set-NeovimLayout.sh -H) in the
       directory Set-HomeSession.sh saved next to the mark, or $CODE_FOLDER/<name>
       for a mark saved before it kept one. Picking the home session's own
       project opens it just once, with the picker layout like any other.

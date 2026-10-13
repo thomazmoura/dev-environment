@@ -5,7 +5,8 @@
 # terminal or one of the coding agents (Select-PaneKind.sh) -- and turns into
 # it. With -f the rest of the window is NeoVim over a terminal running the
 # project's setup command instead. With -H it is the home layout: Paperboy's
-# inbox on the left half of the rest and Workhorse's last query on the right.
+# inbox on the left half of the rest and Workhorse's last query on the right
+# -- or just the one of them this machine has, or, with neither, the picker.
 #
 # A project that keeps a .notes file at the root of its repository gets a third
 # pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
@@ -47,14 +48,15 @@
 #            right beside the radar column even when other panes have taken
 #            its place.
 #   -H       the home layout (prefix+H): Paperboy and Workhorse side by side
-#            instead of the picker, each brought back when missing. Unlike the
-#            other two it never builds around other work: a window holding
-#            anything but the radar column and an unanswered picker gets a new
-#            window with the layout instead, and the picker is turned into
-#            Paperboy.
+#            instead of the picker, each brought back when missing -- only
+#            those this machine has set up, and the standard layout when it
+#            has neither. Unlike the other two it never builds around other
+#            work: a window holding anything but the radar column and an
+#            unanswered picker gets a new window with the layout instead, and
+#            the picker is turned into Paperboy (or Workhorse, alone).
 #   -n       the target is the only pane of a window the caller has just
 #            created, still an idle shell: it becomes the picker (NeoVim with
-#            -f, Paperboy with -H) rather than being built around.
+#            -f, Paperboy or Workhorse with -H) rather than being built around.
 #   -k       leave the focus where it is, for the automatic repairs
 #            (Repair-Layouts.sh): the user is typing somewhere and the layout
 #            changing around them shouldn't take their keys elsewhere. Without
@@ -88,6 +90,23 @@ while getopts ":fnHk" option; do
   esac
 done
 shift $((OPTIND - 1))
+
+# The home layout holds what this machine has of the two: Paperboy where
+# $PAPERBOY_EWS_URL is set, Workhorse where $WORKHORSE_TMUX_QUERY_ID is. Both
+# sit side by side; one alone fills the content area; with neither, -H is
+# dropped and the window gets the standard layout, picker and all. Read from
+# Set-StatusSegments.sh's options, or from the variables themselves: vtmux
+# runs this from pwsh, with the profile's environment, while the server it
+# has just started is still working those options out.
+home_main="" home_side=""
+if [ -n "$home" ]; then
+  home_kinds=()
+  [ -z "${PAPERBOY_EWS_URL:-}$(tmux show -gqv @paperboy_enabled)" ] || home_kinds+=(Paperboy)
+  [ -z "${WORKHORSE_TMUX_QUERY_ID:-}$(tmux show -gqv @workhorse_enabled)" ] || home_kinds+=(Workhorse)
+  home_main=${home_kinds[0]:-}
+  home_side=${home_kinds[1]:-}
+  [ -n "$home_main" ] || home=""
+fi
 
 # One run at a time: the hooks run Repair-Layouts.sh on every resize and closed
 # pane, alongside prefix+v and Restore-PickerPane.sh, and two runs repairing the
@@ -181,13 +200,23 @@ picker_line="$(closing_line "$picker_command")"
 
 # The home layout's two panes, as a new one runs them -- where the session does,
 # like NeoVim, since both are NeoVim (pane_kind's Paperboy and Workhorse).
-paperboy_command="" workhorse_command=""
+# main_command is the one that takes the main pane's place: Paperboy when there
+# is one.
+paperboy_command="" workhorse_command="" main_command=""
 if [ -n "$home" ]; then
   pane_kind "$top" Paperboy
   paperboy_command="$(pane_command "$top" "$kind_command" "$kind_no_exit")"
   pane_kind "$top" Workhorse
   workhorse_command="$(pane_command "$top" "$kind_command" "$kind_no_exit")"
+  main_command=$paperboy_command
+  [ "$home_main" = Paperboy ] || main_command=$workhorse_command
 fi
+
+# set_home_main <pane>
+# Records <pane> as the home layout's main pane, under paperboy or workhorse.
+set_home_main() {
+  if [ "$home_main" = Paperboy ]; then paperboy=$1; else workhorse=$1; fi
+}
 
 # The notes pane, as a new one runs it. Like NeoVim it runs where the session
 # does, on the remote in an ssh session; only a window with the radar column
@@ -418,9 +447,9 @@ fresh=""
 if [ -n "$new_window" ] && [ -z "$git$agents$notes$terminal$neovim$picker$paperboy$workhorse" ]; then
   fresh="yes"
   if [ -n "$home" ]; then
-    paperboy=$top
-    queue_label "$paperboy" "Paperboy"
-    mark_role "$paperboy" paperboy
+    set_home_main "$top"
+    queue_label "$top" "$home_main"
+    mark_role "$top" "${home_main,,}"
   elif [ -z "$force" ]; then
     picker=$top
     queue_label "$picker" "Picker"
@@ -485,8 +514,8 @@ main_split() {
   local target=$1
   shift
   if [ -n "$home" ]; then
-    place_pane "$target" "Paperboy" paperboy "$paperboy_command" "$@"
-    paperboy=$placed
+    place_pane "$target" "$home_main" "${home_main,,}" "$main_command" "$@"
+    set_home_main "$placed"
   elif [ -n "$force" ]; then
     place_pane "$target" "NeoVim" neovim "$nvim_command" "$@"
     neovim=$placed
@@ -495,28 +524,30 @@ main_split() {
     picker=$placed
   fi
 }
-# The home layout's main pane is Paperboy. By the check at the top, a window
-# without it or Workhorse holds only the radar column and, maybe, a picker: the
-# picker is turned into Paperboy where it stands, and a window with no picker
-# gets Paperboy split off beside the column, as the picker would be.
+# The home layout's main pane is Paperboy, or Workhorse on a machine without
+# Paperboy. By the check at the top, a window without either holds only the
+# radar column and, maybe, a picker: the picker is turned into the main pane
+# where it stands, and a window with no picker gets it split off beside the
+# column, as the picker would be.
 if [ -n "$home" ]; then
   if [ -z "$paperboy$workhorse" ] && [ -n "$picker" ]; then
-    paperboy=$picker picker=""
-    path="$(tmux display-message -p -t "$paperboy" '#{pane_current_path}')"
-    queue respawn-pane -k -t "$paperboy" -c "$path"
-    queue_label "$paperboy" "Paperboy"
-    mark_role "$paperboy" paperboy
-    queue send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+    main=$picker picker=""
+    set_home_main "$main"
+    path="$(tmux display-message -p -t "$main" '#{pane_current_path}')"
+    queue respawn-pane -k -t "$main" -c "$path"
+    queue_label "$main" "$home_main"
+    mark_role "$main" "${home_main,,}"
+    queue send-keys -t "$main" "$(closing_line "$main_command")" C-m
     stale=yes
   elif [ -z "$paperboy$workhorse" ] && [ -n "$radars" ]; then
     main_split "$git" -h -f
   fi
-  # Each half is brought back beside the other: Workhorse on Paperboy's right,
-  # Paperboy on Workhorse's left.
-  if [ -n "$paperboy" ] && [ -z "$workhorse" ]; then
+  # With both, each half is brought back beside the other: Workhorse on
+  # Paperboy's right, Paperboy on Workhorse's left.
+  if [ -n "$home_side" ] && [ -n "$paperboy" ] && [ -z "$workhorse" ]; then
     place_pane "$paperboy" "Workhorse" workhorse "$workhorse_command" -h -l 50%
     workhorse=$placed
-  elif [ -z "$paperboy" ] && [ -n "$workhorse" ]; then
+  elif [ -n "$home_side" ] && [ -z "$paperboy" ] && [ -n "$workhorse" ]; then
     place_pane "$workhorse" "Paperboy" paperboy "$paperboy_command" -h -b -l 50%
     paperboy=$placed
   fi
@@ -590,7 +621,7 @@ fi
 
 if [ -n "$fresh" ]; then
   if [ -n "$home" ]; then
-    queue send-keys -t "$paperboy" "$(closing_line "$paperboy_command")" C-m
+    queue send-keys -t "$top" "$(closing_line "$main_command")" C-m
   elif [ -n "$picker" ]; then
     queue send-keys -t "$picker" "$picker_line" C-m
   else
@@ -604,7 +635,7 @@ fi
 # selected: every pane above is placed with -d, so the focus never moved.
 if [ -z "$keep_focus" ]; then
   [ -z "$git" ] || queue select-pane -t "$git"
-  queue select-pane -t "${paperboy:-${neovim:-${picker:-$top}}}"
+  queue select-pane -t "${paperboy:-${workhorse:-${neovim:-${picker:-$top}}}}"
 fi
 # The window -H made in the background, now that there is something in it.
 [ -z "${LAYOUT_SHOW_WINDOW:-}" ] || queue select-window -t "$top"

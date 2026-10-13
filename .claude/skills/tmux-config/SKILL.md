@@ -38,7 +38,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 
 ## Concepts you'll be asked about
 
-- **Standard layout** (`Set-NeovimLayout.sh`): a narrow radar column on the left (Git feed above, Agents feed below, optional Notes pane) plus a **picker pane** (`Select-PaneKind.sh`) filling the rest. `-H` builds the home layout (Paperboy | Workhorse).
+- **Standard layout** (`Set-NeovimLayout.sh`): a narrow radar column on the left (Git feed above, Agents feed below, optional Notes pane) plus a **picker pane** (`Select-PaneKind.sh`) filling the rest. `-H` builds the home layout (Paperboy | Workhorse, or only the one configured: `$PAPERBOY_EWS_URL` / `$WORKHORSE_TMUX_QUERY_ID`, the picker with neither).
 - **Opening panes:** pane bindings call either `Select-PaneKind.sh` (a pane kind or the picker: `prefix,e/E/Space/n/c`) or `New-ToolPane.sh` (a labelled command pane: agents, radars, project-specific .NET/Angular panes). Both close the pane when its command exits. `Restore-PickerPane.sh` puts a picker back when only the radars are left.
 - **Popups:** every popup binding wraps its command in `Invoke-Popup.sh`, which keeps SpotlightDimmer's spotlight on the popup.
 - **Sessions:**
