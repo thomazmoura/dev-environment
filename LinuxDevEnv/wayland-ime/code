@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Starts VS Code with the Wayland input-method flags, so ' + c composes to ç
+# through fcitx5 (see ../cedilla-wayland-setup.sh, which links this into
+# ~/.local/bin ahead of /usr/bin). Hides the CLI's "not in the list of known
+# options" warning that the Chromium flags trigger on every call.
+exec /usr/bin/code --enable-wayland-ime --wayland-text-input-version=3 "$@" \
+  2> >(grep -v "is not in the list of known options" >&2)

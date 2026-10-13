@@ -1,0 +1,14 @@
+# fcitx5 input method profile, copied to ~/.config/fcitx5/profile by
+# cedilla-wayland-setup.sh. A single group with a single input method (the
+# us-intl keyboard, matching the system layout), so there is nothing to switch.
+[Groups/0]
+Name=Default
+Default Layout=us-intl
+DefaultIM=keyboard-us-intl
+
+[Groups/0/Items/0]
+Name=keyboard-us-intl
+Layout=
+
+[GroupOrder]
+0=Default

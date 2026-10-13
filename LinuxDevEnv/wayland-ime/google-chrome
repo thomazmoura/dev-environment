@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Starts Google Chrome with the Wayland input-method flags, so ' + c composes
+# to ç through fcitx5 (see ../cedilla-wayland-setup.sh, which links this into
+# ~/.local/bin as google-chrome and google-chrome-stable, ahead of /usr/bin).
+exec /usr/bin/google-chrome-stable --enable-wayland-ime --wayland-text-input-version=3 "$@"

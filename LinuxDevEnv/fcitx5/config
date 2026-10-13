@@ -1,0 +1,58 @@
+# fcitx5 global config, copied to ~/.config/fcitx5/config by
+# cedilla-wayland-setup.sh. fcitx5 is here only so Chrome and VS Code on
+# Wayland compose ' + c as ç (from ~/.XCompose), so every hotkey is cleared
+# (the default trigger, Ctrl+Space, is the tmux prefix) and every addon that
+# owns a hotkey or shows UI is disabled. An empty list section means "no keys".
+[Hotkey]
+EnumerateWithTriggerKeys=False
+EnumerateSkipFirst=False
+ModifierOnlyKeyTimeout=250
+
+[Hotkey/TriggerKeys]
+
+[Hotkey/AltTriggerKeys]
+
+[Hotkey/EnumerateForwardKeys]
+
+[Hotkey/EnumerateBackwardKeys]
+
+[Hotkey/EnumerateGroupForwardKeys]
+
+[Hotkey/EnumerateGroupBackwardKeys]
+
+[Hotkey/ActivateKeys]
+
+[Hotkey/DeactivateKeys]
+
+[Hotkey/TogglePreedit]
+
+[Hotkey/PrevPage]
+
+[Hotkey/NextPage]
+
+[Hotkey/PrevCandidate]
+
+[Hotkey/NextCandidate]
+
+[Behavior]
+ActiveByDefault=False
+resetStateWhenFocusIn=No
+ShareInputState=No
+PreeditEnabledByDefault=True
+ShowInputMethodInformation=False
+showInputMethodInformationWhenFocusIn=False
+CompactInputMethodInformation=True
+ShowFirstInputMethodInformation=False
+AllowInputMethodForPassword=False
+ShowPreeditForPassword=False
+
+[Behavior/DisabledAddons]
+0=clipboard
+1=unicode
+2=quickphrase
+3=imselector
+4=emoji
+5=spell
+6=notificationitem
+7=notifications
+8=kimpanel

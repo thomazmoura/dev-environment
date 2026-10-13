@@ -133,7 +133,7 @@ Additional scripts:
 | `wezterm-setup.sh` | Installs WezTerm terminal emulator from the official apt repo |
 | `ghostty-setup.sh` | Installs Ghostty terminal emulator from the community `mkasberg/ghostty-ubuntu` PPA |
 | `flameshot-install.sh` | Installs Flameshot and maps it to the Print Screen key under GNOME/Wayland |
-| `cedilla-wayland-setup.sh` | Fixes the `ç` dead-key compose sequence for Wayland apps (symlinks `.XCompose`) |
+| `cedilla-wayland-setup.sh` | Makes `'` + `c` type `ç` everywhere on KDE Wayland: links `.XCompose`, sets up fcitx5 (all hotkeys off) as KWin's input method and adds the Wayland IME flags to the Chrome/VS Code launchers |
 | `setup-login-timeout.sh` | Creates a systemd timer that powers off the machine 5 min after boot if no user is logged in |
 | `Install-AspNetCert.ps1` | Generates and installs the ASP.NET Core localhost HTTPS development certificate |
 
