@@ -5,6 +5,8 @@ return {
   {
     'thomazmoura/paperboy.nvim',
     cond = not vim.g.vscode and vim.env.PAPERBOY_EWS_URL ~= nil,
+    -- The encrypted store holding the Exchange password, unlocked once per NeoVim
+    dependencies = { 'thomazmoura/locksmith.nvim' },
     event = 'VeryLazy',
     cmd = { 'Paperboy', 'PaperboyStatus' },
     keys = {

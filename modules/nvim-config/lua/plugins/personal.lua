@@ -6,6 +6,8 @@ return {
   -- Azure DevOps work items
   {
     'thomazmoura/workhorse.nvim',
+    -- The encrypted store holding the PAT, unlocked once per NeoVim
+    dependencies = { 'thomazmoura/locksmith.nvim' },
     cmd = 'Workhorse',
     keys = function()
       local keys = {
