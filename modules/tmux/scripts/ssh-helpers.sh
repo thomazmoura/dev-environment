@@ -215,6 +215,36 @@ remote_agent_env() {
     "$a" "$a" "$a"
 }
 
+# remote_profile_command <pwsh-command>
+# A remote command that runs <pwsh-command> in a lean pwsh with the host's
+# profile loaded, for the calls that need its environment but have no pane:
+# the status segments of prefix+C-k (Get-RemoteStatus.sh, Select-StatusSource.sh)
+# need PAPERBOY_EWS_URL, WORKHORSE_TMUX_QUERY_ID and the PATH that finds az,
+# none of which an ssh command has.
+#
+# The profile starts an agent and asks for the key whenever it finds no live
+# one (linux-profile.ps1), and these calls have no terminal to ask on -- and
+# one runs every half minute, which would leave an agent behind each time. So
+# it is handed the host's shared agent like a pane is (remote_agent_env) or,
+# without one, a stand-in it takes for live: /dev/null for the socket and the
+# shell's own pid. Nothing here uses the agent.
+#
+# XDG_RUNTIME_DIR, which an ssh command may not have either, is where
+# paperboy.nvim's daemon writes its count and Get-PaperboyUnread.sh reads it:
+# set it as a login session would, so both find the same file a pane does. And
+# DBUS_SESSION_BUS_ADDRESS, the desktop session's bus in it, as both az's token
+# (az devops login) and Paperboy's password live in the keyring behind it.
+remote_profile_command() {
+  local a="$REMOTE_AGENT_DIR"
+  printf 'p="$(cat "%s/agent.pid" 2>/dev/null)"; ' "$a"
+  printf 'if [ -S "%s/agent.sock" ] && [ -n "$p" ] && [ -d "/proc/$p" ]; then export SSH_AUTH_SOCK="%s/agent.sock" SSH_AGENT_PID="$p"; ' \
+    "$a" "$a"
+  printf 'else export SSH_AUTH_SOCK=/dev/null SSH_AGENT_PID=$$; fi; '
+  printf '[ -n "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "/run/user/$(id -u)" ] || export XDG_RUNTIME_DIR="/run/user/$(id -u)"; '
+  printf '[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || [ ! -S "${XDG_RUNTIME_DIR:-}/bus" ] || export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"; '
+  printf 'PWSH_LEAN=1 exec pwsh -NoLogo -Command %s' "$(sq "$1")"
+}
+
 # remote_agent_unlock <target> [<key>]
 # Makes sure the host's shared agent is running and holding the key, asking
 # for the password when it is not. Needs a terminal -- ssh-add reads the

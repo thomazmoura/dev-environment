@@ -47,7 +47,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
   - `prefix,D`: the same in a Docker container (`-D`, through `Invoke-Remote.sh`).
   - `prefix,?` / `prefix,C-p`: session picker (`Select-Session.sh`). `prefix,h`: home session.
 - **Themes:** `Set-SshTheme.sh` recolors ssh (violet) and Docker (blue) sessions and restores the color when you switch back. `Set-PaneBackground.sh` makes backgrounds opaque only while a Termux client is attached.
-- **Status bar:** segments are `#()` jobs. Optional ones are gated by user options that `Set-StatusSegments.sh` sets at config load (`@paperboy_enabled`, `@workhorse_enabled`).
+- **Status bar:** segments are `#()` jobs. Optional ones are gated by user options that `Set-StatusSegments.sh` sets at config load (`@paperboy_enabled`, `@workhorse_enabled`). `prefix,C-k` (`Select-StatusSource.sh`) can point the Workhorse and Paperboy segments at an ssh session's host (`@status_source`): `Get-RemoteStatus.sh` then runs that host's own segment scripts over the session's connection, in its profile's environment (`remote_profile_command`); choosing a host also starts its Paperboy daemon. Toasts and the agent count always stay local.
 - **Git and Agents panes** are separate modules: load the `radars` skill.
 
 ## Gotchas

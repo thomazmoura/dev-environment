@@ -16,16 +16,25 @@
 # (SSH_AGENT_LIFETIME) is what covers that case, and retrying on every later
 # session close would only add a timeout to each.
 #
+# It also points the status bar back at this machine when the host its
+# Workhorse and Paperboy segments came from (@status_source, set on prefix+C-k
+# by Select-StatusSource.sh) has no session left.
+#
 # A hook has nobody to report failure to, so every step here fails quietly.
 set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
 
+in_use="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null)"
+
+status_source="$(tmux show-options -gqv @status_source 2>/dev/null)"
+if [ -n "$status_source" ] && ! grep -qxF -- "$status_source" <<<"$in_use"; then
+  tmux set-option -gu @status_source \; refresh-client -S 2>/dev/null
+fi
+
 targets="$(agent_targets)"
 [ -n "$targets" ] || exit 0
-
-in_use="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null)"
 
 killed=()
 for target in $targets; do
