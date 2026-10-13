@@ -240,9 +240,11 @@ fi
 # no-exit on either: closing a feed should close its pane, not leave a pwsh
 # prompt sitting in a sliver of the radar column. Both are built with
 # pwsh_invocation, not pane_command, for the reason above -- as prefix+r's
-# and R's -L.
-agent_feed="$(pwsh_invocation '& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py')"
-git_feed="$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')"
+# and R's -L. A feed that crashes holds its pane open on the error
+# (held_on_failure, as prefix+r's and R's -H) rather than closing into a layout
+# that would only reopen it.
+agent_feed="$(held_on_failure "$(pwsh_invocation '& ~/.modules/agent-radar/scripts/Watch-AgentFeed.py')")"
+git_feed="$(held_on_failure "$(pwsh_invocation '& ~/.modules/git-radar/scripts/Watch-GitFeed.py')")"
 
 # The fixed sizes, each a percentage of the window. The radar column is
 # git_width_pct wide and full height, with the agent feed taking

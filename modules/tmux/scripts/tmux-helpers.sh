@@ -79,6 +79,17 @@ notice_command() {
     "$(shell_quote "$1")" "$(shell_quote 'Press any key to close...')"
 }
 
+# held_on_failure <command>
+# <command>, but when it exits non-zero the pane stays open on its output until
+# a key is pressed. For the radar feeds (New-ToolPane.sh -H, Set-NeovimLayout.sh):
+# a feed that crashes on start would otherwise close at once, the layout would
+# open it again, and the traceback would never be on screen long enough to read.
+# A normal close (q, Ctrl-C) exits 0 and still closes straight away.
+held_on_failure() {
+  printf '%s || { echo; read -rsn1 -p %s _; }' \
+    "$1" "$(shell_quote 'Press any key to close...')"
+}
+
 # --- Panes -------------------------------------------------------------------
 # The standard layout's terminal row, as a percentage of the window's height:
 # prefix+v fits the row back to it (Set-NeovimLayout.sh), and prefix+" opens

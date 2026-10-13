@@ -20,6 +20,9 @@
 #                 pane about the whole machine rather than the session's
 #                 directory, like the git feed (prefix+R), which lists
 #                 the ssh sessions itself and asks their hosts
+#   -H            if the command fails, keep the pane open on its output until a
+#                 key is pressed -- the radar feeds (prefix+r, R), which the
+#                 layout would otherwise reopen into the same crash forever
 #   -r <role>     give the new pane this @layout_role unless a pane of its window
 #                 already has it -- the plain terminals (prefix+% and prefix+")
 #                 pass "terminal", so the first one opened in a window without a
@@ -46,8 +49,9 @@ print_id=""
 requires=""
 local_only=""
 role=""
+hold=""
 
-while getopts ":t:vl:kPd:Lr:" option; do
+while getopts ":t:vl:kPd:LHr:" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     v) direction="-v" ;;
@@ -56,6 +60,7 @@ while getopts ":t:vl:kPd:Lr:" option; do
     P) print_id="yes" ;;
     d) requires="$OPTARG" ;;
     L) local_only="yes" ;;
+    H) hold="yes" ;;
     r) role="$OPTARG" ;;
     *) die "New-ToolPane.sh: unknown option -$OPTARG" ;;
   esac
@@ -83,6 +88,7 @@ if [ -n "$local_only" ]; then
 else
   line="$(pane_command "$origin" "$command" "$no_exit")"
 fi
+[ -z "$hold" ] || line="$(held_on_failure "$line")"
 if [ -n "$requires" ]; then
   remote="$(ssh_option "$origin" @ssh_target)"
   if [ -n "$remote" ]; then
