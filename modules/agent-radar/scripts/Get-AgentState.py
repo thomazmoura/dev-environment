@@ -286,18 +286,18 @@ def counts_by_session(panes: list[radar.Pane]) -> dict[str, list[tuple[str, int]
 # says what is being counted, beside Paperboy's envelope in the status bar and
 # after the session name in the prefix+? picker. Every row carries the same
 # icon, so the picker's padding by len() still lines its columns up.
-AGENT_ICON = "\U000f06a9"  # nf-md-robot
+COUNT_ICON = "\U000f06a9"  # nf-md-robot
 
 
 def summary_text(counts: list[tuple[str, int]]) -> str:
     """The summary uncoloured, e.g. "󰚩 2 󰚩 1" -- what a consumer pads by."""
-    return " ".join(f"{AGENT_ICON} {count}" for _, count in counts)
+    return " ".join(f"{COUNT_ICON} {count}" for _, count in counts)
 
 
 def render_ansi_summary(counts: list[tuple[str, int]]) -> str:
     """The summary for a terminal: each robot and count in its state's colour."""
     return " ".join(
-        f"{ANSI[state]}{AGENT_ICON} {count}{RESET}" for state, count in counts
+        f"{ANSI[state]}{COUNT_ICON} {count}{RESET}" for state, count in counts
     )
 
 
@@ -308,11 +308,11 @@ def render_status(panes: list[radar.Pane]) -> str:
     always takes room, so it never shifts the rest of the bar.
     """
     parts = [
-        f"#[fg={TMUX_COLOUR[state]}]{AGENT_ICON} {count}"
+        f"#[fg={TMUX_COLOUR[state]}]{COUNT_ICON} {count}"
         for state, count in state_counts(panes)
     ]
     if not parts:
-        parts = [f"#[fg={TMUX_COLOUR[radar.UNKNOWN]}]{AGENT_ICON} 0"]
+        parts = [f"#[fg={TMUX_COLOUR[radar.UNKNOWN]}]{COUNT_ICON} 0"]
     return " ".join(parts) + "#[fg=default]"
 
 
