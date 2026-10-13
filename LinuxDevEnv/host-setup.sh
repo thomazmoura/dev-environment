@@ -4,8 +4,9 @@ sudo apt update \
     curl \
     gnupg \
     software-properties-common \
-  && curl -sSL -O https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
-  && sudo dpkg -i packages-microsoft-prod.deb \
+  && curl -sSL -o /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb \
+  && sudo dpkg -i /tmp/packages-microsoft-prod.deb \
+  && rm -f /tmp/packages-microsoft-prod.deb \
   && sudo apt update \
   && sudo apt install -y \
     apt-utils \
