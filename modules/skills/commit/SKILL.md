@@ -19,7 +19,8 @@ allowed-tools: Bash(git add *) Bash(git status *) Bash(git diff *) Bash(git comm
 Based on the above changes, create one git commit per group of related changes (plus a changelog
 commit, see step 7):
 
-1. Stage all changes, including new files, using `git add .`
+1. If there is nothing to commit, say so and stop — never create an empty commit. Otherwise,
+   stage all changes, including new files, using `git add .`
 2. Scan what is now staged for sensitive information. Run both commands exactly as written:
 
    ```
@@ -27,7 +28,7 @@ commit, see step 7):
    ```
 
    ```
-   git diff --cached -U0 | rg '^(\+\+\+ b/|\+[^+])' | rg -i -e '^\+\+\+ b/' -e 'BEGIN [A-Z ]*PRIVATE KEY' -e 'AKIA[0-9A-Z]{16}' -e 'gh[pousr]_[A-Za-z0-9]{30,}' -e 'sk-[A-Za-z0-9_-]{20,}' -e 'xox[abprs]-' -e 'eyJ[A-Za-z0-9_-]{10,}\.eyJ' -e '(password|passwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\W{0,3}[:=]\W{0,3}\S{6,}' -e '://[^/\s:@]+:[^/\s@]+@' -e '/home/[a-z0-9._-]+/' -e '/Users/[^/]+/' -e 'C:\\Users\\' -e '/srv/' -e '/var/www/' -e '\b(10\.\d+|192\.168|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+\b'
+   git diff --cached -U0 | rg '^(\+\+\+ b/|\+[^+])' | rg -i -e '^\+\+\+ b/' -e 'BEGIN [A-Z ]*PRIVATE KEY' -e 'AKIA[0-9A-Z]{16}' -e 'gh[pousr]_[A-Za-z0-9]{30,}' -e 'sk-[A-Za-z0-9_-]{20,}' -e 'xox[abprs]-' -e 'eyJ[A-Za-z0-9_-]{10,}\.eyJ' -e '(password|passwd|senha|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\W{0,3}[:=]\W{0,3}\S{6,}' -e '://[^/\s:@]+:[^/\s@]+@' -e '/home/[a-z0-9._-]+/' -e '/Users/[^/]+/' -e 'C:\\Users\\' -e '/srv/' -e '/var/www/' -e '\b(10\.\d+|192\.168|172\.(1[6-9]|2\d|3[01]))\.\d+\.\d+\b'
    ```
 
    - The first flags files that usually hold secrets (`.env`, private keys, credential files).
@@ -42,6 +43,10 @@ commit, see step 7):
    - Judge each hit: a `~/` path, an obvious placeholder (`example.com`, `changeme`, `xxx`) or a
      variable read from the environment is fine. A literal secret value or a machine-specific
      absolute path is not.
+   - A staged generated file or build artifact (`bin/`, `obj/`, `node_modules/`, `dist/`,
+     `*.log`, `*.bkp`) is a finding too.
+   - If an added line holds a conflict marker (`<<<<<<<`, `=======` or `>>>>>>>`), do NOT
+     commit: tell the user which files have them and stop.
 3. If anything real was flagged, do NOT commit. Call `AskUserQuestion` listing every finding as
    `file — snippet (why)`, with secret values partly masked (e.g. `abcd…5678`), and offer:
    - "Abort — I'll fix it" (Recommended): stop here, leave the index as is, make no more calls
@@ -58,6 +63,7 @@ commit, see step 7):
    group most of its changes belong to. A rename's old and new paths go in the same group.
    Leave out any file unstaged in step 3. With a single group, this is one commit, as before.
 5. Write a concise commit message for each group:
+   - Match the style of the recent commits above (that is all they are for)
    - Imperative mood (e.g., "Add feature", "Fix bug", "Update config")
    - First line under 72 characters
    - **IMPORTANT!** No reference to Claude, AI, or automated tools. Amend the commit if there are any lines on the message that contain "Co-Authored-By:" or "Claude-Session:"
@@ -79,5 +85,6 @@ commit, see step 7):
      that commit's diff.
    - Run `git add CHANGELOG.md` and `git commit -m "Update changelog"`.
 
-Only make tool calls. Do not output any text — the one exception is the `AskUserQuestion` call when
-the scan flags something.
+Only make tool calls. Do not output any text — the exceptions are the `AskUserQuestion` call when
+the scan flags something, and the short message when there is nothing to commit or a conflict
+marker stops the commit.
