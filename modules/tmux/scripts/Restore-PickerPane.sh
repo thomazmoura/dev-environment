@@ -8,7 +8,7 @@
 # remain-on-exit on, so a pane whose command ends stays behind, dead, and the
 # pane-died hook hands it here before it is gone. Here it is either killed --
 # the window still has a pane to work in, and it closes as it always did -- or
-# respawned as the picker, in the very spot it held. A window's last pane is
+# respawned as the picker, in the very spot it held, and focused. A window's last pane is
 # only ever respawned, so the window and the session outlive it; prefix+C-b x on
 # the picker still closes them, since kill-pane never leaves a dead pane.
 #
@@ -85,6 +85,13 @@ if [ -n "$dead" ]; then
   fi
   queue_label "$dead" Picker
   queue set -p -t "$dead" @layout_role picker
+  # The picker takes the focus, as it does when Set-NeovimLayout.sh puts one
+  # back: a pane that closed while another one was focused -- a feed, say --
+  # would otherwise leave the new picker waiting unnoticed. Touching the git
+  # feed first keeps C-h from the picker landing on Git, as it does there.
+  git=$(tmux list-panes -t "$dead" -F '#{pane_id}|#{@layout_role}' | sed -n 's/|git$//p' | head -n1)
+  [ -z "$git" ] || queue select-pane -t "$git"
+  queue select-pane -t "$dead"
   queue send-keys -t "$dead" "$(closing_line "bash ~/.modules/tmux/scripts/Select-PaneKind.sh")" C-m
   send_batch
   exit 0

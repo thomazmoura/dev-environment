@@ -22,7 +22,8 @@
 # A window zoomed with prefix+z gets only its radar column fitted, and stays
 # zoomed (see Set-NeovimLayout.sh).
 #
-# Never moves the focus: Set-NeovimLayout.sh runs with -k.
+# Never moves the focus (Set-NeovimLayout.sh runs with -k), except to a picker
+# brought back above a terminal row that has grown to the top of the window.
 #
 # Usage: Repair-Layouts.sh
 #

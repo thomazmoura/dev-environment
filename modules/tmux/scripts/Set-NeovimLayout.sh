@@ -59,7 +59,8 @@
 #            -f, Paperboy or Workhorse with -H) rather than being built around.
 #   -k       leave the focus where it is, for the automatic repairs
 #            (Repair-Layouts.sh): the user is typing somewhere and the layout
-#            changing around them shouldn't take their keys elsewhere. Without
+#            changing around them shouldn't take their keys elsewhere -- unless
+#            the repair brings the picker back, which is focused. Without
 #            it the focus goes to the main pane.
 #   target   any tmux target (pane id like %12, or "session:"). Defaults to the
 #            current pane.
@@ -80,6 +81,7 @@ force=""
 home=""
 new_window=""
 keep_focus=""
+new_picker=""
 while getopts ":fnHk" option; do
   case "$option" in
     f) force="yes" ;;
@@ -523,7 +525,7 @@ main_split() {
     neovim=$placed
   else
     place_pane "$target" "Picker" picker "$picker_command" "$@"
-    picker=$placed
+    picker=$placed new_picker=$placed
   fi
 }
 # The home layout's main pane is Paperboy, or Workhorse on a machine without
@@ -634,10 +636,16 @@ fi
 # C-h from NeoVim is `select-pane -L`, which breaks the tie between the two
 # panes of the radar column by most-recently-active. Touching the git feed
 # makes that C-h land on Git instead of on the agent feed. With -k nothing is
-# selected: every pane above is placed with -d, so the focus never moved.
+# selected: every pane above is placed with -d, so the focus never moved --
+# except to a picker this run brought back (main_split), which takes it even
+# then: the pane the user was in has just closed, and a picker that waits
+# unfocused for an answer goes unnoticed.
 if [ -z "$keep_focus" ]; then
   [ -z "$git" ] || queue select-pane -t "$git"
   queue select-pane -t "${paperboy:-${workhorse:-${neovim:-${picker:-$top}}}}"
+elif [ -n "$new_picker" ]; then
+  [ -z "$git" ] || queue select-pane -t "$git"
+  queue select-pane -t "$new_picker"
 fi
 # The window -H made in the background, now that there is something in it.
 [ -z "${LAYOUT_SHOW_WINDOW:-}" ] || queue select-window -t "$top"
