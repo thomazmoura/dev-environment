@@ -249,7 +249,8 @@ return {
 
   -- C# through the Roslyn language server, which is the `roslyn-language-server`
   -- dotnet tool from modules/neovim-lsp/Setup-NeoVimLSP.ps1 (on PATH via
-  -- ~/.dotnet/tools). `:Roslyn target` switches solutions.
+  -- ~/.dotnet/tools). `:Roslyn target` switches solutions. A project its
+  -- solution doesn't list is opened alongside the solution.
   {
     'seblyng/roslyn.nvim',
     lazy = false,
@@ -261,7 +262,53 @@ return {
     },
     config = function(_, opts)
       require('roslyn').setup(opts)
+
+      -- Roslyn loads only the projects a solution lists, not the ones they
+      -- reference: a file of an unlisted project ends up in a misc project
+      -- where gd/gi/hover find nothing outside the file.
+      local discovery = require('roslyn.sln.discovery')
+      local sln_api = require('roslyn.sln.api')
+      local store = require('roslyn.store')
+
+      -- Its solutions upward when none of them lists the buffer's project
+      local function unlisted(bufnr)
+        local csproj = discovery.find_project(bufnr)
+        if not csproj then return end
+        local solutions = discovery.find_solutions_for_buffer(bufnr)
+        for _, solution in ipairs(solutions) do
+          if sln_api.exists_in_target(solution, csproj) then return end
+        end
+        return csproj, solutions
+      end
+
+      -- Opened first, such a file would get a server for its project alone,
+      -- which sees the rest of the solution as compiled DLLs: point
+      -- roslyn.nvim at the nearest solution instead
+      local resolve = vim.lsp.config.roslyn.root_dir
+      local function root_dir(bufnr, on_dir)
+        local _, solutions = unlisted(bufnr)
+        if solutions and #solutions > 0
+          and not vim.list_contains(solutions, store.get_selected_target()) then
+          store.set_selected_target(solutions[1])
+        end
+        return resolve(bufnr, on_dir)
+      end
+
+      -- ...and the server for that solution opens the project too
+      local opened = {} -- client id -> csproj -> true
+      local function on_attach(client, bufnr)
+        local solution = store.get(client.id)
+        local csproj = solution and unlisted(bufnr)
+        if not csproj or sln_api.exists_in_target(solution, csproj) then return end
+        opened[client.id] = opened[client.id] or {}
+        if opened[client.id][csproj] then return end
+        opened[client.id][csproj] = true
+        client:notify('project/open', { projects = { vim.uri_from_fname(csproj) } })
+      end
+
       vim.lsp.config('roslyn', {
+        root_dir = root_dir,
+        on_attach = on_attach,
         settings = {
           -- Background analysis of open files only; analysing the whole
           -- solution pins a CPU core. gd/gr across the solution still work.
