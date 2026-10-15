@@ -16,7 +16,7 @@
 	"Log": {
 		"prefix": "log",
 		"body": [
-			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '\\$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
 			"FROM Log.dbo.Log WITH (NOLOCK)",
 			"WHERE Application = '${1:Aplicacao}'",
 			"ORDER BY Id DESC",
@@ -27,7 +27,7 @@
 	"Log de Erro": {
 		"prefix": "erlog",
 		"body": [
-			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '\\$.Properties.MachineName') AS Maquina, TimeStamp, Message, Level, LogEvent, Application, Id, Team",
 			"FROM Log.dbo.Log WITH (NOLOCK)",
 			"WHERE Application = '${1:Aplicacao}'",
 			"AND LEVEL IN( 'Warning', 'Error', 'Fatal' )",
@@ -64,10 +64,10 @@
 	"Log por Request": {
 		"prefix": "rqlog",
 		"body": [
-			"SELECT TOP 100 JSON_VALUE(LogEvent, '$.Properties.MachineName'), *",
+			"SELECT TOP 100 JSON_VALUE(LogEvent, '\\$.Properties.MachineName'), *",
 			"FROM Log.dbo.Log WITH (NOLOCK)",
 			"WHERE Application = '${1:Aplicacao}'",
-			"AND JSON_VALUE(LogEvent, '$.Properties.RequestId') = '${2:RequestId}'",
+			"AND JSON_VALUE(LogEvent, '\\$.Properties.RequestId') = '${2:RequestId}'",
 			"ORDER BY Id DESC",
 			""
 		],
