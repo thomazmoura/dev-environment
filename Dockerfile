@@ -30,6 +30,10 @@ COPY --chown=developer:developer modules/herdr /home/developer/.modules/herdr
 COPY --chown=developer:developer modules/herdr/config.toml /home/developer/.config/herdr/config.toml
 RUN pwsh -NoProfile -File /home/developer/.modules/herdr/Install-Herdr.ps1
 
+# sqlcmd (SQL Server command-line client; go-sqlcmd's release binary)
+COPY --chown=developer:developer modules/sqlcmd /home/developer/.modules/sqlcmd
+RUN pwsh -NoProfile -File /home/developer/.modules/sqlcmd/Install-Sqlcmd.ps1
+
 # agent-radar (reads each coding agent's screen to say which one is waiting on
 # you; bound to prefix + t then a/A, and summarised in the status bar). Nothing
 # to install -- it is bash plus python3, both already present.

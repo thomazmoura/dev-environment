@@ -150,6 +150,9 @@ fi
 # installs the agent state hooks and the Claude Code agent skill)
 pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 
+# sqlcmd (SQL Server command-line client; go-sqlcmd's release binary)
+pwsh -NoProfile -File $HOME/.modules/sqlcmd/Install-Sqlcmd.ps1
+
 # agent-radar (reads each coding agent's screen to say which one is waiting on
 # you; bound to prefix + t then a/A, and summarised in the status bar). No
 # installer: the scripts run in place out of $HOME/.modules, so only the
