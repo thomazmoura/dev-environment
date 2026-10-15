@@ -6,9 +6,11 @@ return {
       'tpope/vim-dadbod',
       lazy = true,
       cmd = 'DB',
-      config = function()
-        -- Prompts for SQL Server passwords go-sqlcmd can't ask for itself (see the file)
-        vim.cmd.source(vim.fn.stdpath('config') .. '/after/autoload/db/adapter/sqlserver.vim')
+      -- The encrypted store holding the SQL Server passwords, unlocked once per NeoVim
+      dependencies = { 'thomazmoura/locksmith.nvim' },
+      init = function()
+        -- SQL Server passwords asked once and kept in locksmith (see the file)
+        vim.g.db_adapter_sqlserver = 'sqlserver_locksmith#'
       end,
     },
     { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
