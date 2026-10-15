@@ -2,7 +2,15 @@ return {
   'kristijanhusak/vim-dadbod-ui',
   cmd = { 'DBUI', 'DBUIToggle', 'DBUIClose', 'DBUIAddConnection', 'DBUIFindBuffer' },
   dependencies = {
-    { 'tpope/vim-dadbod', lazy = true, cmd = 'DB' },
+    {
+      'tpope/vim-dadbod',
+      lazy = true,
+      cmd = 'DB',
+      config = function()
+        -- Prompts for SQL Server passwords go-sqlcmd can't ask for itself (see the file)
+        vim.cmd.source(vim.fn.stdpath('config') .. '/after/autoload/db/adapter/sqlserver.vim')
+      end,
+    },
     { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
   },
   keys = {
