@@ -36,5 +36,12 @@ return {
         vim.keymap.set('v', '<Leader>r', "<cmd>'<,'>DB<cr>", { buffer = args.buf, desc = 'Run selection' })
       end,
     })
+
+    -- SQL Server results narrowed to their values, not sqlcmd's 256-character max columns
+    vim.api.nvim_create_autocmd('BufReadPost', {
+      group = vim.api.nvim_create_augroup('DboutCompact', { clear = true }),
+      pattern = '*.dbout',
+      callback = function(args) require('config.dbout_compact').compact(args.buf) end,
+    })
   end,
 }
