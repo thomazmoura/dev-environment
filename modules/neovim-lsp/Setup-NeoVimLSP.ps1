@@ -31,6 +31,22 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/lua
 & tar -xzvf "./lua-language-server-3.6.13-linux-x64.tar.gz" -C "$HOME/.language-servers/lua"
 & Remove-Item "./lua-language-server-3.6.13-linux-x64.tar.gz"
 
+
+Write-Output "`n->> Installing the Postgres Language Server"
+New-Item -Force -Type Directory -Path $HOME/.language-servers/postgres
+Invoke-WebRequest "https://github.com/supabase-community/postgres-language-server/releases/download/0.28.2/postgres-language-server_x86_64-unknown-linux-gnu" -OutFile "$HOME/.language-servers/postgres/postgres-language-server"
+& chmod +x "$HOME/.language-servers/postgres/postgres-language-server"
+
+
+Write-Output "`n->> Installing SQL Tools Service (SQL Server LSP)"
+# The server behind VS Code's mssql extension, self-contained (no dotnet needed).
+# Emptied first so an update leaves none of the previous version's DLLs behind.
+Invoke-WebRequest "https://github.com/microsoft/sqltoolsservice/releases/download/6.0.20261002.1/Microsoft.SqlTools.ServiceLayer-linux-x64-net10.0.tar.gz" -OutFile "sqltoolsservice.tar.gz"
+Remove-Item -Recurse -Force -Path $HOME/.language-servers/sqlserver -ErrorAction SilentlyContinue
+New-Item -Force -Type Directory -Path $HOME/.language-servers/sqlserver
+& tar -xzf "./sqltoolsservice.tar.gz" -C "$HOME/.language-servers/sqlserver"
+& Remove-Item "./sqltoolsservice.tar.gz"
+
 Pop-Location
 
 Throw-ExceptionOnNativeFailure

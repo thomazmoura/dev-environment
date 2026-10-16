@@ -13,7 +13,7 @@ when_to_use: Use when asked to add or change a NeoVim plugin, keymap, option, au
 | Path | What lives there |
 |---|---|
 | `init.lua` | Entry point. Sets the leader (Space), requires `config.*`, then lazy |
-| `lua/config/` | Options, filetypes, commands, autocmds, `keymaps/` (`common.lua` is shared with VS Code), clipboard (OSC 52 over ssh), `cmdline_normal.lua` (normal mode in the command line), `pane_background.lua` and `ssh_title.lua` (tmux integration), `sqlserver_locksmith.lua` (dadbod's SQL Server passwords) |
+| `lua/config/` | Options, filetypes, commands, autocmds, `keymaps/` (`common.lua` is shared with VS Code), clipboard (OSC 52 over ssh), `cmdline_normal.lua` (normal mode in the command line), `pane_background.lua` and `ssh_title.lua` (tmux integration), `sqlserver_locksmith.lua` (dadbod's SQL Server passwords), `sql_dialect.lua` (which SQL language server a sql buffer gets) |
 | `autoload/sqlserver_locksmith.vim` | vim-dadbod's sqlserver adapter (`g:db_adapter_sqlserver` points to it): dadbod's own, with the password filled in by `config/sqlserver_locksmith.lua` |
 | `lua/config/lazy.lua` | lazy.nvim setup. `defaults.cond = not vim.g.vscode`. `dev.path = ~/code` for `thomazmoura/*` plugins (falls back to GitHub) |
 | `lua/plugins/<domain>.lua` | One file per domain: `ai`, `colorscheme`, `completion`, `database`, `debug`, `editor`, `git`, `lsp`, `paperboy`, `personal`, `telescope`, `tmux`, `treesitter`, `ui` |
@@ -30,7 +30,7 @@ when_to_use: Use when asked to add or change a NeoVim plugin, keymap, option, au
 - **A spec loads under VS Code only with `cond = true`.**
 - **The Notes pane is deliberately minimal:** `loadplugins = false`, and it adds only vim-tmux-navigator, auto-save.nvim and markview.nvim from the full config's lazy install via its `add()`. It has no status bar, a transparent background, and treats `.notes` as markdown. Changes asked "for the Notes pane" go in `notes.lua`, not the full config.
 - **Personal plugins** are in `lua/plugins/personal.lua` (workhorse.nvim for Azure DevOps, spotlight-dimmer) and `lua/plugins/paperboy.lua` (paperboy.nvim, the Exchange inbox, with its e-mail signature in `compose.signature_file`). They load from `~/code/<plugin>` when present, so changes to the plugin itself belong in that repo. Paperboy loads only when `$PAPERBOY_EWS_URL` is set. Both keep their secrets (PAT, Exchange password, cache keys) in **locksmith.nvim** (`~/code/locksmith.nvim`), one encrypted store unlocked with a password asked once per NeoVim (`:Locksmith`, `bin/locksmith` on the command line). Dadbod keeps its SQL Server passwords there too (namespace `dadbod`, one per server and login), saved once the server accepted them.
-- **LSP servers** are configured in `lua/plugins/lsp.lua` (`vim.lsp.enable`, `node_server(...)` for npm ones). Installers are in `modules/neovim-lsp/`; the `deploy` skill has the recipe.
+- **LSP servers** are configured in `lua/plugins/lsp.lua` (`vim.lsp.enable`, `node_server(...)` for npm ones). Installers are in `modules/neovim-lsp/`; the `deploy` skill has the recipe. The two SQL servers (`sqlserver_ls`, `postgres_lsp`) share the sql filetype, so they stay out of `vim.lsp.enable`: `config/sql_dialect.lua` starts one per buffer, from a pin (`:SqlDialect`, `<Leader>dm`/`dp`/`da`), the dadbod connection, or the syntax.
 - **NeoVim usually runs through pwsh** (tmux panes use `pwsh_invocation`) so the profile's environment and `Use-NodeVersion` apply. Copilot and node-based servers rely on that.
 
 ## Verifying

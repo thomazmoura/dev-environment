@@ -81,6 +81,10 @@ return {
         if vim.fn.exists('*db_ui#statusline') == 0 then return '' end
         return vim.fn['db_ui#statusline']({ show = { 'db_name', 'table' }, separator = ' - ', prefix = '' })
       end
+      -- The SQL language server of the buffer (config/sql_dialect.lua)
+      local function sql_dialect()
+        return require('config.sql_dialect').statusline()
+      end
       local function workhorse()
         local ok, wh = pcall(require, 'workhorse')
         return ok and wh.lualine.get() or ''
@@ -107,7 +111,7 @@ return {
             { noice.mode.get, cond = noice.mode.has, color = { fg = '#ff9e64' } },
             { noice.search.get, cond = noice.search.has, color = { fg = '#ff9e64' } },
           },
-          lualine_y = { 'selectioncount', dadbod, 'progress', 'filetype', encoding, 'fileformat' },
+          lualine_y = { 'selectioncount', dadbod, sql_dialect, 'progress', 'filetype', encoding, 'fileformat' },
           lualine_z = { 'location' },
         },
         inactive_sections = {

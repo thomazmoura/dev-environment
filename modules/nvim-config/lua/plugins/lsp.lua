@@ -239,6 +239,53 @@ return {
         settings = vim.tbl_extend('force', { cucumber = cucumber }, cucumber),
       })
 
+      -- SQL: both servers claim the sql filetype, so they are not in
+      -- vim.lsp.enable: config/sql_dialect.lua starts the one matching each
+      -- buffer's dadbod connection or syntax. Neither needs a database for
+      -- syntax errors and formatting.
+      local function sql_root(bufnr, on_dir)
+        on_dir(vim.fs.root(bufnr, { 'postgres-language-server.jsonc', '.git' }) or vim.fn.getcwd())
+      end
+
+      -- Postgres: a project's own postgres-language-server.jsonc, or else
+      -- these settings (it doesn't format without either). They are layered
+      -- over the file, so a project's are left alone. Not --config-path: the
+      -- server is a daemon shared by every NeoVim, started with the first one's.
+      vim.lsp.config('postgres_lsp', {
+        cmd = { home .. '/.language-servers/postgres/postgres-language-server', 'lsp-proxy' },
+        root_dir = sql_root,
+        on_init = function(client)
+          if vim.uv.fs_stat(client.root_dir .. '/postgres-language-server.jsonc') then return end
+          client.settings = {
+            -- As the SQL Server formatter does; x::int stays x::int, not CAST(x AS int)
+            format = { enabled = true, keywordCase = 'upper', castStyle = 'operator' },
+            db = { disableConnection = true },
+          }
+          client:notify('workspace/didChangeConfiguration', { settings = client.settings })
+        end,
+      })
+
+      -- SQL Server: SqlToolsService, the server behind VS Code's mssql
+      -- extension. Formatter options: format.options in its
+      -- SqlFormatterOptions.cs (mssql.nvim documents the older ones)
+      vim.lsp.config('sqlserver_ls', {
+        cmd = { home .. '/.language-servers/sqlserver/MicrosoftSqlToolsServiceLayer' },
+        filetypes = { 'sql' },
+        root_dir = sql_root,
+        settings = {
+          mssql = {
+            format = {
+              options = {
+                builtInFunctionCasing = 'Uppercase',
+                -- Else a GO ending the file is dropped
+                persistTrailingGo = true,
+              },
+            },
+          },
+        },
+      })
+      require('config.sql_dialect').setup()
+
       -- roslyn is enabled by roslyn.nvim itself
       vim.lsp.enable({
         'powershell_es', 'lua_ls', 'jsonls', 'ts_ls', 'angularls', 'yamlls',
