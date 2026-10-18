@@ -42,13 +42,13 @@ RUN set -eux; \
     wget; \
   apt-get autoremove -y; \
   rm -rf /var/lib/apt/lists/*; \
-  echo "C.UTF-8 UTF-8" > /etc/locale.gen; \
+  echo "en_US.UTF-8 UTF-8" > /etc/locale.gen; \
   locale-gen;
 
 ENV TZ="America/Sao_Paulo"
-ENV LANG="C.UTF-8"
-ENV LC_ALL="C.UTF-8"
-ENV LANGUAGE="C.UTF-8"
+ENV LANG="en_US.UTF-8"
+ENV LC_ALL="en_US.UTF-8"
+ENV LANGUAGE="en_US.UTF-8"
 
 # PowerShell installation (from GitHub releases to avoid libicu version issues with debian:trixie)
 COPY modules/powershell-install /root/.modules/powershell-install

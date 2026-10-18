@@ -38,7 +38,7 @@ sudo apt update \
     wget \
   && sudo apt autoremove -y \
   && sudo rm -rf /var/lib/apt/lists/* \
-  && sudo locale-gen C.UTF-8;
+  && sudo locale-gen en_US.UTF-8;
 
 echo "Setting environment variables"
 environment_file="/etc/environment"
@@ -46,13 +46,13 @@ if ! grep -q "^TZ" $environment_file; then
     echo "TZ=America/Sao_Paulo" | sudo tee -a $environment_file
 fi
 if ! grep -q "^LANG" $environment_file; then
-    echo "LANG=C.UTF-8" | sudo tee -a $environment_file
+    echo "LANG=en_US.UTF-8" | sudo tee -a $environment_file
 fi
 if ! grep -q "^LC_ALL" $environment_file; then
-    echo "LC_ALL=C.UTF-8" | sudo tee -a $environment_file
+    echo "LC_ALL=en_US.UTF-8" | sudo tee -a $environment_file
 fi
 if ! grep -q "^LANGUAGE" $environment_file; then
-    echo "LANGUAGE=C.UTF-8" | sudo tee -a $environment_file
+    echo "LANGUAGE=en_US.UTF-8" | sudo tee -a $environment_file
 fi
 if ! grep -q "^TERM" $environment_file; then
     echo "TERM=xterm-256color" | sudo tee -a $environment_file
