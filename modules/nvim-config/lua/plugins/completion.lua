@@ -31,6 +31,8 @@ return {
         lua = { inherit_defaults = true, 'lazydev' },
       },
       providers = {
+        -- Also completes modules/az and mod without a leading ./
+        path = { module = 'config.bare_path' },
         dadbod = { name = 'Dadbod', module = 'vim_dadbod_completion.blink' },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },
       },
