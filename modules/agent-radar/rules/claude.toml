@@ -124,6 +124,29 @@ not = [
   { contains = ["do you want to allow this connection?"] },
 ]
 
+[[rules]]
+id = "background_agents"
+state = "working"
+priority = 190
+region = "bottom(12)"
+detail = "subagents running"
+# The main agent parked on backgrounded subagents: its own spinner is gone and
+# the ready prompt is showing, but the work is still going on. Claude lists the
+# running ones BELOW the mode footer, one row each, e.g.
+#   ● main
+#   ◯ general-purpose  Checking CNPq item in Aula 16      52s · ↓ 82.6k tokens
+# A finished agent drops off the list rather than changing glyph (watched over
+# five minutes of agents coming and going), so a row on screen means running.
+# The `· ↓ N tokens` tail is what makes it an AGENT row: a background shell has
+# no token count, and a dev server left running must not read as working forever.
+# Below spinner_status so the main agent's own spinner keeps its detail.
+line_regex = ['^\s+◯\s+\S+\s{2,}\S.*\s·\s+↓\s+[\d.]+[kM]?\s+tokens\s*$']
+not = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["waiting for permission"] },
+  { contains = ["do you want to allow this connection?"] },
+]
+
 # --- Idle --------------------------------------------------------------------
 
 [[rules]]

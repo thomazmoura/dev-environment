@@ -1,0 +1,47 @@
+#title: ◐ validar-resumos-engenharia-software
+      345 +### 4.1 Usabilidade, prototipagem e desenho responsivo (Corrigido)                          │                                                                                 ✕
+      346 +- **Conferido:**                                                                            │19 files changed                                                 source: Current ▾
+      347 +  - Aulas 01 e 03: ISO 9241-11, princípios de Norman e questões DPE-RO 2021, TCU 2005       │
+          +, TRE-MS, BANRISUL, BNB 2022, DATAPREV 2023, FUNPRESP-EXE 2025, AEB 2025 e TCE-SP;          │…gramação/1 - Problemas e requisitos/1.1 - Necessidades de usuários.md
+      348 +  - eBook, Cap. 27;                                                                         │…roblemas e requisitos/1.2 - Requisitos funcionais e não funcionais.md
+      349 +  - 35 pegadinhas e 15 itens;                                                               │…- Problemas e requisitos/1.3 - Restrições e critérios de aceitação.md
+      350 +  - Bastien & Scapin, ISO 9241-110, Shneiderman, leis de UX e heurísticas (texto atua       │…ação/1 - Problemas e requisitos/1.4 - Desenho centrado nas pessoas.md
+          +l do NN/g).                                                                                 │…tos/1.5 - Problema público, processo de trabalho e solução digital.md
+      351 +- **Correções:**                                                                            │… correção/2.1 - Java - tipos, controle, métodos, classes e objetos.md
+      352 +  1. **ISO 9241-11:2018:** detalhada — "sistema, produto ou serviço", nova definição        │… correção/2.2 - Encapsulamento, interfaces, herança e polimorfismo.md
+          +de eficiência e de satisfação, e o contraste com a edição de 1998.                          │…amação/2 - Programação e correção/2.3 - Coleções e tipos genéricos.md
+      353 +  2. **"Celular baixa menos CSS":** o arquivo baixado é o mesmo; o ganho é aplicar me       │↓ 11 more below (opt+↓ to scroll)
+          +nos regras.                                                                                 │
+      354 +  3. **AWD:** retirada a autoria de Aaron Gustafson do cabeçalho; uma nota explica o        │──────────────────────────────────────────────────────────────────────────────────
+          +sentido em que ele usava o termo.                                                           │…rogramação/1 - Problemas e requisitos/1.1 - Necessidades de usuários.md (untracke
+      355 +- **Lacunas preenchidas:**                                                                  │                                                                        d)
+      356 +  - histórico das heurísticas de Nielsen (1994, descrições reescritas em 2020, artigo       │──────────────────────────────────────────────────────────────────────────────────
+          + revisado em 2024);                                                                         │New file not yet staged.
+      357 +  - *breakpoints* do gov.br DS (0/576/992/1280/1600 px) e *grid* de 4/8/12 colunas.         │Stage it with git add to see line counts.
+      358 +- **Duvidosos:**                                                                            │
+      359 +  - os valores do gov.br DS vêm do pacote 3.6.2 e não foram confirmados na página atu       │──────────────────────────────────────────────────────────────────────────────────
+          +al;                                                                                         │… Problemas e requisitos/1.2 - Requisitos funcionais e não funcionais.md (untracke
+      360 +  - o gabarito "mapeamento" do DPE-RO é contraintuitivo, mas é o oficial.                   │                                                                        d)
+      361 +- **Fontes:**                                                                               │──────────────────────────────────────────────────────────────────────────────────
+      362 +  - nngroup.com;                                                                            │New file not yet staged.
+      363 +  - prévia da ISO 9241-11:2018;                                                             │Stage it with git add to see line counts.
+      364 +  - lawsofux.com;                                                                           │
+      365 +  - gov.br/ds;                                                                              │──────────────────────────────────────────────────────────────────────────────────
+      366 +  - CSS do pacote `@govbr-ds/core` 3.6.2.                                                   │…1 - Problemas e requisitos/1.3 - Restrições e critérios de aceitação.md (untracke
+  ⎿  Allowed by auto mode classifier                                                                   │                                                                        d)
+                                                                                                       │──────────────────────────────────────────────────────────────────────────────────
+● Agent(Validar resumo 4.4)                                                                            │New file not yet staged.
+  ⎿  Backgrounded agent (↓ to manage · ctrl+o to expand)                                               │Stage it with git add to see line counts.
+                                                                                                       │
+● Já validei 18 dos 26 resumos: do 1.1 ao 4.1. Em andamento: 4.2, 4.3 e 4.4.                           │──────────────────────────────────────────────────────────────────────────────────
+                                                                                                       │
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── validar-resumos-engenharia-software ─
+❯ 
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  󰏫  󰧑 Context 21% 198K  󰔟 5h 46% 23:00  󰨳 7d 46% 5d9h  󰈸 Cache 95% 19:13
+  ⏵⏵ auto mode on (shift+tab to cycle)
+
+  ● main
+  ◯ general-purpose  Checking eMAG shortcuts and NBR 17225                                                                                                        1m 50s · ↓ 89.2k tokens
+  ◯ general-purpose  Checking Modal.vue Teleport usage                                                                                                            1m 25s · ↓ 85.3k tokens
+  ◯ general-purpose  Checking ebook quotes in cap26/cap27                                                                                                          1m 5s · ↓ 95.6k tokens
