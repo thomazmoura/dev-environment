@@ -11,7 +11,7 @@ return {
     cmd = { 'Paperboy', 'PaperboyStatus' },
     keys = {
       { '<Leader>mi', '<cmd>Paperboy inbox<cr>', desc = 'Paperboy: inbox' },
-      { '<Leader>mI', '<cmd>Paperboy all<cr>', desc = 'Paperboy: e-mails of all folders' },
+      { '<Leader>mI', '<cmd>Paperboy open<cr>', desc = 'Paperboy: e-mails of a folder (or all received)' },
       { '<Leader>mt', '<cmd>Paperboy folders<cr>', desc = 'Paperboy: folder tree' },
       { '<Leader>mc', '<cmd>Paperboy calendar<cr>', desc = 'Paperboy: calendar' },
       { '<Leader>mC', '<cmd>Paperboy contacts<cr>', desc = 'Paperboy: contacts' },
