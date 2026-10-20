@@ -128,7 +128,12 @@ On an ssh row it runs on the host. See `Show-GitDiff.sh`.
 
 `h` opens a popup with the commit graph -- the same log as `git history`
 (`gith` in pwsh), spelled out so a host without the alias shows it too -- paged
-by `less`, which `q` closes. See `Show-GitHistory.sh`.
+by `less`, which `q` closes. `/` in that pager switches to a fuzzy search of
+the same log in fzf (less's own `/` search gives way to it; `?` still searches
+backwards): Enter shows the commit under the cursor with `git show`, and `q`
+comes back to the list with the query kept; `ctrl-a` reloads it with every
+branch (`--all`) and `ctrl-b` with this one; `Esc` goes back to the graph. On
+an ssh row all of it runs on the host. See `Show-GitHistory.sh`.
 
 `m` is `gitub` from the pwsh profile with a question in front of it. The popup
 offers every other local and `origin` branch in fzf; picking one shows what is

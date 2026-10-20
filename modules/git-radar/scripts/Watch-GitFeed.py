@@ -849,6 +849,8 @@ def show_history(repo) -> None:
 
     `s` for the log rather than the work tree, and shaped the same way: not
     busy, on a thread, and refused from the row when there is nothing to ask.
+    `/` in the popup searches the log in fzf, and a pick shows the commit --
+    all of it in Show-GitHistory.sh.
     """
     if repo.state == gitr.OFFLINE or not repo.root:
         refusal = "cannot show history" if repo.root else "not a git repository"
