@@ -29,7 +29,6 @@ return {
 
     local telescope = require('telescope')
     telescope.setup({
-      defaults = { winblend = 30 },
       pickers = {
         find_files = { find_command = find_command },
         buffers = { ignore_current_buffer = true, sort_lastused = true, sort_mru = true },

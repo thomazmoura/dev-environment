@@ -54,10 +54,6 @@ opt.guicursor = {
 }
 opt.fillchars:append({ vert = '│' })
 
--- Transparent floating windows and popup menu
-opt.winblend = 15
-opt.pumblend = 15
-
 -- Swap files in the repo's (git-ignored) modules/vim/swapfiles, behind the
 -- ~/.local/share/nvim/site symlink; DevHelpers.psm1 cleans them from there
 opt.directory = vim.fn.stdpath('data') .. '/site/swapfiles/'
