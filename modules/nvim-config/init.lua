@@ -19,6 +19,7 @@ if vim.g.vscode then
   require('vscode-profile')
 else
   require('config.clipboard')
+  require('config.paste_image')
   require('config.keymaps')
   require('config.cmdline_normal')
   require('config.autocmds')
