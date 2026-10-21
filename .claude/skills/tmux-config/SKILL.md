@@ -43,7 +43,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 - **Popups:** every popup binding wraps its command in `Invoke-Popup.sh`, which keeps SpotlightDimmer's spotlight on the popup.
 - **Sessions:**
   - `prefix,/`: a new project session under `~/code` (`New-CodeSession.sh`).
-  - `prefix,N` / `prefix,C-n` (always asks for the host): an ssh session (`New-SshSession.sh`), where every pane is a shell on one remote host.
+  - `prefix,N` / `prefix,C-n` (always asks for the host): an ssh session (`New-SshSession.sh`), where every pane is a shell on one remote host. Named `<host>-<dir>`, or `user@<host>-<dir>` while two users have sessions on that host (`ssh_session_name`; `Rename-SshSessions.sh` renames the open ones on open and on session-closed). Look a session up with `open_session_named`, not by its exact name.
   - `prefix,D`: the same in a Docker container (`-D`, through `Invoke-Remote.sh`).
   - `prefix,?` / `prefix,C-p`: session picker (`Select-Session.sh`). `prefix,h`: home session.
 - **Themes:** `Set-SshTheme.sh` recolors ssh (violet) and Docker (blue) sessions and restores the color when you switch back. `Set-PaneBackground.sh` makes backgrounds opaque only while a Termux client is attached.

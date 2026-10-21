@@ -43,7 +43,10 @@ paths="$(registry_paths_for_session "$session")"
 
 # A new session may already have been opened on the same worktree (the closing
 # one was a duplicate, or it was killed and reopened); that one still needs it.
+# Looked for by the name without the user, which a session on a host another
+# user is on has in front (ssh_session_name in ssh-helpers.sh).
 tmux has-session -t "=$session" 2>/dev/null && exit 0
+[ -n "$(open_session_named "${session#*@}")" ] && exit 0
 
 client="$(tmux list-clients -F '#{client_activity} #{client_name}' 2>/dev/null |
   sort -rn | head -n1 | cut -d' ' -f2-)"

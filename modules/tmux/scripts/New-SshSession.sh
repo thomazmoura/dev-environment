@@ -15,8 +15,10 @@
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
-#   4. creates a session named <host>-<directory>, records the host and the
-#      directory on it (see ssh-helpers.sh), gives it the ssh theme colour
+#   4. creates a session named <host>-<directory> -- user@<host>-<directory>
+#      while another user has a session on that host, the open ones renamed to
+#      match (Rename-SshSessions.sh) -- records the host and the directory on
+#      it (see ssh-helpers.sh), gives it the ssh theme colour
 #      (Set-SshTheme.sh), switches to it and applies the standard layout, every
 #      pane of which runs over ssh -- all but the feeds and the picker, which
 #      run here and hand what is picked to the remote.
@@ -277,13 +279,17 @@ else
   fi
 fi
 
-# <host>-<directory>, or <container>-<directory>. The user part is left out:
-# it is the same on every session you open. Dots and colons are the separators in tmux targets
-# (session:window.pane), so a host like dev.example.com becomes dev_example_com.
-# A caller with a name of its own (-n) has already spelled it that way.
+# <host>-<directory>, or <container>-<directory>. The user part is left out
+# while it is the same on every session open on the host, and put in front once
+# another user has one there (ssh_session_name in ssh-helpers.sh). Dots and
+# colons are the separators in tmux targets (session:window.pane), so a host
+# like dev.example.com becomes dev_example_com. A caller with a name of its own
+# (-n) has already spelled it that way.
 host="${target##*@}"
 host="${host#docker:}"
-name="${name_override:-$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')}"
+base="${name_override:-$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')}"
+user="$(ssh_user "$target")"
+name="$(ssh_session_name "$base" "$target" "$user")"
 
 # The remote's key, unlocked here once so that no pane has to ask for it (see
 # the shared agent in ssh-helpers.sh). Only on a dev-environment remote: that is
@@ -329,7 +335,13 @@ tmux new-session -s "$name" -d -c "$HOME" || die "Could not create session $name
 tmux set-option -t "=$name:" @ssh_target "$target"
 tmux set-option -t "=$name:" @ssh_dir "$dir"
 tmux set-option -t "=$name:" @ssh_devenv "$([ "$kind" = devenv ] && echo yes || echo no)"
+tmux set-option -t "=$name:" @ssh_name "$base"
+[ -n "$user" ] && tmux set-option -t "=$name:" @ssh_user "$user"
 record_agent
+
+# The first session of a second user on this host: the first user's sessions
+# take their user in front too.
+"$scripts/Rename-SshSessions.sh"
 
 # Themed before the switch rather than left to the client-session-changed hook,
 # which runs in the background and would show the local colours first.

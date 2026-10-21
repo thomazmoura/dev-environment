@@ -135,7 +135,10 @@ repo_root() {
 # worktree on another machine, and the host goes in front the way
 # New-SshSession.sh names its own sessions (workhorse-dev-environment_fix-radar)
 # -- which is also what keeps a remote worktree apart from a local one of the
-# same name, so that closing one never offers to remove the other.
+# same name, so that closing one never offers to remove the other. While
+# another user has a session on that host, the open session also has its user
+# in front (ssh_session_name in ssh-helpers.sh); open_session_named finds it
+# either way.
 #
 # tmux session names cannot contain dots -- they are the separator in
 # session:window.pane targets -- nor, in the host part, colons. Must stay in
@@ -211,13 +214,18 @@ registry_target() {
 # Every registered worktree whose session would be called <session>. Usually
 # none -- this is what every closing session is checked against -- and at most
 # one unless two repositories share a name and a worktree name. The host is part
-# of the name, so a remote worktree only ever matches its own session.
+# of the name, so a remote worktree only ever matches its own session -- named
+# with or without the user in front, which comes and goes with the other users
+# on that host (ssh_session_name in ssh-helpers.sh).
 registry_paths_for_session() {
   [ -f "$WORKTREE_REGISTRY" ] || return 0
-  local path repo target
+  local path repo target name
   while IFS=$'\t' read -r path repo target; do
     [ -n "$path" ] || continue
-    [ "$(session_name_for "$path" "$repo" "$target")" = "$1" ] && printf '%s\n' "$path"
+    name="$(session_name_for "$path" "$repo" "$target")"
+    if [ "$name" = "$1" ] || { [ -n "$target" ] && [[ $1 == *@* ]] && [ "${1#*@}" = "$name" ]; }; then
+      printf '%s\n' "$path"
+    fi
   done < "$WORKTREE_REGISTRY"
 }
 
@@ -320,8 +328,8 @@ remove_worktree() {
     fi
   fi
 
-  session="$(session_name_for "$path" "$repo" "$target")"
-  if tmux has-session -t "=$session" 2>/dev/null; then
+  session="$(open_session_named "$(session_name_for "$path" "$repo" "$target")")"
+  if [ -n "$session" ]; then
     echo "killed session $session"
     tmux kill-session -t "=$session" 2>/dev/null
   fi

@@ -11,6 +11,10 @@
 #   @ssh_devenv   "yes" when the remote has this dev-environment (pwsh and
 #                 ~/.modules), so the panes can run the same pwsh commands they
 #                 run locally; anything else gets the remote's login shell
+#   @ssh_user     the user the panes log in as: the user part of @ssh_target,
+#                 or what ~/.ssh/config picks when it has none (ssh_user)
+#   @ssh_name     the session's name without the user in front of it (see
+#                 ssh_session_name)
 #
 # pane_command in tmux-helpers.sh reads them to decide whether a new pane runs
 # its command here or over ssh.
@@ -100,6 +104,55 @@ ssh_option() {
 # ssh_is_devenv <pane>
 ssh_is_devenv() {
   [ "$(ssh_option "$1" @ssh_devenv)" = yes ]
+}
+
+# ssh_user <target>
+# The user an ssh to <target> logs in as: the part before the @, or -- for a
+# bare host -- the one ssh itself would pick, ~/.ssh/config included. Nothing
+# for a container, which has no user to tell sessions apart by.
+ssh_user() {
+  is_docker_target "$1" && return 0
+  case "$1" in
+    *@*) printf '%s\n' "${1%@*}" ;;
+    *) ssh -G "$1" 2>/dev/null | awk '$1 == "user" { print $2; exit }' ;;
+  esac
+}
+
+# ssh_session_name <name> <target> <user>
+# What a session on <target> logged in as <user> is called, given <name>, its
+# name without a user: <host>-<directory> from New-SshSession.sh, or a
+# worktree's (session_name_for in worktree-helpers.sh).
+#
+# The user is left out while every open session on the host logs in as the
+# same one -- the usual case, where it would be the same on every name. Once
+# another user has a session on that host it is put in front, user@<name>, on
+# that user's sessions and on everyone else's there, so two users' sessions on
+# the same folder neither collide nor look alike. Rename-SshSessions.sh keeps
+# the open sessions in step as users come and go.
+#
+# Dots are tmux's separators, so a user like first.last is first_last here.
+ssh_session_name() {
+  local name=$1 host="${2##*@}" user=$3 other other_user
+  if [ -n "$user" ]; then
+    while IFS=$'\t' read -r other other_user; do
+      [ -n "$other" ] && ! is_docker_target "$other" && [ "${other##*@}" = "$host" ] || continue
+      [ -n "$other_user" ] || other_user="$(ssh_user "$other")"
+      if [ "$other_user" != "$user" ]; then
+        printf '%s@%s\n' "$(printf '%s' "$user" | tr '.:' '__')" "$name"
+        return 0
+      fi
+    done < <(tmux list-sessions -F $'#{@ssh_target}\t#{@ssh_user}' 2>/dev/null)
+  fi
+  printf '%s\n' "$name"
+}
+
+# open_session_named <name>
+# The open session called <name>, or whose name is <name> once the user
+# ssh_session_name may have put in front is left off (@ssh_name). Nothing when
+# there is none.
+open_session_named() {
+  tmux list-sessions -F $'#{session_name}\t#{@ssh_name}' 2>/dev/null |
+    awk -F '\t' -v name="$1" '$1 == name || $2 == name { print $1; exit }'
 }
 
 # remote_run <pane> <command> [no-exit] [no-pwsh]

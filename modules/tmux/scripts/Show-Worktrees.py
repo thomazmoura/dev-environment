@@ -239,9 +239,12 @@ def git_worktrees(repo: str, target: str = "") -> list[Worktree]:
 
 
 def open_sessions() -> set[str]:
+    """The open sessions' names, each also under its @ssh_name: the name an
+    ssh session has without the user that ssh_session_name in ssh-helpers.sh
+    puts in front while another user has a session on its host."""
     try:
         result = subprocess.run(
-            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            ["tmux", "list-sessions", "-F", "#{session_name}\t#{@ssh_name}"],
             capture_output=True,
             text=True,
             check=False,
@@ -249,7 +252,9 @@ def open_sessions() -> set[str]:
         )
     except (OSError, subprocess.SubprocessError):
         return set()
-    return set(result.stdout.splitlines()) if result.returncode == 0 else set()
+    if result.returncode != 0:
+        return set()
+    return {name for line in result.stdout.splitlines() for name in line.split("\t") if name}
 
 
 def tmux_option(option: str) -> str:
