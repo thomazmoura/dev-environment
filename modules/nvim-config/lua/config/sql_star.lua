@@ -1,7 +1,7 @@
 -- gd on the * of a SELECT * in a SQL Server buffer replaces it with the columns it stands
 -- for, as SQL Prompt does in SSMS; anywhere else, gd goes to the definition (the keymap is in
--- lua/plugins/database.lua). Through a join each column gets its table's alias (c.Id, o.Id),
--- and o.* gets o's columns, each with o.
+-- lua/plugins/database.lua). Each column gets its table's alias (c.Id), or its name through a
+-- join of tables without one, and o.* gets o's columns, each with o.
 --
 -- ScriptDom (config/sql_split_sqlserver.lua) finds the * and what its FROM reads from. SQL
 -- Server's sys.dm_exec_describe_first_result_set gives the columns of a SELECT that has only
@@ -69,7 +69,7 @@ end
 local function select_list(star, columns, quoted)
   local items, n = {}, 0
   for i, names in ipairs(columns) do
-    local prefix = star.qualifier or (#star.sources > 1 and star.sources[i]) or nil
+    local prefix = star.qualifier or ((#star.sources > 1 or star.aliased[i]) and star.sources[i]) or nil
     for _ = 1, #names do
       n = n + 1
       table.insert(items, prefix and (prefix .. '.' .. quoted[n]) or quoted[n])

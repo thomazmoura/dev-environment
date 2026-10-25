@@ -9,10 +9,11 @@
 #     The statements of the cursor's GO batch, up to the first one ending past the cursor.
 #     A statement that doesn't parse is still one: what lies between the ones around it.
 #   {"kind": "star", "text": "...", "cursor": n}  →  {"star": [start, end], "qualifier": "o",
-#     "sources": ["c", "o"], "with": "WITH ...", "from": "FROM ..."}
+#     "sources": ["c", "o"], "aliased": [true, true], "with": "WITH ...", "from": "FROM ..."}
 #     The * (or o.*) under the cursor, the names its FROM's tables and views go by there
-#     (alias, else name) and the text of its FROM and of its statement's CTEs. qualifier and
-#     with are absent when it has none. star is {"star": null} off a select list's *.
+#     (alias, else name), whether that name is an alias, and the text of its FROM and of its
+#     statement's CTEs. qualifier and with are absent when it has none. star is
+#     {"star": null} off a select list's *.
 #   {"kind": "quote", "names": ["Id", "Total Value", "Order"]}  →  {"names": ["Id",
 #     "[Total Value]", "[Order]"]}: column names bracketed where T-SQL needs it.
 # Offsets are UTF-8 bytes, as NeoVim counts them, with the end excluded.
@@ -118,14 +119,15 @@ public static class SqlServerSplitter
             if (spec.FromClause == null) throw new Exception("the * reads from no FROM");
 
             var sources = spec.FromClause.TableReferences.SelectMany(Flatten).Select(r =>
-                r is TableReferenceWithAlias { Alias: not null } aliased ? Text(aliased.Alias)
-                : r is NamedTableReference named ? Text(named.SchemaObject.BaseIdentifier)
-                : throw new Exception("a table of the FROM has no name to read its columns by: " + Text(r)));
+                r is TableReferenceWithAlias { Alias: not null } aliased ? (Name: Text(aliased.Alias), Aliased: true)
+                : r is NamedTableReference named ? (Name: Text(named.SchemaObject.BaseIdentifier), Aliased: false)
+                : throw new Exception("a table of the FROM has no name to read its columns by: " + Text(r))).ToList();
             var with = (statement as StatementWithCtesAndXmlNamespaces)?.WithCtesAndXmlNamespaces;
             var answer = new Dictionary<string, object>
             {
                 ["star"] = new[] { ToByte(text, around.Start + star.StartOffset), ToByte(text, around.Start + star.StartOffset + star.FragmentLength) },
-                ["sources"] = sources.ToList(),
+                ["sources"] = sources.Select(s => s.Name).ToList(),
+                ["aliased"] = sources.Select(s => s.Aliased).ToList(),
                 ["from"] = Text(spec.FromClause),
             };
             if (star.Qualifier != null) answer["qualifier"] = Text(star.Qualifier);
