@@ -26,6 +26,9 @@ return {
     vim.g.db_ui_execute_on_save = 0
     vim.g.db_ui_show_database_icon = 1
     vim.g.db_ui_use_nerd_fonts = 1
+    -- Completion lists everything for blink to filter (config/dadbod_fuzzy.lua), so a
+    -- 200-item cap would hide the tables past the 200th
+    vim.g.vim_dadbod_completion_source_limits = { tables = 5000, columns = 5000, functions = 5000, schemas = 1000 }
 
     -- <Leader>r runs the query (the buffer) or the selection
     vim.api.nvim_create_autocmd('FileType', {

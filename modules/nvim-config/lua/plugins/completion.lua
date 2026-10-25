@@ -33,7 +33,8 @@ return {
       providers = {
         -- Also completes modules/az and mod without a leading ./
         path = { module = 'config.bare_path' },
-        dadbod = { name = 'Dadbod', module = 'vim_dadbod_completion.blink' },
+        -- Tables and columns filtered fuzzily, not only by their start
+        dadbod = { name = 'Dadbod', module = 'config.dadbod_fuzzy' },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },
       },
     },
