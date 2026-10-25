@@ -64,16 +64,21 @@ for dialect, patterns in pairs(MARKERS) do
   MARKERS[dialect] = vim.tbl_map(function(p) return vim.regex([[\v\c]] .. p) end, patterns)
 end
 
---- The dialect of the buffer's dadbod connection, if it is one of the two
-local function from_dadbod(buf)
+--- The buffer's dadbod connection (b:db, then w:, t:, g:db), as written there
+function M.dadbod_url(buf)
   local db = vim.b[buf].db
   if db == nil then
     local win = vim.fn.bufwinid(buf)
     db = (win ~= -1 and vim.w[win].db) or vim.t.db or vim.g.db
   end
   if type(db) == 'table' then db = db.db_url end
-  if type(db) ~= 'string' then return end
-  return SCHEMES[db:match('^(%w+):')]
+  if type(db) == 'string' then return db end
+end
+
+--- The dialect of the buffer's dadbod connection, if it is one of the two
+local function from_dadbod(buf)
+  local db = M.dadbod_url(buf)
+  return db and SCHEMES[db:match('^(%w+):')]
 end
 
 --- The dialect whose syntax the buffer has more lines of, nil on a tie
@@ -136,6 +141,8 @@ function M.refresh(buf)
   local dialect, source = decide(buf)
   vim.b[buf].sql_dialect, vim.b[buf].sql_dialect_source = dialect, source
   attach(buf, dialect)
+  -- An attached server gets a connection set since; a starting one gets it on LspAttach
+  if dialect == 'sqlserver' then require('config.sql_connection').sync(buf) end
   if before and before ~= dialect then
     vim.notify('SQL: ' .. NAMES[dialect] .. ' (' .. source .. ')', vim.log.levels.INFO)
   end
@@ -178,6 +185,8 @@ function M.setup()
       },
     })
   end
+
+  require('config.sql_connection').setup()
 
   local group = vim.api.nvim_create_augroup('SqlDialect', { clear = true })
 
