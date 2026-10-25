@@ -1,5 +1,6 @@
 -- Where the T-SQL statements around the cursor start and end, for <Leader>r in sql buffers
--- (config/sql_statement.lua): asked of sql_split_sqlserver.ps1, which parses with ScriptDom.
+-- (config/sql_statement.lua), and what a SELECT * reads from, for gd on it
+-- (config/sql_star.lua): asked of sql_split_sqlserver.ps1, which parses with ScriptDom.
 -- T-SQL doesn't need a ';' between statements, so only a parser can tell where one ends.
 --
 -- The script keeps running once started, as it takes a second or two to start (the first
@@ -31,9 +32,11 @@ local function start()
         vim.schedule(function()
           local callback = table.remove(pending, 1)
           if not callback then return end
-          local decoded_ok, answer = pcall(vim.json.decode, line)
+          -- JSON's null as nil, not vim.NIL
+          local decoded_ok, answer = pcall(vim.json.decode, line, { luanil = { object = true, array = true } })
           if not decoded_ok then return callback(nil, line) end
-          callback(answer.statements, answer.error)
+          if answer.error then return callback(nil, answer.error) end
+          callback(answer)
         end)
       end
     end,
@@ -57,12 +60,19 @@ end
 --- Starts the script, so the first <Leader>r doesn't wait for it
 function M.warm() start() end
 
+--- callback(answer) or callback(nil, error) for one of the script's requests (see its top)
+function M.request(request, callback)
+  table.insert(pending, callback)
+  if start() then process:write(vim.json.encode(request) .. '\n') end
+end
+
 --- callback({{start, end}, ...}) with UTF-8 byte offsets, the end excluded, for the
 --- statements of the cursor's GO batch up to the first ending past `cursor`, or
 --- callback(nil, error)
 function M.split(text, cursor, callback)
-  table.insert(pending, callback)
-  if start() then process:write(vim.json.encode({ text = text, cursor = cursor }) .. '\n') end
+  M.request({ text = text, cursor = cursor }, function(answer, err)
+    callback(answer and answer.statements, err)
+  end)
 end
 
 return M

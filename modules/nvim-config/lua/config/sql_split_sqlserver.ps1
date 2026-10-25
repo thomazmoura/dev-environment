@@ -1,12 +1,21 @@
 # Where the T-SQL statements around the cursor start and end, for <Leader>r in sql buffers
-# (config/sql_statement.lua through config/sql_split_sqlserver.lua). It parses with
+# (config/sql_statement.lua), and what a SELECT * reads from, for gd on it
+# (config/sql_star.lua), both through config/sql_split_sqlserver.lua. It parses with
 # ScriptDom, the parser of SSMS and VS Code's mssql, from SqlToolsService's install.
 #
-# It stays running, one request per line on stdin, {"text": "...", "cursor": n}, and one
-# answer per line on stdout: {"statements": [[start, end], ...]}, or {"error": "..."}.
-# Offsets are UTF-8 bytes, as NeoVim counts them, with the end excluded. The statements are
-# those of the cursor's GO batch, up to the first one ending past the cursor. A statement
-# that doesn't parse is still one: what lies between the ones around it.
+# It stays running, one request per line on stdin and one answer per line on stdout, or
+# {"error": "..."}:
+#   {"text": "...", "cursor": n}  →  {"statements": [[start, end], ...]}
+#     The statements of the cursor's GO batch, up to the first one ending past the cursor.
+#     A statement that doesn't parse is still one: what lies between the ones around it.
+#   {"kind": "star", "text": "...", "cursor": n}  →  {"star": [start, end], "qualifier": "o",
+#     "sources": ["c", "o"], "with": "WITH ...", "from": "FROM ..."}
+#     The * (or o.*) under the cursor, the names its FROM's tables and views go by there
+#     (alias, else name) and the text of its FROM and of its statement's CTEs. qualifier and
+#     with are absent when it has none. star is {"star": null} off a select list's *.
+#   {"kind": "quote", "names": ["Id", "Total Value", "Order"]}  →  {"names": ["Id",
+#     "[Total Value]", "[Order]"]}: column names bracketed where T-SQL needs it.
+# Offsets are UTF-8 bytes, as NeoVim counts them, with the end excluded.
 param(
   [string]$ScriptDomDll = "$HOME/.language-servers/sqlserver/Microsoft.SqlServer.TransactSql.ScriptDom.dll"
 )
@@ -53,8 +62,14 @@ public static class SqlServerSplitter
             try
             {
                 using var request = JsonDocument.Parse(line);
-                answer = Answer(request.RootElement.GetProperty("text").GetString(),
-                    request.RootElement.GetProperty("cursor").GetInt32());
+                var root = request.RootElement;
+                var kind = root.TryGetProperty("kind", out var k) ? k.GetString() : "split";
+                answer = kind switch
+                {
+                    "star" => Star(root.GetProperty("text").GetString(), root.GetProperty("cursor").GetInt32()),
+                    "quote" => Quote(root.GetProperty("names").EnumerateArray().Select(n => n.GetString())),
+                    _ => Answer(root.GetProperty("text").GetString(), root.GetProperty("cursor").GetInt32()),
+                };
             }
             catch (Exception e)
             {
@@ -67,8 +82,89 @@ public static class SqlServerSplitter
 
     static string Answer(string text, int cursorByte)
     {
+        int cursor = ToChar(text, cursorByte);
+        var pairs = Statements(text, cursor).Select(s => "[" + ToByte(text, s.Start) + "," + ToByte(text, s.End) + "]");
+        return "{\"statements\":[" + string.Join(",", pairs) + "]}";
+    }
+
+    static int ToChar(string text, int offsetByte)
+    {
         var bytes = Encoding.UTF8.GetBytes(text);
-        int cursor = Encoding.UTF8.GetCharCount(bytes, 0, Math.Clamp(cursorByte, 0, bytes.Length));
+        return Encoding.UTF8.GetCharCount(bytes, 0, Math.Clamp(offsetByte, 0, bytes.Length));
+    }
+
+    static int ToByte(string text, int offset) => Encoding.UTF8.GetByteCount(text.AsSpan(0, offset));
+
+    // The select list's * holding the cursor, in the statement holding it
+    static string Star(string text, int cursorByte)
+    {
+        int cursor = ToChar(text, cursorByte);
+        var around = Statements(text, cursor).FirstOrDefault(s => s.Start <= cursor && cursor < s.End);
+        if (around.End == 0) return "{\"star\":null}";
+        var statementText = text.Substring(around.Start, around.End - around.Start);
+        var script = Parser.Parse(new StringReader(statementText), out var errors) as TSqlScript;
+        var statement = script?.Batches.SelectMany(b => b.Statements).FirstOrDefault();
+        if (statement == null || errors.Count > 0) return "{\"star\":null}";
+
+        string Text(TSqlFragment f) => statementText.Substring(f.StartOffset, f.FragmentLength);
+        var specs = new QuerySpecifications();
+        statement.Accept(specs);
+        int local = cursor - around.Start;
+        foreach (var spec in specs.Found)
+        {
+            var star = spec.SelectElements.OfType<SelectStarExpression>()
+                .FirstOrDefault(e => e.StartOffset <= local && local < e.StartOffset + e.FragmentLength);
+            if (star == null) continue;
+            if (spec.FromClause == null) throw new Exception("the * reads from no FROM");
+
+            var sources = spec.FromClause.TableReferences.SelectMany(Flatten).Select(r =>
+                r is TableReferenceWithAlias { Alias: not null } aliased ? Text(aliased.Alias)
+                : r is NamedTableReference named ? Text(named.SchemaObject.BaseIdentifier)
+                : throw new Exception("a table of the FROM has no name to read its columns by: " + Text(r)));
+            var with = (statement as StatementWithCtesAndXmlNamespaces)?.WithCtesAndXmlNamespaces;
+            var answer = new Dictionary<string, object>
+            {
+                ["star"] = new[] { ToByte(text, around.Start + star.StartOffset), ToByte(text, around.Start + star.StartOffset + star.FragmentLength) },
+                ["sources"] = sources.ToList(),
+                ["from"] = Text(spec.FromClause),
+            };
+            if (star.Qualifier != null) answer["qualifier"] = Text(star.Qualifier);
+            if (with != null) answer["with"] = Text(with);
+            return JsonSerializer.Serialize(answer);
+        }
+        return "{\"star\":null}";
+    }
+
+    // The tables, views, subqueries... of a FROM, in order, out of its joins
+    static IEnumerable<TableReference> Flatten(TableReference reference) => reference switch
+    {
+        JoinTableReference join => Flatten(join.FirstTableReference).Concat(Flatten(join.SecondTableReference)),
+        JoinParenthesisTableReference parenthesis => Flatten(parenthesis.Join),
+        _ => new[] { reference },
+    };
+
+    class QuerySpecifications : TSqlFragmentVisitor
+    {
+        public readonly List<QuerySpecification> Found = new();
+        public override void Visit(QuerySpecification node) => Found.Add(node);
+    }
+
+    // A name stays bare when ScriptDom reads it back as one identifier: not a keyword, no spaces...
+    static string Quote(IEnumerable<string> names)
+    {
+        var quoted = names.Select(name =>
+        {
+            var tokens = Parser.GetTokenStream(new StringReader(name), out var errors)
+                .Where(t => t.TokenType != TSqlTokenType.EndOfFile).ToList();
+            bool bare = errors.Count == 0 && tokens.Count == 1 && tokens[0].TokenType == TSqlTokenType.Identifier
+                && tokens[0].Text == name;
+            return bare ? name : "[" + name.Replace("]", "]]") + "]";
+        });
+        return JsonSerializer.Serialize(new { names = quoted });
+    }
+
+    static List<(int Start, int End)> Statements(string text, int cursor)
+    {
 
         // What a statement that doesn't parse is cut from, and the GO lines between batches.
         // A statement can start at a token that starts a line or follows a ';'
@@ -97,10 +193,7 @@ public static class SqlServerSplitter
             else { end = t.Start; break; }
         }
 
-        var pairs = Split(text, tokens, start, end, cursor).Select(s => "["
-            + Encoding.UTF8.GetByteCount(text.AsSpan(0, s.Start)) + ","
-            + Encoding.UTF8.GetByteCount(text.AsSpan(0, s.End)) + "]");
-        return "{\"statements\":[" + string.Join(",", pairs) + "]}";
+        return Split(text, tokens, start, end, cursor);
     }
 
     static List<(int Start, int End)> Split(string text, List<Token> tokens, int start, int end, int cursor)
