@@ -30,12 +30,15 @@ return {
     -- 200-item cap would hide the tables past the 200th
     vim.g.vim_dadbod_completion_source_limits = { tables = 5000, columns = 5000, functions = 5000, schemas = 1000 }
 
-    -- <Leader>r runs the query (the buffer) or the selection
+    -- <Leader>r runs the statement under the cursor (config/sql_statement.lua) or the
+    -- selection, <Leader>R the whole buffer, as in the VS Code profile
     vim.api.nvim_create_autocmd('FileType', {
       group = vim.api.nvim_create_augroup('SqlKeymaps', { clear = true }),
       pattern = 'sql',
       callback = function(args)
-        vim.keymap.set('n', '<Leader>r', '<Plug>(DBUI_ExecuteQuery)', { buffer = args.buf, desc = 'Run query' })
+        vim.keymap.set('n', '<Leader>r', function() require('config.sql_statement').run() end,
+          { buffer = args.buf, desc = 'Run statement' })
+        vim.keymap.set('n', '<Leader>R', '<Plug>(DBUI_ExecuteQuery)', { buffer = args.buf, desc = 'Run query' })
         vim.keymap.set('v', '<Leader>r', "<cmd>'<,'>DB<cr>", { buffer = args.buf, desc = 'Run selection' })
       end,
     })
