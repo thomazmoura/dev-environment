@@ -28,8 +28,11 @@ function! sqlserver_locksmith#interactive(url) abort
   return db#adapter#sqlserver#interactive(s:with_password(a:url))
 endfunction
 
+" Query results for lua/config/dbout_compact.lua to lay out: values whole up to sqlcmd's
+" maximum width (-y 0, unlimited, drops the column headers), unpadded (-W) and split by the
+" unit separator, which no value holds, so a value with line breaks can be joined back
 function! sqlserver_locksmith#input(url, in) abort
-  return db#adapter#sqlserver#input(s:with_password(a:url), a:in)
+  return db#adapter#sqlserver#input(s:with_password(a:url), a:in) + ['-W', '-y', '8000', '-s', "\x1f"]
 endfunction
 
 function! sqlserver_locksmith#dbext(url) abort

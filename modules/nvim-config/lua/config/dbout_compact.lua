@@ -1,118 +1,187 @@
--- Narrows the columns of SQL Server results (sqlcmd's output in dadbod's .dbout buffers) to
--- their widest value. sqlcmd pads every cell to the column's declared width, 256 characters
--- for varchar(max) and other max types (its -y default), however short the values are.
+-- Lays out SQL Server results (sqlcmd's output in dadbod's .dbout buffers) as columns as wide
+-- as their widest shown value, and keeps every value whole for yic (after/ftplugin/dbout.lua).
 -- Called on BufReadPost *.dbout from lua/plugins/database.lua, so each query and each reload.
 --
--- A result is a header line over a line of dashes, one run per column split by single
--- spaces (what dadbod-ui's cell yank and folds read too), then rows up to the blank line.
--- sqlcmd counts the padding in characters. Numbers stay right-aligned, as sqlcmd prints them.
--- Rows of another length (a value with a line break) are kept as they are.
+-- autoload/sqlserver_locksmith.vim runs queries with sqlcmd -W -y 8000 -s <unit separator>:
+-- values unpadded, up to sqlcmd's 8000-character maximum (its default cuts max types at 256),
+-- split by a character no value holds. A value with a line break spans lines, joined back
+-- here by counting separators: a row holds one less than its columns. On screen only, line
+-- breaks show as ↵ and values past MAX_WIDTH are cut with ….
+--
+-- A result is a header over a line of dashes (one run per column, what dadbod-ui's cell yank
+-- and folds read too), then rows up to a blank line; messages and row counts are kept as they
+-- are. Lines with no separator after a whole row are the rest of its last value, so only the
+-- line breaks of a first column are misread (of a single column, always). A result whose rows
+-- do not add up is kept as sqlcmd printed it, separators shown as spaces.
 local M = {}
 
---- The columns of a dashes line, as { from = first character (0-based), len = characters }
-local function columns(dashes)
-  local cols = {}
-  for from, run in dashes:gmatch('()(%-+)') do
-    table.insert(cols, { from = from - 1, len = #run })
-  end
-  return cols
+local SEP = '\31'
+
+-- Widest a value is shown, in display cells
+local MAX_WIDTH = 80
+
+-- sqlcmd's maximum for -y: a value this long was most likely cut there
+M.SQLCMD_MAX = 8000
+
+-- buf → lnum → { cols = { { from, to }... } (0-based display columns), values = { whole... } }
+local cells = {}
+
+local function separators(line)
+  local _, n = line:gsub(SEP, '')
+  return n
+end
+
+local function split(line)
+  return vim.split(line, SEP, { plain = true })
 end
 
 local function is_dashes(line)
-  return line:match('^%-+$') ~= nil or line:match('^%-[%- ]*%-$') ~= nil and not line:find('  ', 1, true)
-end
-
-local function is_ascii(line)
-  return not line:find('[\128-\255]')
-end
-
-local function sub(line, ascii, from, len)
-  if ascii then return line:sub(from + 1, from + len) end
-  return vim.fn.strcharpart(line, from, len)
+  if not line or line == '' then return false end
+  for _, run in ipairs(split(line)) do
+    if not run:match('^%-+$') then return false end
+  end
+  return true
 end
 
 local function width(text)
-  if is_ascii(text) then return #text end
-  return vim.fn.strdisplaywidth(text)
+  if not text:find('[\128-\255]') then return #text end
+  return vim.api.nvim_strwidth(text)
 end
 
---- The result starting at lines[first] (its header), compacted; and the line after it
-local function compact_result(lines, first)
-  local cols = columns(lines[first + 1])
-  local length = #lines[first + 1]
-  local last = first + 1
-  while lines[last + 1] and lines[last + 1] ~= '' do
-    last = last + 1
+--- value as shown: line breaks as ↵, tabs as spaces, at most MAX_WIDTH cells
+local function shown(value)
+  local text = value:gsub('\r?\n', '↵'):gsub('\r', '↵'):gsub('\t', ' ')
+  if width(text) <= MAX_WIDTH then return text end
+  local n = MAX_WIDTH - 1
+  local cut = vim.fn.strcharpart(text, 0, n)
+  while width(cut) > MAX_WIDTH - 1 do
+    n = n - 1
+    cut = vim.fn.strcharpart(text, 0, n)
   end
+  return cut .. '…'
+end
 
-  -- cells[i][c]: line first + i - 1, column c, trimmed (nil for a row of another length)
-  local cells, widths, right = {}, {}, {}
-  for c, col in ipairs(cols) do
-    widths[c], right[c] = 0, nil
-  end
-  for i = first, last do
+--- The rows of the result whose header is lines[first], as lists of values, and the line after
+--- it; nil when they do not add up
+local function parse(lines, first, ncols)
+  local rows, i = {}, first + 2
+  local pending, count -- the lines of a row read so far, and their separators
+  while lines[i] do
     local line = lines[i]
-    local ascii = is_ascii(line)
-    if i ~= first + 1 and (ascii and #line or vim.fn.strchars(line)) == length then
-      local row = {}
-      for c, col in ipairs(cols) do
-        local cell = sub(line, ascii, col.from, col.len)
-        row[c] = vim.trim(cell)
-        widths[c] = math.max(widths[c], width(row[c]))
-        -- Right-aligned: every value of the column ends on its last character
-        if i > first + 1 and row[c] ~= '' then
-          right[c] = right[c] ~= false and cell:sub(-1) ~= ' '
-        end
+    if pending then
+      table.insert(pending, line)
+      count = count + separators(line)
+    elseif line == '' then
+      break
+    elseif #rows > 0 and ncols > 1 and not line:find(SEP, 1, true) then
+      local row = rows[#rows]
+      row[ncols] = row[ncols] .. '\n' .. line
+    else
+      pending, count = { line }, separators(line)
+    end
+    if pending and count >= ncols - 1 then
+      if count > ncols - 1 then return nil end
+      table.insert(rows, split(table.concat(pending, '\n')))
+      pending = nil
+    end
+    i = i + 1
+  end
+  if pending then return nil end
+  return rows, i
+end
+
+--- Appends the result to out, and the whole values of its lines to found
+local function render(header, rows, out, found)
+  local widths, right, texts = {}, {}, {}
+  for c, name in ipairs(header) do
+    widths[c] = math.max(width(name), 1)
+  end
+  for r, row in ipairs(rows) do
+    texts[r] = {}
+    for c, value in ipairs(row) do
+      texts[r][c] = shown(value)
+      widths[c] = math.max(widths[c], width(texts[r][c]))
+      -- Right-aligned, as sqlcmd prints numbers: every value of the column is one
+      if value ~= 'NULL' and value ~= '' then
+        right[c] = right[c] ~= false and value:match('^%-?%d+%.?%d*$') ~= nil
       end
-      cells[i - first + 1] = row
     end
   end
 
-  local out = {}
-  for i = first, last do
-    local row = cells[i - first + 1]
-    if i == first + 1 then
-      local runs = {}
-      for c in ipairs(cols) do
-        runs[c] = ('-'):rep(math.max(widths[c], 1))
-      end
-      table.insert(out, table.concat(runs, ' '))
-    elseif row then
-      local parts = {}
-      for c, cell in ipairs(row) do
-        local pad = (' '):rep(math.max(widths[c], 1) - width(cell))
-        parts[c] = (right[c] and i > first + 1) and pad .. cell or cell .. pad
-      end
-      table.insert(out, (table.concat(parts, ' '):gsub('%s+$', '')))
-    else
-      table.insert(out, lines[i])
-    end
+  local cols, from = {}, 0
+  for c, w in ipairs(widths) do
+    cols[c] = { from, from + w - 1 }
+    from = from + w + 1
   end
-  return out, last + 1
+
+  local function add(line_texts, values, align)
+    local parts = {}
+    for c, text in ipairs(line_texts) do
+      local pad = (' '):rep(widths[c] - width(text))
+      parts[c] = (align and right[c]) and pad .. text or text .. pad
+    end
+    table.insert(out, (table.concat(parts, ' '):gsub('%s+$', '')))
+    if values then found[#out] = { cols = cols, values = values } end
+  end
+
+  add(header, header, false)
+  local dashes = {}
+  for c, w in ipairs(widths) do
+    dashes[c] = ('-'):rep(w)
+  end
+  add(dashes, nil, false)
+  for r, row in ipairs(rows) do
+    add(texts[r], row, true)
+  end
 end
 
 function M.compact(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local out, i, changed = {}, 1, false
+  local out, found, i = {}, {}, 1
   while i <= #lines do
-    if lines[i + 1] and lines[i] ~= '' and is_dashes(lines[i + 1]) then
-      local result, after = compact_result(lines, i)
-      vim.list_extend(out, result)
-      i, changed = after, true
+    local header, dashes = lines[i], lines[i + 1]
+    local rows, after
+    if header ~= '' and is_dashes(dashes) and separators(header) == separators(dashes) then
+      rows, after = parse(lines, i, separators(dashes) + 1)
+    end
+    if rows then
+      render(split(header), rows, out, found)
+      i = after
     else
-      table.insert(out, lines[i])
+      table.insert(out, (lines[i]:gsub(SEP, ' ')))
       i = i + 1
     end
   end
-  if not changed then return end
 
-  -- As read from the file: not modified, and no undo step back to the padded text. dadbod's
+  if not cells[buf] then
+    vim.api.nvim_create_autocmd('BufWipeout', {
+      buffer = buf,
+      once = true,
+      callback = function() cells[buf] = nil end,
+    })
+  end
+  cells[buf] = found
+  if vim.deep_equal(out, lines) then return end
+
+  -- As read from the file: not modified, and no undo step back to sqlcmd's text. dadbod's
   -- preview window is nomodifiable (and readonly), so that is lifted for the rewrite only
   local bo = vim.bo[buf]
   local undolevels, modifiable = bo.undolevels, bo.modifiable
   bo.undolevels, bo.modifiable = -1, true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
   bo.undolevels, bo.modifiable, bo.modified = undolevels, modifiable, false
+end
+
+--- The whole value at line lnum, display column vcol (0-based), of buf; nil off a result laid out
+function M.value_at(buf, lnum, vcol)
+  if buf == 0 then buf = vim.api.nvim_get_current_buf() end
+  local row = (cells[buf] or {})[lnum]
+  if not row then return nil end
+  local c = 1
+  for n, col in ipairs(row.cols) do
+    if col[1] <= vcol then c = n end
+  end
+  return row.values[c]
 end
 
 return M
