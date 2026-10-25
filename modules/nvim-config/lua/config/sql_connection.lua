@@ -1,6 +1,7 @@
 -- Connects SqlToolsService (sqlserver_ls) to a sql buffer's dadbod database, as VS Code's
 -- mssql extension does with connection/connect. Without it the server only parses the text:
--- with it, hover (gh, K) shows a column's type and nullability, a table's columns...
+-- with it, hover (gh, K) shows a column's type and nullability, and gd on a table or view
+-- opens its CREATE script, which the server writes to a temporary file
 -- config/sql_dialect.lua calls M.sync when it attaches the server to a buffer, and LspAttach
 -- does when the server starts. The password comes from config/sqlserver_locksmith.lua, as it
 -- does for dadbod's queries
@@ -93,6 +94,19 @@ function M.setup()
     callback = function(args)
       local client = vim.lsp.get_client_by_id(args.data.client_id)
       if client and client.name == SERVER then M.sync(args.buf) end
+    end,
+  })
+  -- gd on a table or view opens the CREATE script the server wrote to a temporary file:
+  -- it gets the connection of the buffer gd came from (the current one while the script's is
+  -- created), so its own gd, hover and <Leader>r reach the same database, as in SSMS
+  vim.api.nvim_create_autocmd('BufNew', {
+    group = group,
+    pattern = '*/mssql_definition_*/*.sql',
+    callback = function(args)
+      local from = vim.api.nvim_get_current_buf()
+      if from ~= args.buf and vim.bo[from].filetype == 'sql' then
+        vim.b[args.buf].db = require('config.sql_dialect').dadbod_url(from)
+      end
     end,
   })
   vim.api.nvim_create_autocmd('LspDetach', {
