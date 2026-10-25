@@ -1,6 +1,7 @@
 -- Where the T-SQL statements around the cursor start and end, for <Leader>r in sql buffers
--- (config/sql_statement.lua), and what a SELECT * reads from, for gd on it
--- (config/sql_star.lua): asked of sql_split_sqlserver.ps1, which parses with ScriptDom.
+-- (config/sql_statement.lua), what a SELECT * reads from, for gd on it (config/sql_star.lua),
+-- and the tables of the join whose ON is being written, for its completion
+-- (config/sql_join.lua): asked of sql_split_sqlserver.ps1, which parses with ScriptDom.
 -- T-SQL doesn't need a ';' between statements, so only a parser can tell where one ends.
 --
 -- The script keeps running once started, as it takes a second or two to start (the first

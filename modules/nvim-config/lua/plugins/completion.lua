@@ -22,12 +22,19 @@ return {
       -- <CR> takes the first item when none is selected
       list = { selection = { preselect = false, auto_insert = true } },
       documentation = { auto_show = true },
+      -- A space shows the menu only after a join's ON, for its conditions (config/sql_join.lua)
+      trigger = {
+        show_on_blocked_trigger_characters = function()
+          if require('config.sql_join').after_on() then return { '\n', '\t' } end
+          return { ' ', '\n', '\t' }
+        end,
+      },
     },
     snippets = { preset = 'default' },
     sources = {
       default = { 'lsp', 'snippets', 'buffer', 'path' },
       per_filetype = {
-        sql = { 'snippets', 'dadbod', 'buffer' },
+        sql = { 'sql_join', 'snippets', 'dadbod', 'buffer' },
         lua = { inherit_defaults = true, 'lazydev' },
       },
       providers = {
@@ -35,6 +42,8 @@ return {
         path = { module = 'config.bare_path' },
         -- Tables and columns filtered fuzzily, not only by their start
         dadbod = { name = 'Dadbod', module = 'config.dadbod_fuzzy' },
+        -- A join's ON completed from the foreign keys, ahead of everything else
+        sql_join = { name = 'Join', module = 'config.sql_join', score_offset = 100 },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },
       },
     },

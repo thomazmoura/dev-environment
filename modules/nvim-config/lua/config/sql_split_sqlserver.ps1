@@ -1,6 +1,7 @@
 # Where the T-SQL statements around the cursor start and end, for <Leader>r in sql buffers
-# (config/sql_statement.lua), and what a SELECT * reads from, for gd on it
-# (config/sql_star.lua), both through config/sql_split_sqlserver.lua. It parses with
+# (config/sql_statement.lua), what a SELECT * reads from, for gd on it (config/sql_star.lua),
+# and the tables of the join whose ON is being written, for its completion
+# (config/sql_join.lua), all through config/sql_split_sqlserver.lua. It parses with
 # ScriptDom, the parser of SSMS and VS Code's mssql, from SqlToolsService's install.
 #
 # It stays running, one request per line on stdin and one answer per line on stdout, or
@@ -14,6 +15,14 @@
 #     (alias, else name), whether that name is an alias, and the text of its FROM and of its
 #     statement's CTEs. qualifier and with are absent when it has none. star is
 #     {"star": null} off a select list's *.
+#   {"kind": "join", "text": "...", "cursor": n}  →  {"join": {"joined": [{"schema": "dbo",
+#     "table": "Customers", "name": "c"}], "earlier": [{"schema": null, "table": "Orders",
+#     "name": "o"}]}}
+#     The tables of the join whose ON has no condition yet at the cursor: the one it joins
+#     (several for a parenthesized join) and the ones before it, nearest last. schema and table
+#     are the names unquoted, schema null when not written, and name what the table goes by
+#     there (alias, else name). Views, subqueries, CTEs and other databases' tables are left
+#     out. join is {"join": null} off such an ON.
 #   {"kind": "quote", "names": ["Id", "Total Value", "Order"]}  →  {"names": ["Id",
 #     "[Total Value]", "[Order]"]}: column names bracketed where T-SQL needs it.
 # Offsets are UTF-8 bytes, as NeoVim counts them, with the end excluded.
@@ -68,6 +77,7 @@ public static class SqlServerSplitter
                 answer = kind switch
                 {
                     "star" => Star(root.GetProperty("text").GetString(), root.GetProperty("cursor").GetInt32()),
+                    "join" => Join(root.GetProperty("text").GetString(), root.GetProperty("cursor").GetInt32()),
                     "quote" => Quote(root.GetProperty("names").EnumerateArray().Select(n => n.GetString())),
                     _ => Answer(root.GetProperty("text").GetString(), root.GetProperty("cursor").GetInt32()),
                 };
@@ -135,6 +145,47 @@ public static class SqlServerSplitter
             return JsonSerializer.Serialize(answer);
         }
         return "{\"star\":null}";
+    }
+
+    // The tables of the join whose ON is at the cursor, with no condition yet. Such a
+    // statement doesn't parse, so it is parsed with a placeholder condition at the cursor
+    static string Join(string text, int cursorByte)
+    {
+        int cursor = ToChar(text, cursorByte);
+        text = text.Insert(cursor, " 1=1 ");
+        cursor++;
+        var around = Statements(text, cursor).FirstOrDefault(s => s.Start <= cursor && cursor < s.End);
+        if (around.End == 0) return "{\"join\":null}";
+        var statementText = text.Substring(around.Start, around.End - around.Start);
+        var script = Parser.Parse(new StringReader(statementText), out var errors) as TSqlScript;
+        var statement = script?.Batches.SelectMany(b => b.Statements).FirstOrDefault();
+        if (statement == null || errors.Count > 0) return "{\"join\":null}";
+
+        var joins = new QualifiedJoins();
+        statement.Accept(joins);
+        int local = cursor - around.Start;
+        var join = joins.Found.FirstOrDefault(j => j.SearchCondition.StartOffset == local);
+        if (join == null) return "{\"join\":null}";
+
+        string Text(TSqlFragment f) => statementText.Substring(f.StartOffset, f.FragmentLength);
+        var ctes = ((statement as StatementWithCtesAndXmlNamespaces)?.WithCtesAndXmlNamespaces?.CommonTableExpressions
+            .Select(c => c.ExpressionName.Value) ?? Enumerable.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        List<object> Tables(TableReference side) => Flatten(side).OfType<NamedTableReference>()
+            .Where(t => t.SchemaObject.DatabaseIdentifier == null && t.SchemaObject.ServerIdentifier == null
+                && !(t.SchemaObject.SchemaIdentifier == null && ctes.Contains(t.SchemaObject.BaseIdentifier.Value)))
+            .Select(t => (object)new Dictionary<string, string>
+            {
+                ["schema"] = t.SchemaObject.SchemaIdentifier?.Value,
+                ["table"] = t.SchemaObject.BaseIdentifier.Value,
+                ["name"] = Text(t.Alias ?? (TSqlFragment)t.SchemaObject.BaseIdentifier),
+            }).ToList();
+        return JsonSerializer.Serialize(new { join = new { joined = Tables(join.SecondTableReference), earlier = Tables(join.FirstTableReference) } });
+    }
+
+    class QualifiedJoins : TSqlFragmentVisitor
+    {
+        public readonly List<QualifiedJoin> Found = new();
+        public override void Visit(QualifiedJoin node) => Found.Add(node);
     }
 
     // The tables, views, subqueries... of a FROM, in order, out of its joins
