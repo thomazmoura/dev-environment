@@ -36,6 +36,10 @@ return {
       group = vim.api.nvim_create_augroup('SqlKeymaps', { clear = true }),
       pattern = 'sql',
       callback = function(args)
+        -- Twice: config/sql_dialect.lua decides the dialect in a schedule of its own
+        vim.schedule(function()
+          vim.schedule(function() require('config.sql_statement').warm(args.buf) end)
+        end)
         vim.keymap.set('n', '<Leader>r', function() require('config.sql_statement').run() end,
           { buffer = args.buf, desc = 'Run statement' })
         vim.keymap.set('n', '<Leader>R', '<Plug>(DBUI_ExecuteQuery)', { buffer = args.buf, desc = 'Run query' })
