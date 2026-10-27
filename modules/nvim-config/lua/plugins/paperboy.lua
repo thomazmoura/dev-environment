@@ -29,6 +29,9 @@ return {
         -- <Leader>ma in the compose buffer attaches a file from here
         attachment_dirs = { '~/Documents/Attachments' },
       },
+      -- Image previews on as Markdown files, compose buffers and e-mails from my
+      -- contacts open (others ask first); <Leader>mv outside Markdown switches it
+      preview = { auto = true },
     },
   },
 }
