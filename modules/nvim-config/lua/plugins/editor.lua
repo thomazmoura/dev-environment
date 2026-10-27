@@ -74,8 +74,24 @@ return {
     event = { 'BufReadPost', 'BufNewFile' },
     opts = {
       enabled = true,
-      trigger_events = { 'BufLeave' },
+      trigger_events = { 'InsertLeave', 'TextChanged', 'BufLeave' },
+      -- Not in Workhorse buffers: there :w sends the changes to Azure DevOps
+      condition = function(buf)
+        if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].modifiable then
+          return false
+        end
+        return not vim.bo[buf].filetype:match('^workhorse')
+          and not vim.api.nvim_buf_get_name(buf):find('Workhorse|', 1, true)
+      end,
     },
+    -- plugin/auto-save.lua turns it on with the default events before setup runs:
+    -- turn it on again with these
+    config = function(_, opts)
+      local auto_save = require('auto-save')
+      auto_save.setup(opts)
+      auto_save.off()
+      auto_save.on()
+    end,
   },
 
   -- Case conversion (<Leader>s + p/c/_/-/u/...)
