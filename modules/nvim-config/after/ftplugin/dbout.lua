@@ -21,6 +21,19 @@ vim.keymap.set('o', 'ic', function()
   return ':call db_ui#dbout#get_cell_value()<CR>'
 end, { buffer = true, expr = true, silent = true, desc = 'Cell value' })
 
+-- H and L move to the previous and next cell of the row (config/dbout_move.lua)
+for lhs, direction in pairs({ H = -1, L = 1 }) do
+  vim.keymap.set('n', lhs, function()
+    local count = vim.v.count1
+    if not require('config.dbout_move').move(direction, count) then
+      vim.cmd.normal({ count .. lhs, bang = true })
+    end
+  end, { buffer = true, desc = direction < 0 and 'Previous cell' or 'Next cell' })
+end
+-- J and K move down and up as j and k, so shift can stay held to move between cells
+vim.keymap.set('n', 'J', 'j', { buffer = true, desc = 'Cell below' })
+vim.keymap.set('n', 'K', 'k', { buffer = true, desc = 'Cell above' })
+
 -- The whole value under the cursor in a popup: JSON and HTML highlighted, HTML in the browser
 -- too (config/dbout_cell.lua)
 vim.keymap.set('n', '<Leader><CR>', function() require('config.dbout_cell').open() end,
