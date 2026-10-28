@@ -13,6 +13,10 @@
 -- are. Lines with no separator after a whole row are the rest of its last value, so only the
 -- line breaks of a first column are misread (of a single column, always). A result whose rows
 -- do not add up is kept as sqlcmd printed it, separators shown as spaces.
+--
+-- The space between columns shows a │, and the dash line ─ and ┼: extmarks over the text,
+-- which stays as it is for dadbod-ui and yic. Only the last column's padding is trimmed, so
+-- the empty cells at the end of a row keep their │.
 local M = {}
 
 local SEP = '\31'
@@ -23,9 +27,14 @@ local MAX_WIDTH = 80
 -- sqlcmd's maximum for -y: a value this long was most likely cut there
 M.SQLCMD_MAX = 8000
 
+local ns = vim.api.nvim_create_namespace('dbout_compact')
+vim.api.nvim_set_hl(0, 'DboutSeparator', { default = true, link = 'WinSeparator' })
+
 -- buf → lnum → { cols = { { from, to }... } (0-based display columns), values = { whole... },
 -- header = { column names... } }
 local cells = {}
+-- buf → { { header = lnum, last = lnum }... }: where each result laid out starts and ends
+local results = {}
 
 local function separators(line)
   local _, n = line:gsub(SEP, '')
@@ -91,8 +100,9 @@ local function parse(lines, first, ncols)
   return rows, i
 end
 
---- Appends the result to out, and the whole values of its lines to found
-local function render(header, rows, out, found)
+--- Appends the result to out, the whole values of its lines to found, and the separators to
+--- draw over it to marks ({ line, byte, text }, 0-based)
+local function render(header, rows, out, found, marks)
   local widths, right, texts = {}, {}, {}
   for c, name in ipairs(header) do
     widths[c] = math.max(width(name), 1)
@@ -121,8 +131,15 @@ local function render(header, rows, out, found)
       local pad = (' '):rep(widths[c] - width(text))
       parts[c] = (align and right[c]) and pad .. text or text .. pad
     end
-    table.insert(out, (table.concat(parts, ' '):gsub('%s+$', '')))
+    parts[#parts] = parts[#parts]:gsub('%s+$', '')
+    table.insert(out, table.concat(parts, ' '))
     if values then found[#out] = { cols = cols, values = values, header = header } end
+    local at = 0
+    for c = 1, #parts - 1 do
+      at = at + #parts[c]
+      table.insert(marks, { #out - 1, at, '│' })
+      at = at + 1
+    end
   end
 
   add(header, header, false)
@@ -130,7 +147,12 @@ local function render(header, rows, out, found)
   for c, w in ipairs(widths) do
     dashes[c] = ('-'):rep(w)
   end
-  add(dashes, nil, false)
+  table.insert(out, table.concat(dashes, ' '))
+  -- One mark per character: an overlay hides whole once its start scrolls off to the left,
+  -- so a single one across the line would vanish on the first zl
+  for at = 0, #out[#out] - 1 do
+    table.insert(marks, { #out - 1, at, out[#out]:sub(at + 1, at + 1) == '-' and '─' or '┼' })
+  end
   for r, row in ipairs(rows) do
     add(texts[r], row, true)
   end
@@ -138,7 +160,7 @@ end
 
 function M.compact(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local out, found, i = {}, {}, 1
+  local out, found, marks, ranges, i = {}, {}, {}, {}, 1
   while i <= #lines do
     local header, dashes = lines[i], lines[i + 1]
     local rows, after
@@ -146,7 +168,9 @@ function M.compact(buf)
       rows, after = parse(lines, i, separators(dashes) + 1)
     end
     if rows then
-      render(split(header), rows, out, found)
+      local first = #out + 1
+      render(split(header), rows, out, found, marks)
+      table.insert(ranges, { header = first, last = #out })
       i = after
     else
       table.insert(out, (lines[i]:gsub(SEP, ' ')))
@@ -158,19 +182,29 @@ function M.compact(buf)
     vim.api.nvim_create_autocmd('BufWipeout', {
       buffer = buf,
       once = true,
-      callback = function() cells[buf] = nil end,
+      callback = function() cells[buf], results[buf] = nil, nil end,
     })
   end
-  cells[buf] = found
-  if vim.deep_equal(out, lines) then return end
+  cells[buf], results[buf] = found, ranges
+  if not vim.deep_equal(out, lines) then
+    -- As read from the file: not modified, and no undo step back to sqlcmd's text. dadbod's
+    -- preview window is nomodifiable (and readonly), so that is lifted for the rewrite only
+    local bo = vim.bo[buf]
+    local undolevels, modifiable = bo.undolevels, bo.modifiable
+    bo.undolevels, bo.modifiable = -1, true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
+    bo.undolevels, bo.modifiable, bo.modified = undolevels, modifiable, false
+  end
 
-  -- As read from the file: not modified, and no undo step back to sqlcmd's text. dadbod's
-  -- preview window is nomodifiable (and readonly), so that is lifted for the rewrite only
-  local bo = vim.bo[buf]
-  local undolevels, modifiable = bo.undolevels, bo.modifiable
-  bo.undolevels, bo.modifiable = -1, true
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, out)
-  bo.undolevels, bo.modifiable, bo.modified = undolevels, modifiable, false
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  for _, mark in ipairs(marks) do
+    vim.api.nvim_buf_set_extmark(buf, ns, mark[1], mark[2], {
+      virt_text = { { mark[3], 'DboutSeparator' } },
+      virt_text_pos = 'overlay',
+      -- Scrolled off to the left, an overlay is otherwise drawn at the window's edge
+      virt_text_hide = true,
+    })
+  end
 end
 
 --- The whole value at line lnum, display column vcol (0-based), of buf, and its column's name;
@@ -184,6 +218,14 @@ function M.value_at(buf, lnum, vcol)
     if col[1] <= vcol then c = n end
   end
   return row.values[c], row.header[c]
+end
+
+--- The header's line and the last row's of the result laid out that holds line lnum of buf;
+--- nil off one
+function M.result_at(buf, lnum)
+  for _, range in ipairs(results[buf] or {}) do
+    if range.header <= lnum and lnum <= range.last then return range.header, range.last end
+  end
 end
 
 return M

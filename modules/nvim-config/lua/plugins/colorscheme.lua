@@ -7,7 +7,7 @@ return {
     -- lazy.nvim makes tokyonight emit only the groups of installed plugins;
     -- workhorse's tag_title_colors (plugins/personal.lua) use the MiniIcons* ones
     plugins = { mini_icons = true },
-    on_highlights = function(hl)
+    on_highlights = function(hl, c)
       local function set(group, attrs)
         hl[group] = vim.tbl_extend('force', hl[group] or {}, attrs)
       end
@@ -31,6 +31,9 @@ return {
       set('JsonCommentError', { fg = '#819c98' })
       set('DiagnosticUnnecessary', { fg = '#818181' })
       set('CopilotSuggestion', { fg = '#989898' })
+      -- The lines between the columns of SQL Server results (config/dbout_compact.lua), a
+      -- step below the text
+      set('DboutSeparator', { fg = c.fg_dark })
     end,
   },
   config = function(_, opts)

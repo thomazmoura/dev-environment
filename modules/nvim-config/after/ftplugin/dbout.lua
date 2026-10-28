@@ -1,3 +1,7 @@
+-- Absolute line numbers in results, not relative ones (<Leader>L still toggles them)
+vim.opt_local.number = true
+vim.opt_local.relativenumber = false
+
 -- yic in dadbod's results yanks the whole value under the cursor, line breaks included, not
 -- only what its column shows: config/dbout_compact.lua keeps it. Other operators, and results
 -- it did not lay out, get dadbod-ui's own ic (the cell as shown)
@@ -20,6 +24,9 @@ vim.keymap.set('o', 'ic', function()
   end
   return ':call db_ui#dbout#get_cell_value()<CR>'
 end, { buffer = true, expr = true, silent = true, desc = 'Cell value' })
+
+-- The header stays at the top while the rows scroll under it (config/dbout_pin.lua)
+vim.schedule(require('config.dbout_pin').sync)
 
 -- H and L move to the previous and next cell of the row (config/dbout_move.lua)
 for lhs, direction in pairs({ H = -1, L = 1 }) do
