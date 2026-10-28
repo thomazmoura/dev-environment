@@ -20,3 +20,8 @@ vim.keymap.set('o', 'ic', function()
   end
   return ':call db_ui#dbout#get_cell_value()<CR>'
 end, { buffer = true, expr = true, silent = true, desc = 'Cell value' })
+
+-- The whole value under the cursor in a popup: JSON and HTML highlighted, HTML in the browser
+-- too (config/dbout_cell.lua)
+vim.keymap.set('n', '<Leader><CR>', function() require('config.dbout_cell').open() end,
+  { buffer = true, desc = 'Show the cell in a popup' })

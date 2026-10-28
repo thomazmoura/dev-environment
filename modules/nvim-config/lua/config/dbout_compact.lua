@@ -23,7 +23,8 @@ local MAX_WIDTH = 80
 -- sqlcmd's maximum for -y: a value this long was most likely cut there
 M.SQLCMD_MAX = 8000
 
--- buf → lnum → { cols = { { from, to }... } (0-based display columns), values = { whole... } }
+-- buf → lnum → { cols = { { from, to }... } (0-based display columns), values = { whole... },
+-- header = { column names... } }
 local cells = {}
 
 local function separators(line)
@@ -121,7 +122,7 @@ local function render(header, rows, out, found)
       parts[c] = (align and right[c]) and pad .. text or text .. pad
     end
     table.insert(out, (table.concat(parts, ' '):gsub('%s+$', '')))
-    if values then found[#out] = { cols = cols, values = values } end
+    if values then found[#out] = { cols = cols, values = values, header = header } end
   end
 
   add(header, header, false)
@@ -172,7 +173,8 @@ function M.compact(buf)
   bo.undolevels, bo.modifiable, bo.modified = undolevels, modifiable, false
 end
 
---- The whole value at line lnum, display column vcol (0-based), of buf; nil off a result laid out
+--- The whole value at line lnum, display column vcol (0-based), of buf, and its column's name;
+--- nil off a result laid out
 function M.value_at(buf, lnum, vcol)
   if buf == 0 then buf = vim.api.nvim_get_current_buf() end
   local row = (cells[buf] or {})[lnum]
@@ -181,7 +183,7 @@ function M.value_at(buf, lnum, vcol)
   for n, col in ipairs(row.cols) do
     if col[1] <= vcol then c = n end
   end
-  return row.values[c]
+  return row.values[c], row.header[c]
 end
 
 return M
