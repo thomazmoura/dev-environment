@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The picker pane of the default layout, and the pane opener behind prefix+e,
-# prefix+E and prefix+Space.
+# prefix+E, prefix+Space and prefix+S-Space.
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents,
@@ -20,18 +20,22 @@
 # a new pane that asks, the way the layout's picker does -- prefix+Space and
 # prefix+- then Space. With -w the new pane is a window of its own instead of
 # a split: prefix+c opens a picker that way, in place of tmux's bare new-window.
-# A new pane is the only way to get one outside a new session: nothing types
-# the picker into a pane that is already there.
+# With -r it takes -t's own place instead: whatever runs there is killed and
+# the pane respawned as the kind, at the very same bounds -- prefix+S-Space
+# turns the pane into a fresh picker that way, a quick NeoVim reset.
+# Besides -r, a new pane is the only way to get one outside a new session:
+# nothing types the picker into a pane that is already there.
 #
 # In an ssh session (prefix+N) the picker itself runs here, where fzf is, and
 # the chosen tool runs on the remote like every other pane (pane_command) --
 # but for Scripts, a picker too, which runs here and does that itself.
 #
-# Usage: Select-PaneKind.sh [-t <target>] [-v | -w] [kind]
+# Usage: Select-PaneKind.sh [-t <target>] [-v | -w | -r] [kind]
 #   -t <target>   with a kind: the pane the split is relative to; bindings pass
 #                 "#{pane_id}". Without one: the pane to turn (default $TMUX_PANE)
 #   -v            with a kind: split below instead of to the right
 #   -w            with a kind: open it in a new window instead of a split
+#   -r            with a kind: replace the target pane with it instead of a split
 #   kind          one of PANE_KINDS, or Picker for a new pane that asks;
 #                 omitted, this pane asks
 set -euo pipefail
@@ -41,11 +45,13 @@ source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
 target=""
 direction="-h"
 window=""
-while getopts ":t:vw" option; do
+replace=""
+while getopts ":t:vwr" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     v) direction="-v" ;;
     w) window="yes" ;;
+    r) replace="yes" ;;
     *) die "Select-PaneKind.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -60,6 +66,17 @@ if [ -n "$kind" ]; then
   open() {
     if [ -n "$window" ]; then
       new_window "$origin" "$1" "$2" >/dev/null
+    elif [ -n "$replace" ]; then
+      replace_pane "$origin" "$1" "$2" >/dev/null
+      # A layout pane keeps its place in the layout under its new kind: the
+      # picker's role, NeoVim's, or none, as when the picker turns into it.
+      if [ -n "$(tmux display-message -p -t "$origin" '#{@layout_role}')" ]; then
+        case "$1" in
+          Picker) tmux set -p -t "$origin" @layout_role picker ;;
+          NeoVim) tmux set -p -t "$origin" @layout_role neovim ;;
+          *) tmux set -p -u -t "$origin" @layout_role ;;
+        esac
+      fi
     else
       new_pane "$origin" "$1" "$2" "$direction" >/dev/null
     fi

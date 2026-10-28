@@ -264,6 +264,32 @@ new_window() {
   printf '%s' "$pane"
 }
 
+# replace_pane <pane> <label> <command>
+# new_pane, but in <pane> itself instead of a split: whatever runs there is
+# killed and the pane respawned -- same id, same spot, same size -- in its
+# current directory, where <command> starts the way it does in a new pane. No
+# pane closes on the way, so neither the pane-died nor the after-kill-pane hook
+# (Restore-PickerPane.sh) fires. Prints the pane id.
+#
+# respawn-pane reruns the pane's own command: none, for every pane new_pane or
+# a new session opens, which means the user's login shell. Anything else gets
+# that shell explicitly, as Restore-PickerPane.sh does. One command list, so
+# the pane turns into <command> in one screen update.
+replace_pane() {
+  local pane=$1 label=$2 command=$3
+  local path start
+  IFS='|' read -r path start < <(tmux display-message -p -t "$pane" '#{pane_current_path}|#{pane_start_command}')
+  if [ -n "$start" ]; then
+    queue respawn-pane -k -t "$pane" -c "$path" "exec ${SHELL:-bash} -l"
+  else
+    queue respawn-pane -k -t "$pane" -c "$path"
+  fi
+  queue_label "$pane" "$label"
+  queue send-keys -t "$pane" "$(closing_line "$command")" C-m
+  send_batch
+  printf '%s' "$pane"
+}
+
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
