@@ -16,7 +16,11 @@
 --
 -- The space between columns shows a │, and the dash line ─ and ┼: extmarks over the text,
 -- which stays as it is for dadbod-ui and yic. Only the last column's padding is trimmed, so
--- the empty cells at the end of a row keep their │.
+-- the empty cells at the end of a row keep their │. The table's frame is extmarks too: a │
+-- before each line and after its last column (├ and ┤ on the dash line), inline so the text
+-- keeps its columns, and a ┌─┬─┐ line above the header and └─┴─┘ below the last row. A result
+-- at the top of the file gets a blank line above it to hold its ┌─┬─┐: NeoVim shows no virtual
+-- line above the first one (gg scrolls past it).
 local M = {}
 
 local SEP = '\31'
@@ -101,8 +105,9 @@ local function parse(lines, first, ncols)
 end
 
 --- Appends the result to out, the whole values of its lines to found, and the separators to
---- draw over it to marks ({ line, byte, text }, 0-based)
-local function render(header, rows, out, found, marks)
+--- draw over it to marks ({ line, byte, text }, 0-based) and its frame to frames
+--- ({ line, side = 'left'|'right'|'above'|'below', text })
+local function render(header, rows, out, found, marks, frames)
   local widths, right, texts = {}, {}, {}
   for c, name in ipairs(header) do
     widths[c] = math.max(width(name), 1)
@@ -124,6 +129,21 @@ local function render(header, rows, out, found, marks)
     cols[c] = { from, from + w - 1 }
     from = from + w + 1
   end
+  local total = from - 1
+
+  --- The line's │ (or the given characters) before it and after its last column
+  local function frame(left, right)
+    table.insert(frames, { #out - 1, 'left', left or '│' })
+    table.insert(frames, { #out - 1, 'right', (' '):rep(total - width(out[#out])) .. (right or '│') })
+  end
+  --- A rule across the result: ─ over each column, the given corners and joints
+  local function rule(left, joint, right)
+    local runs = {}
+    for c, w in ipairs(widths) do
+      runs[c] = ('─'):rep(w)
+    end
+    return left .. table.concat(runs, joint) .. right
+  end
 
   local function add(line_texts, values, align)
     local parts = {}
@@ -134,6 +154,7 @@ local function render(header, rows, out, found, marks)
     parts[#parts] = parts[#parts]:gsub('%s+$', '')
     table.insert(out, table.concat(parts, ' '))
     if values then found[#out] = { cols = cols, values = values, header = header } end
+    frame()
     local at = 0
     for c = 1, #parts - 1 do
       at = at + #parts[c]
@@ -143,11 +164,13 @@ local function render(header, rows, out, found, marks)
   end
 
   add(header, header, false)
+  table.insert(frames, { #out - 1, 'above', rule('┌', '┬', '┐') })
   local dashes = {}
   for c, w in ipairs(widths) do
     dashes[c] = ('-'):rep(w)
   end
   table.insert(out, table.concat(dashes, ' '))
+  frame('├', '┤')
   -- One mark per character: an overlay hides whole once its start scrolls off to the left,
   -- so a single one across the line would vanish on the first zl
   for at = 0, #out[#out] - 1 do
@@ -156,11 +179,12 @@ local function render(header, rows, out, found, marks)
   for r, row in ipairs(rows) do
     add(texts[r], row, true)
   end
+  table.insert(frames, { #out - 1, 'below', rule('└', '┴', '┘') })
 end
 
 function M.compact(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local out, found, marks, ranges, i = {}, {}, {}, {}, 1
+  local out, found, marks, frames, ranges, i = {}, {}, {}, {}, {}, 1
   while i <= #lines do
     local header, dashes = lines[i], lines[i + 1]
     local rows, after
@@ -168,8 +192,9 @@ function M.compact(buf)
       rows, after = parse(lines, i, separators(dashes) + 1)
     end
     if rows then
+      if #out == 0 then table.insert(out, '') end
       local first = #out + 1
-      render(split(header), rows, out, found, marks)
+      render(split(header), rows, out, found, marks, frames)
       table.insert(ranges, { header = first, last = #out })
       i = after
     else
@@ -197,6 +222,24 @@ function M.compact(buf)
   end
 
   vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+  -- The frame first: the ├ comes ahead of the ─ over the dash line's first character only when
+  -- set ahead of it, or that ─ is drawn over the ├
+  for _, mark in ipairs(frames) do
+    local line, side, text = unpack(mark)
+    if side == 'left' or side == 'right' then
+      vim.api.nvim_buf_set_extmark(buf, ns, line, side == 'left' and 0 or #out[line + 1], {
+        virt_text = { { text, 'DboutSeparator' } },
+        virt_text_pos = 'inline',
+      })
+    else
+      vim.api.nvim_buf_set_extmark(buf, ns, line, 0, {
+        virt_lines = { { { text, 'DboutSeparator' } } },
+        virt_lines_above = side == 'above',
+        -- Scrolled sideways with the rows (zl), not cut at the window's edge
+        virt_lines_overflow = 'scroll',
+      })
+    end
+  end
   for _, mark in ipairs(marks) do
     vim.api.nvim_buf_set_extmark(buf, ns, mark[1], mark[2], {
       virt_text = { { mark[3], 'DboutSeparator' } },

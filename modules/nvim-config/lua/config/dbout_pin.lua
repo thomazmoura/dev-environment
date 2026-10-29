@@ -3,7 +3,7 @@
 -- after/ftplugin/dbout.lua.
 --
 -- Once a result's header is scrolled away, a float over the window's first rows shows the
--- same buffer at that header: its │ and ┼ (config/dbout_compact.lua) come along, and it
+-- same buffer at that header: its │, ┼ and frame (config/dbout_compact.lua) come along, and it
 -- follows the window's horizontal scroll and wrapping. The cursor is kept off the rows it
 -- covers: moving up into them scrolls the window, scrolling it moves the cursor down.
 local M = {}
@@ -32,7 +32,8 @@ end
 local function pin(win)
   local header, info = scrolled_header(win)
   tops[win] = vim.fn.getwininfo(win)[1].topline
-  -- The header and the dash line, as many screen rows as the window wraps them in
+  -- The header and the dash line, as many screen rows as the window wraps them in, and the
+  -- frame's line above them
   local height = header and vim.api.nvim_win_text_height(win, { start_row = header - 1, end_row = header }).all
   -- Tiny windows keep their rows visible
   if not header or info.height <= height + 1 then return close(win) end
@@ -70,8 +71,10 @@ local function pin(win)
   end
 
   local leftcol = vim.api.nvim_win_call(win, vim.fn.winsaveview).leftcol
+  -- The virtual lines above the header (start_vcol leaves them out of the count)
+  local topfill = height - vim.api.nvim_win_text_height(win, { start_row = header - 1, start_vcol = 0, end_row = header }).all
   vim.api.nvim_win_call(float, function()
-    vim.fn.winrestview({ topline = header, lnum = header, col = 0, leftcol = leftcol })
+    vim.fn.winrestview({ topline = header, topfill = topfill, lnum = header, col = 0, leftcol = leftcol })
   end)
 end
 
