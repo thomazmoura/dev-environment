@@ -290,15 +290,40 @@ return {
       })
 
       -- SQL Server: our own server (modules/sql-assist), for what SqlToolsService
-      -- lacks: "Expand *" in the code actions (<Leader>.), join conditions and
-      -- INSERT column lists in the completion, the statements of <Leader>r.
-      -- Without the .NET diagnostics server, which would let other processes
-      -- read the passwords it holds (see its Hardening.cs)
+      -- lacks: "Expand *" and "Toggle ;" in the code actions (<Leader>.), join
+      -- conditions and INSERT column lists in the completion, the statements of
+      -- <Leader>r. Without the .NET diagnostics server, which would let other
+      -- processes read the passwords it holds (see its Hardening.cs)
+      local function code_action(id)
+        return function()
+          vim.lsp.buf.code_action({ apply = true, filter = function(action) return action.data and action.data.id == id end })
+        end
+      end
       vim.lsp.config('sqlserver_assist', {
         cmd = { home .. '/.language-servers/sqlserver-assist/SqlServerAssist' },
         cmd_env = { DOTNET_EnableDiagnostics = '0' },
         filetypes = { 'sql' },
         root_dir = sql_root,
+        -- <Leader>; ends the statement under the cursor with a ; or takes it away,
+        -- <Leader>: does it to all of them, instead of the command history while the
+        -- server is attached (a Postgres buffer gets it back)
+        on_attach = function(client, buf)
+          local keys = {
+            ['<Leader>;'] = { 'sqlserver.toggleSemicolon', 'Toggle ;' },
+            ['<Leader>:'] = { 'sqlserver.toggleAllSemicolons', 'Toggle ; in all statements' },
+          }
+          for lhs, key in pairs(keys) do
+            vim.keymap.set('n', lhs, code_action(key[1]), { buffer = buf, desc = key[2] })
+          end
+          vim.api.nvim_create_autocmd('LspDetach', {
+            buffer = buf,
+            callback = function(args)
+              if args.data.client_id ~= client.id then return end
+              for lhs in pairs(keys) do pcall(vim.keymap.del, 'n', lhs, { buffer = buf }) end
+              return true
+            end,
+          })
+        end,
       })
       require('config.sql_dialect').setup()
 

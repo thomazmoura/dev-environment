@@ -142,8 +142,54 @@ public static class Parsing
     // statement that doesn't parse is still one: what lies between the ones around it
     public static List<(int Start, int End)> Statements(string text, int cursor)
     {
-        // What a statement that doesn't parse is cut from, and the GO lines between batches.
-        // A statement can start at a token that starts a line or follows a ';'
+        var tokens = Tokens(text);
+
+        // The cursor's batch: from the previous GO to its own (its GO line included, so
+        // the cursor there gets the batch's last statement)
+        int start = 0, end = text.Length;
+        foreach (var t in tokens.Where(t => t.Go))
+        {
+            if (t.End <= cursor) start = t.End;
+            else { end = t.Start; break; }
+        }
+
+        return Split(text, tokens, start, end, cursor);
+    }
+
+    // Every GO batch, from where it starts (past the previous GO), with all its statements
+    public static List<(int Start, List<(int Start, int End)> Statements)> Batches(string text)
+    {
+        var tokens = Tokens(text);
+        var batches = new List<(int, List<(int, int)>)>();
+        int start = 0;
+        foreach (var go in tokens.Where(t => t.Go).Append(new Token { Start = text.Length }))
+        {
+            batches.Add((start, Split(text, tokens, start, go.Start, int.MaxValue)));
+            start = go.End;
+        }
+        return batches;
+    }
+
+    // The statement holding the cursor, else the one next to it: the one above, or on a
+    // comment line the one below, which the comment usually is about. As <Leader>r picks
+    // in NeoVim (config/sql_statement.lua)
+    public static (int Start, int End)? Pick(List<(int Start, int End)> statements, int cursor, string line)
+    {
+        (int, int)? before = null, after = null;
+        foreach (var statement in statements)
+        {
+            if (statement.Start <= cursor && cursor < statement.End) return statement;
+            if (statement.End <= cursor) before = statement;
+            else after ??= statement;
+        }
+        var comment = System.Text.RegularExpressions.Regex.IsMatch(line, @"^\s*(--|/\*)");
+        return comment ? after ?? before : before ?? after;
+    }
+
+    // What a statement that doesn't parse is cut from, and the GO lines between batches.
+    // A statement can start at a token that starts a line or follows a ';'
+    static List<Token> Tokens(string text)
+    {
         var tokens = new List<Token>();
         int previousLine = 0;
         bool afterSemicolon = false;
@@ -159,18 +205,13 @@ public static class Parsing
             previousLine = t.Line;
             afterSemicolon = t.TokenType == TSqlTokenType.Semicolon;
         }
-
-        // The cursor's batch: from the previous GO to its own (its GO line included, so
-        // the cursor there gets the batch's last statement)
-        int start = 0, end = text.Length;
-        foreach (var t in tokens.Where(t => t.Go))
-        {
-            if (t.End <= cursor) start = t.End;
-            else { end = t.Start; break; }
-        }
-
-        return Split(text, tokens, start, end, cursor);
+        return tokens;
     }
+
+    // Whether the statement parses as a MERGE, which must end with a ';'
+    public static bool IsMerge(string statementText) =>
+        Parser.Parse(new StringReader(statementText), out var errors) is TSqlScript script && errors.Count == 0
+        && script.Batches.SelectMany(b => b.Statements).FirstOrDefault() is MergeStatement;
 
     static List<(int Start, int End)> Split(string text, List<Token> tokens, int start, int end, int cursor)
     {

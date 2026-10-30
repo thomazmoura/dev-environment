@@ -15,6 +15,10 @@ A Postgres one would go in `postgres/`, and a VS Code extension in `vscode/` (se
   - **Expand \*** on a select list's `*` (or `o.*`): its columns, each with the table's alias,
     from `sys.dm_exec_describe_first_result_set`, so views, CTEs, subqueries and APPLY expand
     as the server sees them.
+  - **Toggle ;** on a statement (`<Leader>;`): ends it with a `;`, or takes its `;` away.
+    **Toggle ; in all statements** (`<Leader>:`) adds one to each statement missing it, else
+    takes them all away. The statements are `sqlserver/statements`' ones. A `;` T-SQL requires
+    stays: a `MERGE`'s, and the one before a `WITH` or a `THROW`.
 - **Completion:**
   - after a join's `ON`: the conditions of the foreign keys between the joined table and the
     ones before it (`o.CustomerId = c.Id`), nearest tables first;
@@ -67,8 +71,8 @@ Standard LSP over stdio, with positions in UTF-16 (LSP's default):
 | `sqlserver/connection` | → | Notification `{ textDocument: { uri }, connectionString: string \| null }`: the document's SqlClient connection string, or none |
 | `sqlserver/statements` | → | Request `{ textDocument, position }` → `Range[]`: the statements of the position's GO batch, up to the first one ending past it. A statement that doesn't parse is still one: what lies between the ones around it |
 
-Without a `sqlserver/connection`, the parse-only parts still work (`sqlserver/statements`, offering
-"Expand *"). The ones that need the database do nothing, or say why.
+Without a `sqlserver/connection`, the parse-only parts still work (`sqlserver/statements`, "Toggle ;",
+offering "Expand *"). The ones that need the database do nothing, or say why.
 
 ## Secrets
 

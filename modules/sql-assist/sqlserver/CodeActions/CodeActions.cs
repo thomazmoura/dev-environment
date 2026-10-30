@@ -6,5 +6,7 @@ public static class CodeActions
     public static readonly ICodeAction[] All =
     {
         new ExpandStar(),
+        new ToggleSemicolon(),
+        new ToggleAllSemicolons(),
     };
 }
