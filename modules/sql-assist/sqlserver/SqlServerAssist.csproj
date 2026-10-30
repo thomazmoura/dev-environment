@@ -1,0 +1,28 @@
+<!-- sqlserver-assist: the SQL Server language server of sql-assist (see ../README.md).
+     Built by ../Build-SqlAssist.ps1 into ~/.language-servers/sqlserver-assist -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- The Docker image has only the .NET 8 SDK; a newer runtime runs it too -->
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SqlServerAssist</AssemblyName>
+    <RootNamespace>SqlServerAssist</RootNamespace>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- No .pdb next to the published binary -->
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The parser of SSMS and VS Code's mssql -->
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="180.140.0" />
+    <!-- 6.x: Azure AD password authentication is still built in (7.x moved it out) -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.8" />
+    <!-- JSON-RPC with LSP's Content-Length framing, as Roslyn's server uses -->
+    <PackageReference Include="StreamJsonRpc" Version="2.26.150" />
+  </ItemGroup>
+
+</Project>

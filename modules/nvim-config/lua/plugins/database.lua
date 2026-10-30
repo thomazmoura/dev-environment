@@ -36,20 +36,13 @@ return {
       group = vim.api.nvim_create_augroup('SqlKeymaps', { clear = true }),
       pattern = 'sql',
       callback = function(args)
-        -- Twice: config/sql_dialect.lua decides the dialect in a schedule of its own
-        vim.schedule(function()
-          vim.schedule(function() require('config.sql_statement').warm(args.buf) end)
-        end)
         vim.keymap.set('n', '<Leader>r', function() require('config.sql_statement').run() end,
           { buffer = args.buf, desc = 'Run statement' })
         vim.keymap.set('n', '<Leader>R', '<Plug>(DBUI_ExecuteQuery)', { buffer = args.buf, desc = 'Run query' })
         -- A : from visual mode, not <cmd>: the '<,'> marks are only set on leaving it, so
         -- <cmd> would run the previous selection
         vim.keymap.set('v', '<Leader>r', ':DB<cr>', { buffer = args.buf, desc = 'Run selection' })
-        -- On a SELECT's *, its columns (config/sql_star.lua). Set ahead of the LSP's own gd,
-        -- which leaves a buffer's mapping alone
-        vim.keymap.set('n', 'gd', function() require('config.sql_star').definition() end,
-          { buffer = args.buf, desc = 'Go to definition, or expand the *' })
+        require('config.sql_completion_triggers').attach(args.buf)
       end,
     })
 

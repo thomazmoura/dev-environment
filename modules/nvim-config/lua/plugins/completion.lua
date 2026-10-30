@@ -22,12 +22,13 @@ return {
       -- <CR> takes the first item when none is selected
       list = { selection = { preselect = false, auto_insert = true } },
       documentation = { auto_show = true },
-      -- A space shows the menu only after a join's ON, for its conditions (config/sql_join.lua),
-      -- and in sql buffers a '(' only after INSERT INTO <table>, for its columns (config/sql_insert.lua)
+      -- A space shows the menu only after a join's ON, for its conditions, and in sql
+      -- buffers a '(' only after INSERT INTO <table>, for its columns (config/sql_completion_triggers.lua)
       trigger = {
         show_on_blocked_trigger_characters = function()
-          if require('config.sql_join').after_on() then return { '\n', '\t' } end
-          if vim.bo.filetype == 'sql' and not require('config.sql_insert').after_insert() then
+          local triggers = require('config.sql_completion_triggers')
+          if triggers.after_on() then return { '\n', '\t' } end
+          if vim.bo.filetype == 'sql' and not triggers.after_insert() then
             return { ' ', '\n', '\t', '(' }
           end
           return { ' ', '\n', '\t' }
@@ -38,7 +39,7 @@ return {
     sources = {
       default = { 'lsp', 'snippets', 'buffer', 'path' },
       per_filetype = {
-        sql = { 'sql_join', 'sql_insert', 'snippets', 'dadbod', 'buffer' },
+        sql = { 'sql_assist', 'snippets', 'dadbod', 'buffer' },
         lua = { inherit_defaults = true, 'lazydev' },
       },
       providers = {
@@ -46,10 +47,11 @@ return {
         path = { module = 'config.bare_path' },
         -- Tables and columns filtered fuzzily, not only by their start
         dadbod = { name = 'Dadbod', module = 'config.dadbod_fuzzy' },
-        -- A join's ON completed from the foreign keys, ahead of everything else
-        sql_join = { name = 'Join', module = 'config.sql_join', score_offset = 100 },
-        -- An INSERT's column list completed with all the table's columns, first too
-        sql_insert = { name = 'Insert', module = 'config.sql_insert', score_offset = 100 },
+        -- sqlserver-assist (modules/sql-assist), the only language server completing in sql
+        -- buffers (plugins/lsp.lua): a join's ON from the foreign keys and an INSERT's column
+        -- list with all the table's columns, ahead of everything else. Its own provider, so
+        -- the offset leaves other filetypes' LSP items alone
+        sql_assist = { name = 'SQL', module = 'blink.cmp.sources.lsp', score_offset = 100 },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },
       },
     },

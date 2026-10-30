@@ -85,7 +85,8 @@ RUN chmod +x /home/developer/.modules/claude/statusline.py \
 # Dotnet tools instalation script
 COPY --chown=developer:developer modules/dotnet-tools /home/developer/.modules/dotnet-tools
 
-# NeoVim LSP Configuration
+# NeoVim LSP Configuration (sql-assist is built from source there)
+COPY --chown=developer:developer modules/sql-assist /home/developer/.modules/sql-assist
 COPY --chown=developer:developer modules/neovim-lsp /home/developer/.modules/neovim-lsp
 RUN pwsh -NoProfile -File /home/developer/.modules/neovim-lsp/Setup-NeoVimLSP.ps1
 

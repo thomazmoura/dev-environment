@@ -47,6 +47,10 @@ New-Item -Force -Type Directory -Path $HOME/.language-servers/sqlserver
 & tar -xzf "./sqltoolsservice.tar.gz" -C "$HOME/.language-servers/sqlserver"
 & Remove-Item "./sqltoolsservice.tar.gz"
 
+
+Write-Output "`n->> Building sql-assist (our SQL Server language server, modules/sql-assist)"
+. "$HOME/.modules/sql-assist/Build-SqlAssist.ps1"
+
 Pop-Location
 
 Throw-ExceptionOnNativeFailure

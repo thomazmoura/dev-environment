@@ -1,6 +1,7 @@
--- Which SQL language server a sql buffer gets: SQL Server (SqlToolsService) or
--- Postgres (postgres-language-server). Both claim the sql filetype, so they are
--- configured in plugins/lsp.lua but left out of vim.lsp.enable, and started here.
+-- Which SQL language servers a sql buffer gets: SQL Server's (SqlToolsService and
+-- our sqlserver-assist) or Postgres's (postgres-language-server). All claim the sql
+-- filetype, so they are configured in plugins/lsp.lua but left out of vim.lsp.enable,
+-- and started here.
 --
 -- A buffer's dialect comes from, in order:
 --   1. a pin: :SqlDialect sqlserver|postgres, <Leader>dm / <Leader>dp
@@ -13,7 +14,7 @@ local M = {}
 
 local DEFAULT = 'sqlserver'
 
-local SERVERS = { sqlserver = 'sqlserver_ls', postgres = 'postgres_lsp' }
+local SERVERS = { sqlserver = { 'sqlserver_ls', 'sqlserver_assist' }, postgres = { 'postgres_lsp' } }
 local NAMES = { sqlserver = 'SQL Server', postgres = 'Postgres' }
 local SCHEMES = { sqlserver = 'sqlserver', postgres = 'postgres', postgresql = 'postgres' }
 
@@ -110,26 +111,30 @@ local function decide(buf)
   return DEFAULT, 'default'
 end
 
---- Detaches the other dialect's server and starts (or reuses) this one's
+--- Detaches the other dialect's servers and starts (or reuses) this one's
 local function attach(buf, dialect)
-  for other, name in pairs(SERVERS) do
+  for other, names in pairs(SERVERS) do
     if other ~= dialect then
-      for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf, name = name })) do
-        vim.lsp.buf_detach_client(buf, client.id)
+      for _, name in ipairs(names) do
+        for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf, name = name })) do
+          vim.lsp.buf_detach_client(buf, client.id)
+        end
       end
     end
   end
-  local name = SERVERS[dialect]
-  if #vim.lsp.get_clients({ bufnr = buf, name = name }) > 0 then return end
-  local config = vim.deepcopy(vim.lsp.config[name])
-  local function start(root)
-    config.root_dir = root
-    if vim.api.nvim_buf_is_valid(buf) then vim.lsp.start(config, { bufnr = buf }) end
-  end
-  if type(config.root_dir) == 'function' then
-    config.root_dir(buf, start)
-  else
-    start(config.root_dir)
+  for _, name in ipairs(SERVERS[dialect]) do
+    if #vim.lsp.get_clients({ bufnr = buf, name = name }) == 0 then
+      local config = vim.deepcopy(vim.lsp.config[name])
+      local function start(root)
+        config.root_dir = root
+        if vim.api.nvim_buf_is_valid(buf) then vim.lsp.start(config, { bufnr = buf }) end
+      end
+      if type(config.root_dir) == 'function' then
+        config.root_dir(buf, start)
+      else
+        start(config.root_dir)
+      end
+    end
   end
 end
 
@@ -172,18 +177,20 @@ end
 function M.setup()
   -- A server still checking the text when the buffer switched away from it
   -- publishes afterwards: only an attached server's diagnostics are shown
-  for _, name in pairs(SERVERS) do
-    vim.lsp.config(name, {
-      handlers = {
-        ['textDocument/publishDiagnostics'] = function(err, result, ctx)
-          local client = vim.lsp.get_client_by_id(ctx.client_id)
-          local buf = vim.uri_to_bufnr(result.uri)
-          if client and client.attached_buffers[buf] then
-            vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
-          end
-        end,
-      },
-    })
+  for _, names in pairs(SERVERS) do
+    for _, name in ipairs(names) do
+      vim.lsp.config(name, {
+        handlers = {
+          ['textDocument/publishDiagnostics'] = function(err, result, ctx)
+            local client = vim.lsp.get_client_by_id(ctx.client_id)
+            local buf = vim.uri_to_bufnr(result.uri)
+            if client and client.attached_buffers[buf] then
+              vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
+            end
+          end,
+        },
+      })
+    end
   end
 
   require('config.sql_connection').setup()

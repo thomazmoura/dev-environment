@@ -239,13 +239,15 @@ return {
         settings = vim.tbl_extend('force', { cucumber = cucumber }, cucumber),
       })
 
-      -- SQL: both servers claim the sql filetype, so they are not in
-      -- vim.lsp.enable: config/sql_dialect.lua starts the one matching each
-      -- buffer's dadbod connection or syntax. Neither needs a database for
-      -- syntax errors and formatting.
+      -- SQL: the servers claim the sql filetype, so they are not in
+      -- vim.lsp.enable: config/sql_dialect.lua starts the ones matching each
+      -- buffer's dadbod connection or syntax. SqlToolsService and the Postgres
+      -- server need no database for syntax errors and formatting.
       local function sql_root(bufnr, on_dir)
         on_dir(vim.fs.root(bufnr, { 'postgres-language-server.jsonc', '.git' }) or vim.fn.getcwd())
       end
+      -- sql buffers complete from dadbod and sqlserver_assist only (blink's sql_assist source)
+      local function no_completion(client) client.server_capabilities.completionProvider = nil end
 
       -- Postgres: a project's own postgres-language-server.jsonc, or else
       -- these settings (it doesn't format without either). They are layered
@@ -255,6 +257,7 @@ return {
         cmd = { home .. '/.language-servers/postgres/postgres-language-server', 'lsp-proxy' },
         root_dir = sql_root,
         on_init = function(client)
+          no_completion(client)
           if vim.uv.fs_stat(client.root_dir .. '/postgres-language-server.jsonc') then return end
           client.settings = {
             -- As the SQL Server formatter does; x::int stays x::int, not CAST(x AS int)
@@ -272,6 +275,7 @@ return {
         cmd = { home .. '/.language-servers/sqlserver/MicrosoftSqlToolsServiceLayer' },
         filetypes = { 'sql' },
         root_dir = sql_root,
+        on_init = no_completion,
         settings = {
           mssql = {
             format = {
@@ -283,6 +287,18 @@ return {
             },
           },
         },
+      })
+
+      -- SQL Server: our own server (modules/sql-assist), for what SqlToolsService
+      -- lacks: "Expand *" in the code actions (<Leader>.), join conditions and
+      -- INSERT column lists in the completion, the statements of <Leader>r.
+      -- Without the .NET diagnostics server, which would let other processes
+      -- read the passwords it holds (see its Hardening.cs)
+      vim.lsp.config('sqlserver_assist', {
+        cmd = { home .. '/.language-servers/sqlserver-assist/SqlServerAssist' },
+        cmd_env = { DOTNET_EnableDiagnostics = '0' },
+        filetypes = { 'sql' },
+        root_dir = sql_root,
       })
       require('config.sql_dialect').setup()
 

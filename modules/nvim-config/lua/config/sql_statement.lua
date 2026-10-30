@@ -2,20 +2,34 @@
 -- lua/plugins/database.lua), like the mssql/pgsql extensions' runCurrentStatement in VS Code.
 --
 -- Where a statement starts and ends comes from the buffer's dialect (config/sql_dialect.lua):
--- ScriptDom's parse for SQL Server (config/sql_split_sqlserver.lua), psql's rules for Postgres
--- (config/sql_split_postgres.lua). So a query with blank lines inside runs whole, and two
--- on one line run apart. Between two statements, the cursor gets the one above, or on a
--- comment line the one below, which the comment usually is about.
+-- ScriptDom's parse for SQL Server (sqlserver-assist's sqlserver/statements, from
+-- modules/sql-assist), psql's rules for Postgres (config/sql_split_postgres.lua). So a query
+-- with blank lines inside runs whole, and two on one line run apart. Between two statements,
+-- the cursor gets the one above, or on a comment line the one below, which the comment
+-- usually is about.
 local M = {}
 
 local ns = vim.api.nvim_create_namespace('sql_statement')
 
+--- callback({{start, end}, ...}) with byte offsets, the end excluded, or callback(nil, error),
+--- given the buffer's text, its lines' start offsets and the cursor's (row, col)
 local SPLITTERS = {
-  sqlserver = function(text, cursor, callback)
-    require('config.sql_split_sqlserver').split(text, cursor, callback)
+  sqlserver = function(buf, lines, starts, row, col, callback)
+    local client = vim.lsp.get_clients({ bufnr = buf, name = 'sqlserver_assist' })[1]
+    if not client then return callback(nil, 'sqlserver-assist is not running for this buffer (:checkhealth vim.lsp)') end
+    local position = { line = row - 1, character = vim.str_utfindex(lines[row], 'utf-16', col, false) }
+    client:request('sqlserver/statements', { textDocument = { uri = vim.uri_from_bufnr(buf) }, position = position },
+      function(err, ranges)
+        if err then return callback(nil, err.message) end
+        local function offset(p)
+          local line = lines[p.line + 1] or ''
+          return starts[p.line + 1] + vim.str_byteindex(line, 'utf-16', math.min(p.character, vim.str_utfindex(line, 'utf-16')), false)
+        end
+        callback(vim.tbl_map(function(r) return { offset(r.start), offset(r['end']) } end, ranges))
+      end, buf)
   end,
-  postgres = function(text, _, callback)
-    callback(require('config.sql_split_postgres').split(text))
+  postgres = function(_, lines, _, _, _, callback)
+    callback(require('config.sql_split_postgres').split(table.concat(lines, '\n')))
   end,
 }
 
@@ -54,7 +68,7 @@ function M.run()
   local cursor = starts[row] + col
   local tick = vim.b[buf].changedtick
 
-  SPLITTERS[vim.b[buf].sql_dialect or 'sqlserver'](text, cursor, function(statements, err)
+  SPLITTERS[vim.b[buf].sql_dialect or 'sqlserver'](buf, lines, starts, row, col, function(statements, err)
     if err then return vim.notify('Run statement: ' .. err, vim.log.levels.ERROR) end
     if vim.api.nvim_get_current_buf() ~= buf or vim.b[buf].changedtick ~= tick then
       return vim.notify('Run statement: the buffer changed while it was parsed', vim.log.levels.WARN)
@@ -79,11 +93,6 @@ function M.run()
     vim.api.nvim_buf_set_mark(buf, ']', last_row, last_col, {})
     vim.cmd('0,1DB')
   end)
-end
-
---- Starts SQL Server's parser ahead of the first run, if the buffer is SQL Server's
-function M.warm(buf)
-  if vim.b[buf].sql_dialect == 'sqlserver' then require('config.sql_split_sqlserver').warm() end
 end
 
 return M
