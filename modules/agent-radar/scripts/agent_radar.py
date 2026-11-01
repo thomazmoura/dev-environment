@@ -44,7 +44,7 @@ sys.path.insert(0, str(SHARED_SCRIPTS))
 import radar_cache  # noqa: E402
 
 # --- States ------------------------------------------------------------------
-# Four things a *screen* can say, and resist adding a fifth (herdr S3.6).
+# Five things a *screen* can say, and resist adding a sixth (herdr S3.6).
 # "Waiting for input" is BLOCKED; the difference between "waiting for approval"
 # and "waiting for a prompt" is already carried by BLOCKED vs IDLE, and every
 # consumer would have to learn a new value to gain nothing.
@@ -53,17 +53,26 @@ WORKING = "working"
 IDLE = "idle"
 UNKNOWN = "unknown"
 
-# What a rule may declare, and therefore everything classify() can return.
-STATES = (BLOCKED, WORKING, IDLE, UNKNOWN)
+# The fifth, and what it took to earn it: a screen neither IDLE nor WORKING
+# could describe. The agent ended its turn and its prompt is showing, but it is
+# parked on work of its own -- a backgrounded shell or subagents -- and will
+# pick up again when that finishes, with no keystroke from you. IDLE would say
+# "your turn", which it is not; WORKING would say "busy right now", when it is
+# mostly waiting and can sit like this for hours (or for good, behind a dev
+# server). So it gets a word of its own, and a quiet colour.
+BACKGROUND = "background"
 
-# The fifth published value -- and the reason it does not walk the rule above
+# What a rule may declare, and therefore everything classify() can return.
+STATES = (BLOCKED, WORKING, BACKGROUND, IDLE, UNKNOWN)
+
+# The sixth published value -- and the reason it does not walk the rule above
 # back. No screen can show DONE. It is IDLE plus a fact no snapshot contains:
 # this pane was working a moment ago and nothing has displayed it since. So it
 # is not classified but *remembered*, by the one process that keeps state across
 # samples (agent_feed.debounce), and a rule that tries to declare it is a load
 # error like any other unknown state.
 #
-# What it buys is the distinction the four could not draw: an idle pane is
+# What it buys is the distinction the others could not draw: an idle pane is
 # either an agent that has never been asked anything, or one whose answer you
 # already read, or one that finished while you were elsewhere -- and only the
 # last of those wants you. Green now means exactly that, and IDLE goes grey.
@@ -73,9 +82,10 @@ DONE = "done"
 PUBLISHED_STATES = STATES + (DONE,)
 
 # Presentation lives with the consumers, but the ordering is a detection fact:
-# the two states that mean "your turn" sort above the three that do not, blocked
-# first because it is the reason you opened the list.
-STATE_ORDER = {BLOCKED: 0, DONE: 1, WORKING: 2, UNKNOWN: 3, IDLE: 4}
+# the two states that mean "your turn" sort above the four that do not, blocked
+# first because it is the reason you opened the list. BACKGROUND sits under
+# WORKING: busy, but less so.
+STATE_ORDER = {BLOCKED: 0, DONE: 1, WORKING: 2, BACKGROUND: 3, UNKNOWN: 4, IDLE: 5}
 
 # --- Layer 1: identification -------------------------------------------------
 # Executable basename -> canonical agent label. Reverse of herdr's agent table
@@ -970,9 +980,11 @@ def detect(remote=None) -> list[Pane]:
                 # is running a tool is not sitting on a dialog.
                 if not on_host:
                     clear_marker(pane.pane_id)
-            elif verdict.state in (IDLE, UNKNOWN):
+            elif verdict.state in (IDLE, BACKGROUND, UNKNOWN):
                 # The case this channel exists for -- a dialog whose shape no
-                # rule recognises. The agent told us itself.
+                # rule recognises. The agent told us itself. BACKGROUND is in
+                # the list because its prompt is showing too: an agent parked on
+                # a background shell can still stop on a dialog.
                 verdict = Verdict(
                     BLOCKED, str(marker.get("detail") or "waiting"), "hook_marker"
                 )

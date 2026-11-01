@@ -1,0 +1,55 @@
+#title: ✳ remover-notas-questoes-audio
+
+
+● O Kanban também está certo: tudo o que saiu são questões. Com a regra nova do #VamosPraticar#, rodo de novo o levantamento geral para ver se ainda sobra algum caso
+  suspeito.
+
+  Ran 1 shell command
+
+● A correção retornou cerca de 106 mil caracteres de teoria em Engenharia de Software e 36 mil em Banco de Dados. Vou conferir mais duas amostras, Políticas 2.1 e
+  Administração Pública 5.3, antes de prosseguir.
+
+  Ran 2 shell commands
+
+● Os parágrafos seguem no roteiro, e a diferença no diff era só a remoção das notas. Antes de disparar, vou checar se a Aula 01 de Governança já gerada contém
+  #VamosPraticar#, pois isso exigiria refazê-la.
+
+  Ran 1 shell command
+
+● A Aula 01 tem 4 #VamosPraticar#. Comparo os roteiros salvos com o que a regra nova produziria.
+
+  Ran 1 shell command
+
+● Todos estão em sub-itens de questões, que são pulados, então a Aula 01 já gerada continua válida. Disparo a geração completa em segundo plano.
+
+  Ran 1 shell command
+
+● Comecei a regerar com o edge-tts (voz Thalita) todos os cursos e aulas que existiam em Estratégia - v1. A geração roda em segundo plano, um curso e uma aula por vez,
+  e grava em docs/study/materiais/audio/Estratégia/. Aviso quando terminar.
+
+  São 50 aulas em 7 cursos, com cerca de 3,3 milhões de caracteres de teoria, ou umas 60 horas de áudio. Deve levar várias horas. Se parar no meio, basta rodar de novo:
+  o que já foi gerado é pulado. Banco de Dados e Desenvolvimento de Software tinham só parte das aulas em v1 (5 de 9 e 1 de 16), e regerei só essas.
+
+  Antes de disparar, conferi a remoção de questões nos outros cursos e corrigi um problema:
+  - O que estava errado: no curso de Engenharia de Software, o #VamosPraticar# também aparece depois das questões, marcando a volta à teoria. A regra antiga tratava
+    esse marcador sempre como começo de questão e cortava teoria junto.
+  - Correção: agora ele só abre questão quando a linha seguinte é um enunciado, como (FGV / TJDFT – 2022) ou 1. (CEBRASPE…. Nos outros casos, ele fecha a questão.
+  - Efeito: voltaram cerca de 106 mil caracteres de teoria em Engenharia de Software e 36 mil em Banco de Dados.
+  - Aula 01 de Governança: continua valendo, porque os #VamosPraticar# dela estão só nos sub-itens de questões, que são pulados.
+
+  Verifiquei por amostra 7 sub-itens que perderam muito texto, em todos os cursos. Em todos, o que saiu eram questões, e a teoria continua no roteiro. Não conferi todos
+  os sub-itens, então vale prestar atenção ao ouvir.
+
+  Os roteiros ficam em docs/study/materiais/audio/roteiros/<curso>/. Se algum áudio sair com corte estranho, você pode corrigir o roteiro à mão e gerar só aquele
+  sub-item de novo.
+
+✻ Brewed for 2m 58s · done 11:31 AM · 1 shell still running
+
+※ recap: O objetivo é regerar com o edge-tts os áudios de `Estratégia - v1`, agora sem notas e questões. A geração das 50 aulas está rodando em segundo plano e deve
+  levar várias horas. Quando terminar, eu reviso o log e reporto as falhas.
+                                                                                       new task? /clear to save 178.6k tokens · ✔ Update installed · Restart to update
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── remover-notas-questoes-audio ─
+❯ 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  󰏫  󰧑 Context 19% 177K  󰔟 5h 15% 15:00  󰨳 7d 2% 6d15h  󰜗 Cache 98% cold
+  ⏵⏵ auto mode on · 1 shell

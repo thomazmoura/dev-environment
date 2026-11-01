@@ -85,18 +85,23 @@ _spec.loader.exec_module(state_cli)
 # The same colours as the ANSI map in Get-AgentState.py, in curses terms. Green
 # belongs to DONE alone -- an agent that finished while you were elsewhere.
 #
-# Two of these are placeholders resolved against the palette the terminal
+# Three of these are placeholders resolved against the palette the terminal
 # actually has, at startup in run():
 #
 #   idle     state_cli.IDLE_256, a muted teal, where there are 256 colours.
 #            Base cyan is the fallback and is louder than idle deserves, but a
 #            16-colour terminal has nothing quieter that is not the text colour.
+#   background
+#            state_cli.BACKGROUND_256, a muted yellow, where there are 256
+#            colours. In 16 it is working's yellow, told apart by the missing
+#            bold (STATE_EMPHASIS below).
 #   unknown  grey, i.e. "bright black" -- colour 8, which only exists from 16
 #            colours up. COLOR_BLACK is not a substitute: on a dark background
 #            it is invisible.
 COLOUR = {
     radar.BLOCKED: curses.COLOR_RED,
     radar.WORKING: curses.COLOR_YELLOW,
+    radar.BACKGROUND: curses.COLOR_YELLOW,
     radar.DONE: curses.COLOR_GREEN,
     radar.IDLE: curses.COLOR_CYAN,
     radar.UNKNOWN: curses.COLOR_WHITE,
@@ -118,12 +123,12 @@ COLOUR = {
 AGENT_COLOUR = dict(state_cli.AGENT_BASIC)
 
 # The rail marking the agent you are focused on. Blue is the one hue none of the
-# four states claims, so it cannot be misread as one -- see CURRENT_RAIL in
+# states claims, so it cannot be misread as one -- see CURRENT_RAIL in
 # Get-AgentState.py for why this needs a channel of its own at all, and
 # focused_pane below for how the row is chosen.
 RAIL_COLOUR = curses.COLOR_BLUE
 
-# The state word carries the colour, so it is emphasised -- except in the two
+# The state word carries the colour, so it is emphasised -- except in the three
 # states that are explicitly not asking for you. Idle lost its bold along with
 # its green: a pane you have already read should sit quietly under the ones that
 # have something to say.
@@ -131,6 +136,7 @@ STATE_EMPHASIS = {
     radar.BLOCKED: curses.A_BOLD,
     radar.DONE: curses.A_BOLD,
     radar.WORKING: curses.A_BOLD,
+    radar.BACKGROUND: curses.A_NORMAL,
     radar.IDLE: curses.A_NORMAL,
     radar.UNKNOWN: curses.A_DIM,
 }
@@ -382,6 +388,8 @@ def run(stdscr, interval: float) -> str:
         # Quiet, but still a colour rather than the colour everything else on
         # the row is already drawn in. See IDLE_256 in Get-AgentState.py.
         COLOUR[radar.IDLE] = state_cli.IDLE_256
+        # Working's hue, muted. See BACKGROUND_256 in Get-AgentState.py.
+        COLOUR[radar.BACKGROUND] = state_cli.BACKGROUND_256
         # Orange and mauve do not exist in 16 colours; where they do, take them.
         AGENT_COLOUR.update(state_cli.AGENT_256)
 

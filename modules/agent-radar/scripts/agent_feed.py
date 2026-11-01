@@ -207,6 +207,12 @@ def debounce(panes: list[radar.Pane]) -> None:
       you look, which is the whole reason it exists: IDLE could not tell an
       agent that has never been asked anything from one that just answered.
 
+      background -> idle is treated the same way: the agent was parked on work
+      of its own, that work is over, and it is at its prompt. Usually Claude
+      resumes first (background -> working -> idle); this catches the shell
+      that was killed under it. working -> background is not smoothed and
+      makes no DONE: a turn that ended on a still-running shell is not done.
+
     Only that one transition is smoothed. Positive evidence needs no
     confirmation: a matched blocked rule publishes immediately, because the
     entire point of the tool is to tell you about it now.
@@ -230,18 +236,18 @@ def debounce(panes: list[radar.Pane]) -> None:
         # list_panes already carried them.
         seen = pane.active and pane.attached
 
-        if published == radar.WORKING and raw == radar.IDLE:
+        if published in (radar.WORKING, radar.BACKGROUND) and raw == radar.IDLE:
             count = entry.get("count", 0) + 1
             first = entry.get("first", now)
             if count >= PENDING_IDLE_CONFIRMATIONS or now - first >= PENDING_IDLE_CAP_SECONDS:
                 # The one place DONE is ever created: an agent that was working
-                # has stopped, and you were not there to see it.
+                # (or parked on background work) has stopped, and you were not
+                # there to see it.
                 published = radar.IDLE if seen else radar.DONE
                 count, first = 0, now
             else:
-                # Keep reporting working, and keep the detail that came with it
-                # so the row does not half-update.
-                published = radar.WORKING
+                # Keep reporting what it was, and keep the detail that came
+                # with it so the row does not half-update.
                 pane.detail = entry.get("detail", pane.detail)
         elif published == radar.DONE and raw in (radar.IDLE, radar.UNKNOWN):
             # DONE deliberately outlives the sample that created it, and ends in

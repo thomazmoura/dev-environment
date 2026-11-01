@@ -124,23 +124,50 @@ not = [
   { contains = ["do you want to allow this connection?"] },
 ]
 
+# --- Background --------------------------------------------------------------
+# The main agent ended its turn and its ready prompt is showing, but it is parked
+# on work of its own and will pick up again when that finishes. Not idle (it is
+# not your turn) and not working (it is mostly waiting, sometimes for hours), so
+# these get the state of their own. Both rules sit below spinner_status: while
+# the main agent's own spinner is up, the pane is working, whatever else runs.
+
 [[rules]]
 id = "background_agents"
-state = "working"
+state = "background"
 priority = 190
 region = "bottom(12)"
 detail = "subagents running"
-# The main agent parked on backgrounded subagents: its own spinner is gone and
-# the ready prompt is showing, but the work is still going on. Claude lists the
-# running ones BELOW the mode footer, one row each, e.g.
+# Backgrounded subagents. Claude lists the running ones BELOW the mode footer,
+# one row each, e.g.
 #   ● main
 #   ◯ general-purpose  Checking CNPq item in Aula 16      52s · ↓ 82.6k tokens
 # A finished agent drops off the list rather than changing glyph (watched over
 # five minutes of agents coming and going), so a row on screen means running.
-# The `· ↓ N tokens` tail is what makes it an AGENT row: a background shell has
-# no token count, and a dev server left running must not read as working forever.
-# Below spinner_status so the main agent's own spinner keeps its detail.
+# The `· ↓ N tokens` tail is what makes it an AGENT row, and gives this rule its
+# own detail; background shells are background_shells' job.
 line_regex = ['^\s+◯\s+\S+\s{2,}\S.*\s·\s+↓\s+[\d.]+[kM]?\s+tokens\s*$']
+not = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["waiting for permission"] },
+  { contains = ["do you want to allow this connection?"] },
+]
+
+[[rules]]
+id = "background_shells"
+state = "background"
+priority = 180
+region = "bottom(12)"
+detail = "shell running"
+# A backgrounded shell. The mode footer counts them at its end, e.g.
+#   ⏵⏵ auto mode on · 1 shell
+# That counter is live: it goes when the shell exits. The finished line says it
+# too --
+#   ✻ Brewed for 2m 58s · done 11:31 AM · 1 shell still running
+# -- but that line is printed once and never redrawn, so it would keep claiming a
+# shell long after it ended. Indented, so the prompt line (`❯ ...`) and your
+# draft cannot take this shape. A dev server left running reads as background
+# for as long as it runs, which is true, and background is quiet.
+line_regex = ['^\s+\S.*\s·\s+\d+\s+shells?\s*$']
 not = [
   { contains = ["do you want to proceed?"] },
   { contains = ["waiting for permission"] },

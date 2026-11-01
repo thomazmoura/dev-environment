@@ -296,10 +296,11 @@ class Notifier:
 
             # Fires whether or not the pane is on screen. debounce never
             # publishes DONE for a pane you watched finish -- it lands as IDLE
-            # -- so a confirmed working -> idle is read as the done it would
-            # otherwise have been.
+            # -- so a confirmed working -> idle (or background -> idle) is read
+            # as the done it would otherwise have been. BACKGROUND itself is not
+            # in ATTENTION: an agent parked on a shell does not want you yet.
             state = pane.state
-            if state == radar.IDLE and entry.get("state") == radar.WORKING:
+            if state == radar.IDLE and entry.get("state") in (radar.WORKING, radar.BACKGROUND):
                 state = radar.DONE
             entered = state in ATTENTION and entry.get("state") != state
             repeat = sent_state == state and now - sent_at < REPEAT_AFTER

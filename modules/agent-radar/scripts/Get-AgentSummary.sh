@@ -4,8 +4,9 @@
 #   󰚩 2 󰚩 1      two agents waiting on you, one working
 #   󰚩 0          none waiting, done or working (grey)
 #
-# Idle agents are left out on purpose: a robot that is always lit teaches you
-# to stop reading the segment. The grey 0 is there so the segment never
+# Idle and background agents are left out on purpose: a robot that is always
+# lit teaches you to stop reading the segment, and an agent parked on a dev
+# server would keep one lit all day. The grey 0 is there so the segment never
 # vanishes and shifts the rest of the bar.
 #
 # Drawn in tmux-power's inner right segment (@tmux_power_right_y, set in the

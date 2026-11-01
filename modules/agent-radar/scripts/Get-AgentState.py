@@ -67,7 +67,7 @@ GLYPH = "\u25cf"
 # It needs a channel no other signal is using, and the row has none left: the
 # state word's colour is the state, bold is the selected row, and the background
 # is the selection band. So it gets its own column, and blue -- the one hue the
-# four states do not claim. The feed draws it down both lines of the entry,
+# states do not claim. The feed draws it down both lines of the entry,
 # which is what makes it findable without being read.
 #
 # It is emphatically not the same thing as the selection. The band says where
@@ -95,9 +95,15 @@ RAIL_WIDTH = 1
 # axis in use: red, yellow and green are the states that want you, grey is
 # unknown, and the focus rail's blue is a saturated hue in a column of its own.
 IDLE_256 = 73  # xterm 73, #5fafaf -- desaturated cyan, dimmer than the text
+# BACKGROUND is working's quieter sibling -- an agent parked on a shell or
+# subagents of its own -- so it takes working's hue with the saturation and
+# brightness taken out, where there are 256 colours. It can stay lit for hours
+# (a dev server), so it must not shout like the states that want you.
+BACKGROUND_256 = 143  # xterm 143, #afaf5f -- muted olive yellow
 ANSI = {
     radar.BLOCKED: "\033[91m",   # bright red -- the row you opened the list for
     radar.WORKING: "\033[33m",
+    radar.BACKGROUND: f"\033[38;5;{BACKGROUND_256}m",
     radar.DONE: "\033[32m",
     radar.IDLE: f"\033[38;5;{IDLE_256}m",
     radar.UNKNOWN: "\033[90m",
@@ -180,18 +186,20 @@ UNKNOWN_ICON = "\uf120"  # nf-fa-terminal
 TMUX_COLOUR = {
     radar.BLOCKED: "#f38ba8",
     radar.WORKING: "#f9e2af",
+    radar.BACKGROUND: "#afaf5f",
     radar.DONE: "#a6e3a1",
     radar.IDLE: "#5fafaf",
     radar.UNKNOWN: "#6c7086",
 }
 
 WAITING_LABEL = {
-    # The vocabulary is herdr's four states plus DONE; the words shown are the
-    # ones that answer the question you actually asked. "blocked" is jargon for
-    # "it wants you", so say that.
+    # The vocabulary is herdr's four states plus BACKGROUND and DONE; the words
+    # shown are the ones that answer the question you actually asked. "blocked"
+    # is jargon for "it wants you", so say that.
     radar.BLOCKED: "waiting",
     radar.DONE: "done",
     radar.WORKING: "working",
+    radar.BACKGROUND: "background",
     radar.IDLE: "idle",
     radar.UNKNOWN: "unknown",
 }
@@ -242,7 +250,8 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
 # omitted: a summary is glanced at, not read, and a dot that is always present
 # teaches you to ignore the whole segment. DONE is counted precisely because it
 # cannot always be present -- it clears itself the moment you look at the pane,
-# so a green dot is news every time.
+# so a green dot is news every time. BACKGROUND is omitted for idle's reason: a
+# dev server left running would keep its dot lit all day.
 SUMMARY_STATES = (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
 
 # The per-session summary counts idle agents too, last. It sits beside a
@@ -250,7 +259,7 @@ SUMMARY_STATES = (radar.BLOCKED, radar.DONE, radar.WORKING, radar.UNKNOWN)
 # there the question is "what is running in this session" -- an idle agent is
 # part of that answer, and it is drawn in idle's muted teal so it never
 # competes with the states that want you.
-SESSION_SUMMARY_STATES = SUMMARY_STATES + (radar.IDLE,)
+SESSION_SUMMARY_STATES = SUMMARY_STATES + (radar.BACKGROUND, radar.IDLE)
 
 
 def state_counts(

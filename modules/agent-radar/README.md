@@ -14,6 +14,7 @@ The picker and the fzf watcher list one agent per line:
 Autotrac_Starlink_Portal  Claude Code  claude  ● waiting  permission prompt
 notas                     Claude Code  claude  ● done     ready
 dev-environment           Claude Code  claude  ● working
+Sentinela                 Claude Code  claude  ● background  shell running
 herdr                     Claude Code  claude  ● idle     ready
 ```
 
@@ -417,13 +418,24 @@ an event, so herdr and the rest keep working. To paste it by hand instead:
 that outlives its dialog is the failure users would never forgive. `PreToolUse`
 is *not* among them: it fires **before** the permission prompt it would clear.
 
-## The four states a screen can be in
+## The five states a screen can be in
 
-`blocked` · `working` · `idle` · `unknown`. There is no fifth, and there cannot
-be: this is the vocabulary of *classification*, and a rule that names anything
-else is a load error. "Waiting for input" **is** `blocked` -- the difference
-between waiting for approval and waiting for a prompt is already carried by
-`blocked` vs `idle`.
+`blocked` · `working` · `background` · `idle` · `unknown`. This is the vocabulary
+of *classification*, and a rule that names anything else is a load error.
+"Waiting for input" **is** `blocked` -- the difference between waiting for
+approval and waiting for a prompt is already carried by `blocked` vs `idle`.
+
+`background` is the one that had to be added, because neither neighbour could
+say it. Claude Code ends its turn and shows its ready prompt, but it is parked
+on work of its own -- a backgrounded shell (`· 1 shell` at the end of the mode
+footer) or backgrounded subagents (the `◯` rows under the footer) -- and will
+pick up again when that work finishes, with no keystroke from you. `idle` would
+say "your turn", which it is not; `working` would say "busy right now", when it
+is mostly waiting, often for hours. So it gets a word of its own and working's
+yellow, muted: it is not asking for you, and the status bar does not count it,
+since a dev server left running would keep it lit all day. The session picker
+(`prefix,?`) does count it. While the agent's own spinner is up, the pane is
+`working`, whatever runs behind it.
 
 An agent that is identified but whose screen matches no rule falls back to
 `idle`, never to a guessed `blocked` -- except for a headless run, where `idle`
@@ -432,7 +444,7 @@ is not a state the agent has and the fallback is `working` (see
 costs a stale row, a false blocked sends you to a pane that did not need you,
 and a display that cries wolf stops being read.
 
-## `done`, the fifth state nothing can classify
+## `done`, the state nothing can classify
 
 `idle` answered two different questions with one word. An agent that has never
 been asked anything, an agent whose answer you read an hour ago, and an agent
@@ -440,7 +452,7 @@ that finished a twenty-minute job while you were in another session were all the
 same green row -- and only the last of them wanted you. So green went unread,
 which is the failure mode this whole tool exists to avoid.
 
-`done` is that third case, and it is not a fifth thing a screen can say. No
+`done` is that third case, and it is not a thing a screen can say. No
 snapshot contains it: it is `idle` **plus** two facts about the past --
 
     this pane was working a moment ago
@@ -455,7 +467,7 @@ committed to a different word.
 
 | | |
 | --- | --- |
-| `done` is created | when a confirmed `working -> idle` lands on a pane nothing was displaying |
+| `done` is created | when a confirmed `working -> idle` (or `background -> idle`) lands on a pane nothing was displaying |
 | `done` ends | when some client displays the pane -- or when the agent starts doing something again |
 | `done` never appears | for an agent that was never seen working, however long it sits there |
 
@@ -576,7 +588,9 @@ Check the variable with `tr '\0' '\n' < /proc/<pid>/environ`.
 Notifications fire even while the pane is on screen. The radar itself never
 shows `done` for a pane you watched finish -- it lands straight in `idle` -- so
 the notifier treats a confirmed `working` → `idle` as the `done` it would
-otherwise have been.
+otherwise have been. The same goes for `background` → `idle`, while entering
+`background` sends nothing: a turn that ended on a still-running shell is not
+done yet.
 
 **When a notification is not sent**:
 - **An agent was already in that state when the notifier first started.** The
