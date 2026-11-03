@@ -16,7 +16,8 @@ return {
     { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
   },
   keys = {
-    { '<Leader>db', '<cmd>tabnew<cr><cmd>DBUI<cr>', desc = 'Database UI' },
+    -- Only once locksmith, where the passwords are, is unlocked (config/sqlserver_locksmith.lua)
+    { '<Leader>db', function() require('config.sqlserver_locksmith').open_ui() end, desc = 'Database UI' },
     { '<Leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', desc = 'Close database UI' },
   },
   init = function()

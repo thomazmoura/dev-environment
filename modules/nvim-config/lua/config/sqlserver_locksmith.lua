@@ -1,8 +1,11 @@
 -- SQL Server passwords for vim-dadbod, kept in locksmith.nvim (namespace "dadbod", one secret
 -- per server and login). Called by autoload/sqlserver_locksmith.vim for every sqlserver: URL:
 -- one with a login and no password gets the saved password when the server takes it, or else
--- the one typed, saved as soon as the server takes it. Once per login and NeoVim: then it is
--- kept in memory, so an existing connection costs only locksmith's own password
+-- the one typed, saved as soon as the server takes it. locksmith is unlocked first, asking
+-- again after a wrong password; with its prompt cancelled, the password typed is used but not
+-- saved. Once per login and NeoVim: then it is
+-- kept in memory, so an existing connection costs only locksmith's own password. <Leader>db
+-- (plugins/database.lua) calls open_ui, which opens DBUI only once locksmith is unlocked
 local M = {}
 
 local NAMESPACE = 'dadbod'
@@ -63,12 +66,52 @@ local function ask(user)
   return ok and typed ~= '' and typed or nil
 end
 
---- The password for url, and whether the server took it; nil when none was typed
-local function password_for(url, parsed, name)
+--- locksmith's questions while dadbod waits on it: vim.wait (await) runs locksmith's
+--- scheduled prompts but keeps typed keys queued until it returns, so vim.ui.select's picker
+--- (telescope's) never gets them and its Retry hangs. inputsecret(), input() and inputlist()
+--- read the keys themselves
+local function blocking_prompt(message, callback, opts)
+  local ok, answer
+  if opts.kind == 'choice' then
+    local lines = { vim.split(message, '\n')[1] }
+    for i, choice in ipairs(opts.choices) do
+      table.insert(lines, ('%d. %s'):format(i, choice))
+    end
+    -- 0 (cancelled) is no choice for locksmith
+    ok, answer = pcall(vim.fn.inputlist, lines)
+  elseif opts.kind == 'password' then
+    ok, answer = pcall(vim.fn.inputsecret, message)
+  else
+    ok, answer = pcall(vim.fn.input, { prompt = message, cancelreturn = '' })
+  end
+  vim.cmd.redraw()
+  callback(ok and answer or nil)
+end
+
+--- locksmith, unlocked first: a wrong password offers Retry until one opens the store. nil
+--- when it is missing or its prompt was cancelled: the server's password is then asked and
+--- used without being saved
+local function unlocked_locksmith()
   local found, locksmith = pcall(require, 'locksmith')
   if not found then
-    locksmith = nil
+    return nil
   end
+  locksmith.set_prompt(blocking_prompt)
+  local ran, ok, err = pcall(await, function(callback)
+    locksmith.unlock(callback)
+  end)
+  locksmith.set_prompt(nil)
+  if not (ran and ok) then
+    notify('locksmith stays locked, passwords are neither read nor saved: ' .. tostring(ran and err or ok),
+      vim.log.levels.WARN)
+    return nil
+  end
+  return locksmith
+end
+
+--- The password for url, and whether the server took it; nil when none was typed
+local function password_for(url, parsed, name)
+  local locksmith = unlocked_locksmith()
 
   if locksmith then
     local saved, err = await(function(callback)
@@ -131,6 +174,19 @@ function M.with_password(url)
   end
   -- As dadbod does with the password it asks for itself
   return vim.fn.substitute(url, [[://[^:/@]*\zs@]], ':' .. vim.fn['db#url#encode'](password) .. '@', '')
+end
+
+--- DBUI in a new tab, once locksmith is unlocked: asks for its password (again, even after it
+--- was declined), and opens nothing when it stays locked
+function M.open_ui()
+  require('locksmith').unlock(function(ok, err)
+    if not ok then
+      notify('database UI not opened: ' .. (err or 'locksmith is locked'), vim.log.levels.WARN)
+      return
+    end
+    vim.cmd.tabnew()
+    vim.cmd.DBUI()
+  end)
 end
 
 return M
