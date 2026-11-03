@@ -6,7 +6,7 @@
 -- - sqlserver-assist (sqlserver_assist, modules/sql-assist) with sqlserver/connection, a
 --   SqlClient connection string, for "Expand *" and the join/INSERT completions.
 -- config/sql_dialect.lua calls M.sync when it attaches the servers to a buffer, and LspAttach
--- does when one starts. The password comes from config/sqlserver_locksmith.lua, as it does
+-- does when one starts. The password comes from config/dadbod_locksmith.lua, as it does
 -- for dadbod's queries. It goes over each server's stdin only, and never while the LSP log
 -- level is DEBUG or below, where NeoVim writes every message to lsp.log in plain text
 local M = {}
@@ -35,7 +35,7 @@ local function options(url)
     or (not params.authentication and (parsed.user and 'SqlLogin' or 'Integrated'))
   if not auth then return end
   if auth ~= 'Integrated' and not parsed.password then
-    url = require('config.sqlserver_locksmith').with_password(url)
+    url = require('config.dadbod_locksmith').with_password(url)
     if not url then return end
     parsed = vim.fn['db#url#parse'](url)
   end

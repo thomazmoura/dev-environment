@@ -1,33 +1,59 @@
--- SQL Server passwords for vim-dadbod, kept in locksmith.nvim (namespace "dadbod", one secret
--- per server and login). Called by autoload/sqlserver_locksmith.vim for every sqlserver: URL:
+-- SQL Server and Postgres passwords for vim-dadbod, kept in locksmith.nvim (namespace
+-- "dadbod", one secret per server and login). Called by autoload/sqlserver_locksmith.vim and
+-- autoload/postgresql_locksmith.vim, dadbod's adapters for sqlserver: and postgresql: URLs:
 -- one with a login and no password gets the saved password when the server takes it, or else
--- the one typed, saved as soon as the server takes it. locksmith is unlocked first, asking
--- again after a wrong password; with its prompt cancelled, the password typed is used but not
--- saved. Once per login and NeoVim: then it is
--- kept in memory, so an existing connection costs only locksmith's own password. <Leader>db
--- (plugins/database.lua) calls open_ui, which opens DBUI only once locksmith is unlocked
+-- the one typed, saved as soon as the server takes it. A Postgres server that lets the login
+-- in without one (trust, ~/.pgpass, $PGPASSWORD) is asked for none. locksmith is unlocked
+-- first, asking again after a wrong password; with its prompt cancelled, the password typed is
+-- used but not saved. Once per login and NeoVim: then it is kept in memory, so an existing
+-- connection costs only locksmith's own password. <Leader>db (plugins/database.lua) calls
+-- open_ui, which opens DBUI only once locksmith is unlocked
 local M = {}
 
 local NAMESPACE = 'dadbod'
 
--- Authentication methods that take the password. The others (integrated, Azure AD
--- interactive...) are left to sqlcmd
-local PASSWORD_METHODS = { SqlPassword = true, ActiveDirectoryPassword = true }
-
 -- How long a check may wait for the server, in ms
 local CHECK_TIMEOUT = 30000
 
--- Secret name → the password the server took this session
+-- What each scheme needs: `check`, the command running SELECT 1 for url; `env`, the variable
+-- its client reads the password from; `rejected`, its words for a refused login; `optional`,
+-- a login may need no password
+local SCHEMES = {
+  sqlserver = {
+    check = function(url)
+      return vim.list_extend(vim.fn['db#adapter#sqlserver#interactive'](url), { '-Q', 'SELECT 1' })
+    end,
+    env = 'SQLCMDPASSWORD',
+    rejected = { 'login failed' },
+    -- Authentication methods that take the password. The others (integrated, Azure AD
+    -- interactive...) are left to sqlcmd
+    takes_password = function(parsed)
+      local method = type(parsed.params) == 'table' and parsed.params.authentication or nil
+      return not method or method == 'SqlPassword' or method == 'ActiveDirectoryPassword'
+    end,
+  },
+  postgresql = {
+    -- -w (from dadbod): psql never prompts, it fails with "no password supplied"
+    check = function(url)
+      return vim.list_extend(vim.fn['db#adapter#postgresql#interactive'](url), { '--no-psqlrc', '-c', 'SELECT 1' })
+    end,
+    env = 'PGPASSWORD',
+    rejected = { 'password authentication failed', 'no password supplied' },
+    optional = true,
+  },
+}
+
+-- Secret name → the password the server took this session, or false when it needs none
 local session = {}
 
 local function notify(message, level)
   vim.notify('dadbod: ' .. message, level or vim.log.levels.INFO)
 end
 
---- sqlserver.<host>[_<port>].<user>: locksmith names allow only letters, digits and ._-
+--- <scheme>.<host>[_<port>].<user>: locksmith names allow only letters, digits and ._-
 local function secret_name(parsed)
   local server = (parsed.host or 'localhost') .. (parsed.port and ('_' .. parsed.port) or '')
-  return (('sqlserver.%s.%s'):format(server, parsed.user):gsub('[^%w._-]', '_'))
+  return (('%s.%s.%s'):format(parsed.scheme, server, parsed.user):gsub('[^%w._-]', '_'))
 end
 
 --- Runs fn(callback) and waits for callback(value, err): locksmith is asynchronous, dadbod's
@@ -44,20 +70,24 @@ local function await(fn)
 end
 
 --- 'ok', 'rejected' (the server refused the login) or 'error' (anything else: the server is
---- unreachable...), from a SELECT 1 with that password
-local function check(url, password)
+--- unreachable...), from a SELECT 1 with that password, or with none when it is nil
+local function check(scheme, url, password)
   local ok, result = pcall(function()
-    local cmd = vim.fn['db#adapter#sqlserver#interactive'](url)
-    vim.list_extend(cmd, { '-Q', 'SELECT 1' })
-    return vim.system(cmd, { env = { SQLCMDPASSWORD = password }, text = true }):wait(CHECK_TIMEOUT)
+    return vim.system(scheme.check(url), { env = password and { [scheme.env] = password } or nil, text = true })
+      :wait(CHECK_TIMEOUT)
   end)
   if not ok then
     return 'error'
   elseif result.code == 0 then
     return 'ok'
   end
-  return ((result.stdout or '') .. (result.stderr or '')):lower():find('login failed', 1, true) and 'rejected'
-    or 'error'
+  local output = ((result.stdout or '') .. (result.stderr or '')):lower()
+  for _, words in ipairs(scheme.rejected) do
+    if output:find(words, 1, true) then
+      return 'rejected'
+    end
+  end
+  return 'error'
 end
 
 local function ask(user)
@@ -109,8 +139,9 @@ local function unlocked_locksmith()
   return locksmith
 end
 
---- The password for url, and whether the server took it; nil when none was typed
-local function password_for(url, parsed, name)
+--- The password for url, false when the server needs none, nil when none was typed; and
+--- whether the server took it
+local function password_for(scheme, url, parsed, name)
   local locksmith = unlocked_locksmith()
 
   if locksmith then
@@ -120,11 +151,19 @@ local function password_for(url, parsed, name)
     if err then
       notify('no saved password: ' .. err, vim.log.levels.WARN)
     elseif saved then
-      local verdict = check(url, saved)
+      local verdict = check(scheme, url, saved)
       if verdict ~= 'rejected' then
         return saved, verdict == 'ok'
       end
       notify(('the saved password for %s was refused'):format(parsed.user), vim.log.levels.WARN)
+    end
+  end
+
+  if scheme.optional then
+    -- Not refused without one ('error' included: dadbod runs it and shows why)
+    local verdict = check(scheme, url, nil)
+    if verdict ~= 'rejected' then
+      return false, verdict == 'ok'
     end
   end
 
@@ -133,7 +172,7 @@ local function password_for(url, parsed, name)
     if not typed then
       return nil
     end
-    local verdict = check(url, typed)
+    local verdict = check(scheme, url, typed)
     if verdict == 'ok' and locksmith then
       local _, err = await(function(callback)
         locksmith.set(NAMESPACE, name, typed, callback)
@@ -155,22 +194,26 @@ end
 ---@return string|nil
 function M.with_password(url)
   local parsed = vim.fn['db#url#parse'](url)
-  local method = type(parsed.params) == 'table' and parsed.params.authentication or nil
-  if not parsed.user or parsed.password or (method and not PASSWORD_METHODS[method]) or vim.in_fast_event() then
+  local scheme = SCHEMES[parsed.scheme]
+  if not scheme or not parsed.user or parsed.password or vim.in_fast_event()
+    or (scheme.takes_password and not scheme.takes_password(parsed)) then
     return url
   end
 
   local name = secret_name(parsed)
   local password = session[name]
-  if not password then
+  if password == nil then
     local taken
-    password, taken = password_for(url, parsed, name)
-    if not password then
+    password, taken = password_for(scheme, url, parsed, name)
+    if password == nil then
       return nil
     end
     if taken then
       session[name] = password
     end
+  end
+  if password == false then
+    return url
   end
   -- As dadbod does with the password it asks for itself
   return vim.fn.substitute(url, [[://[^:/@]*\zs@]], ':' .. vim.fn['db#url#encode'](password) .. '@', '')

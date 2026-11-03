@@ -1,13 +1,13 @@
 " vim-dadbod's sqlserver adapter, with the passwords kept in locksmith.nvim. The vim-dadbod
 " spec in lua/plugins/database.lua points sqlserver: URLs here (g:db_adapter_sqlserver).
 " Each function calls dadbod's own with the URL's password filled in by
-" lua/config/sqlserver_locksmith.lua: saved, or asked once and saved when the server takes it.
+" lua/config/dadbod_locksmith.lua: saved, or asked once and saved when the server takes it.
 " Every function of dadbod's adapter needs one here: dadbod finds none it does not list.
 
 " go-sqlcmd asks for a missing password through liner, which fails without a TTY, so the
 " password always comes from here, in the URL (SQLCMDPASSWORD for sqlcmd)
 function! s:with_password(url) abort
-  let url = v:lua.require'config.sqlserver_locksmith'.with_password(a:url)
+  let url = v:lua.require'config.dadbod_locksmith'.with_password(a:url)
   if url is v:null
     throw 'DB: no password typed for ' . a:url
   endif

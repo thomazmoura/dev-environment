@@ -9,15 +9,17 @@ return {
       -- The encrypted store holding the SQL Server passwords, unlocked once per NeoVim
       dependencies = { 'thomazmoura/locksmith.nvim' },
       init = function()
-        -- SQL Server passwords asked once and kept in locksmith (see the file)
+        -- SQL Server and Postgres passwords asked once and kept in locksmith
+        -- (config/dadbod_locksmith.lua)
         vim.g.db_adapter_sqlserver = 'sqlserver_locksmith#'
+        vim.g.db_adapter_postgresql = 'postgresql_locksmith#'
       end,
     },
     { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
   },
   keys = {
-    -- Only once locksmith, where the passwords are, is unlocked (config/sqlserver_locksmith.lua)
-    { '<Leader>db', function() require('config.sqlserver_locksmith').open_ui() end, desc = 'Database UI' },
+    -- Only once locksmith, where the passwords are, is unlocked (config/dadbod_locksmith.lua)
+    { '<Leader>db', function() require('config.dadbod_locksmith').open_ui() end, desc = 'Database UI' },
     { '<Leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', desc = 'Close database UI' },
   },
   init = function()
