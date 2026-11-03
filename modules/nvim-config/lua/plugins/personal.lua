@@ -2,6 +2,18 @@
 -- config/lazy.lua), GitHub otherwise
 local spotlight_subdir = 'SpotlightDimmer.NeovimPlugin'
 
+-- Workhorse saved queries, by the <Leader> keys that open them
+local workhorse_queries = {
+  wT = '0ce03ce4-34b3-417b-a7d7-928d45a970dc', -- Tree
+  wt = 'a7977848-adab-4453-a4cf-39c28163ac3c', -- Tree
+  wu = '729b31ef-3bce-4fcb-b300-0342e4ce69c8', -- User Stories
+  wf = '38cfedab-c989-41bb-9d28-71d2c4ad9464', -- Features
+  we = '7c0761cd-ba78-4769-a28e-68685934d0aa', -- Epics
+  wl = 'd53e77f7-d7c8-49ff-ba14-35a061d047e9', -- LuaLine
+  wa = '3c82101c-2a67-408f-9fd7-8ad00a55710c', -- Full (All)
+  wx = '9a90e30d-0827-4fe9-9426-e70a8fd62ca6', -- Trash
+}
+
 return {
   -- Azure DevOps work items
   {
@@ -18,17 +30,7 @@ return {
       for _, lhs in ipairs({ 'wb', 'wB', 'w<C-b>', 'wp', 'wP', 'w<C-p>', 'wR' }) do
         table.insert(keys, { '<Leader>' .. lhs })
       end
-      local queries = {
-        wT = '0ce03ce4-34b3-417b-a7d7-928d45a970dc', -- Tree
-        wt = 'a7977848-adab-4453-a4cf-39c28163ac3c', -- Tree
-        wu = '729b31ef-3bce-4fcb-b300-0342e4ce69c8', -- User Stories
-        wf = '38cfedab-c989-41bb-9d28-71d2c4ad9464', -- Features
-        we = '7c0761cd-ba78-4769-a28e-68685934d0aa', -- Epics
-        wl = 'd53e77f7-d7c8-49ff-ba14-35a061d047e9', -- LuaLine
-        wa = '3c82101c-2a67-408f-9fd7-8ad00a55710c', -- Full (All)
-        wx = '9a90e30d-0827-4fe9-9426-e70a8fd62ca6', -- Trash
-      }
-      for lhs, id in pairs(queries) do
+      for lhs, id in pairs(workhorse_queries) do
         table.insert(keys, { '<Leader>' .. lhs, '<cmd>Workhorse query ' .. id .. '<cr>', desc = 'Workhorse query' })
       end
       return keys
@@ -86,6 +88,8 @@ return {
       },
       confirm_changes = 'OnlyOnRemovals',
       cache = { enabled = true, ttl = 300 },
+      -- The work items of the PR screen's Work Items section are completed from <Leader>wu's query
+      prs = { work_items_query = workhorse_queries.wu },
     },
   },
 
