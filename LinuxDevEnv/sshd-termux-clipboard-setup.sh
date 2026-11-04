@@ -30,8 +30,10 @@ fi
 
 sshd -t
 # The first value sshd reads wins: sshd_config includes sshd_config.d at its
-# top, but an earlier drop-in could still say otherwise
-if ! sshd -T | grep -qix 'streamlocalbindunlink yes'; then
+# top, but an earlier drop-in could still say otherwise. Captured first: grep
+# -q quits at the match, and sshd's SIGPIPE would fail the pipe (pipefail).
+effective="$(sshd -T)"
+if ! grep -qix 'streamlocalbindunlink yes' <<<"$effective"; then
   echo "Warning: sshd still has StreamLocalBindUnlink off -- another file in" >&2
   echo "  /etc/ssh sets it before $CONF does." >&2
   exit 1
