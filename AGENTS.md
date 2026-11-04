@@ -13,6 +13,7 @@ Personal dotfiles + dev environment. Each tool is a folder in `modules/`, deploy
 | PowerShell profile and its environment (`~/.profile.ps1`) | `modules/powershell-config/` | |
 | Script library (`prefix,s`) | `modules/scripts/` | its `README.md` |
 | sql-assist, our SQL Server language server (Expand * and Toggle ; code actions, join/INSERT completion, `<Leader>r`'s statements) | `modules/sql-assist/` (C#) | its `README.md` |
+| .NET debugging in NeoVim (`<Leader>dr`/`dR` projects, `<Leader>dt` tests, attaching to `dotnet watch`), netcoredbg | `modules/nvim-config/lua/config/dotnet_debug/`, `modules/debugging/` | its `README.md` |
 | Global Claude Code skills (linked into `~/.claude/skills`) | `modules/skills/` | |
 
 Read the matching skill file before changing an area (Claude Code loads it automatically).

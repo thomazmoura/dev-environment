@@ -394,9 +394,46 @@ return {
         client:notify('project/open', { projects = { vim.uri_from_fname(csproj) } })
       end
 
+      -- <Leader>dt's textDocument/runTests (config/dotnet_debug/test.lua):
+      -- Roslyn asks us to attach to the test host, and streams the run's
+      -- output as partial results on the token we gave it
+      local handlers = {
+        ['workspace/attachDebugger'] = function(...)
+          return require('config.dotnet_debug.test').attach_debugger(...)
+        end,
+        ['$/progress'] = function(err, params, ctx, config)
+          if type(params.token) == 'string' and params.token:find('^dotnet%-test%-')
+            and require('config.dotnet_debug.test').progress(params) then
+            return
+          end
+          -- Looked up now: noice may replace the global one after this runs
+          return vim.lsp.handlers['$/progress'](err, params, ctx, config)
+        end,
+      }
+
+      -- runTests' vstest needs a log directory ("Value cannot be null
+      -- (LogFilePath)" without one), which VS Code passes and roslyn.nvim
+      -- doesn't. The roslyn-language-server thin client forwards only the
+      -- transport and --clientProcessId (and its shared daemon starts with
+      -- neither), so the server is started directly, one per NeoVim. The
+      -- whole cmd: lists merge by index.
+      local cmd = vim.lsp.config.roslyn.cmd
+      local thin_client = vim.fn.exepath('roslyn-language-server')
+      local server = thin_client ~= ''
+        and vim.fs.joinpath(vim.fs.dirname(vim.fn.resolve(thin_client)), 'Microsoft.CodeAnalysis.LanguageServer')
+      if server and vim.fn.executable(server) == 1 then
+        cmd = {
+          server, '--stdio',
+          '--clientProcessId', tostring(vim.uv.os_getpid()),
+          '--extensionLogDirectory', vim.fn.stdpath('log') .. '/roslyn',
+        }
+      end
+
       vim.lsp.config('roslyn', {
+        cmd = cmd,
         root_dir = root_dir,
         on_attach = on_attach,
+        handlers = handlers,
         settings = {
           -- Background analysis of open files only; analysing the whole
           -- solution pins a CPU core. gd/gr across the solution still work.
