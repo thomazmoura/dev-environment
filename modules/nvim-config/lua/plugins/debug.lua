@@ -3,6 +3,7 @@
 -- one, <Leader>dt the test or test class under the cursor. While a session
 -- runs, each <Leader>d{key} is also <M-{key}> and gH (or <CR>) opens the value
 -- under the cursor as an expandable tree in a popup (config/dap_session_keys).
+-- Values of types like Guid and DateTime show formatted (config/dotnet_debug/display).
 local function dotnet(action)
   return function() require('config.dotnet_debug')[action]() end
 end
@@ -110,6 +111,11 @@ return {
     for name, sign in pairs(signs) do vim.fn.sign_define(name, sign) end
 
     require('nvim-dap-virtual-text').setup({})
+    -- Guid, DateTime and co. as their ToString() instead of {System.Guid};
+    -- dates the Brazilian way here (the default is ISO)
+    require('config.dotnet_debug.display').setup({
+      formatters = { ['System.DateTime'] = '{value}.ToString("dd/MM/yyyy HH:mm:ss")' },
+    })
     -- Rounded like Workhorse's and Paperboy's popups
     dapui.setup({ floating = { border = 'rounded' } })
     require('config.dap_session_keys').setup(session_keys)

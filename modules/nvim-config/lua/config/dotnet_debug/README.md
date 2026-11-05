@@ -32,6 +32,7 @@ plugin buffers keep their own `<CR>`.
 | `project.lua` | The csproj, msbuild properties, the build, `launchSettings.json` |
 | `watch.lua` | Finding the app `dotnet watch` runs |
 | `test.lua` | Tree-sitter range, Roslyn's `textDocument/runTests`, the debugger attach handshake |
+| `display.lua` | Formatting values by type (Guid, DateTime...) with an expression evaluated in the debuggee |
 
 ### Projects (`<Leader>dr`, `<Leader>dR`)
 
@@ -127,3 +128,38 @@ stdin. Here, program output goes to the DAP REPL.
 Other debug adapters that easy-dotnet bundles, if netcoredbg ever falls short:
 [dncdbg](https://github.com/viewizard/dncdbg) (a netcoredbg fork with more features) and
 [sharpdbg](https://github.com/MattParkerDev/sharpdbg) (a debugger written in C#).
+
+### Value formatters (`display.lua`)
+
+netcoredbg shows a struct like `Guid` or `DateTime` as its type name: `{System.Guid}`. For the
+types in `formatters`, the value is replaced by an expression evaluated in the debuggee,
+`{value}` standing for the variable (`exemploDeGuid.ToString()`). Only the text changes: the
+value still expands into its members. This covers the inline virtual text, dap-ui's Scopes and
+Watches panes, `gH`'s popup and the REPL.
+
+The defaults are `ToString()` for `Guid` and `TimeSpan`, and ISO for `DateTime` (`"s"`:
+`2021-11-30T20:36:45`), `DateTimeOffset`, `DateOnly` and `TimeOnly`. A nullable one (`T?`) uses
+`T`'s. `lua/plugins/debug.lua` overrides DateTime to `dd/MM/yyyy HH:mm:ss`. A formatter is a
+string, a function `(expr, item) -> expression or nil`, or `false` to turn a default off:
+
+```lua
+require('config.dotnet_debug.display').setup({
+  formatters = {
+    ['System.DateTime'] = '{value}.ToString("dd/MM/yyyy HH:mm:ss")',
+    ['System.TimeSpan'] = false,
+    ['MyApp.Money'] = function(expr) return expr .. '.Amount.ToString("N2")' end,
+  },
+  unquote = true, -- 54b3… rather than "54b3…"
+  timeout_ms = 1000, -- past it, the values not evaluated yet keep netcoredbg's text
+})
+```
+
+It wraps the session's `request` for `variables` and `evaluate` (coreclr sessions only, hooked
+through `dap.listeners.on_session`): the response reaches dap or dap-ui after the evaluations,
+and the virtual text, which draws on dap's `after.variables` listener before that, is refreshed
+then.
+
+- Each formatted value costs one evaluation per stop or expand, so only expressions with no side
+  effects belong there.
+- A value with no `evaluateName` (a collection's items, "Static members") keeps netcoredbg's text.
+- dap-ui's `e` starts from the formatted text: type a C# expression (`new DateTime(...)`).
