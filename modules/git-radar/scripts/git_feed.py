@@ -60,7 +60,7 @@ def _encode(repo: git_radar.Repo) -> dict:
 
 
 def _decode(entry: dict) -> git_radar.Repo:
-    return git_radar.Repo(**{field: entry[field] for field in FIELDS})
+    return git_radar.decode(entry)
 
 
 CACHE = radar_cache.RadarCache(

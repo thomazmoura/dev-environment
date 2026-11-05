@@ -90,6 +90,8 @@ FIELDS = (
     # The @ssh_target of an ssh session's pane, whose agent runs on that host
     # (agent_radar.serve). Empty for a local one.
     "remote",
+    # The session's prefix+$ name, shown in its place. Empty when it has none.
+    "session_label",
 )
 
 # Agents blink through an idle-looking frame between tool calls, so a consumer
@@ -116,8 +118,9 @@ PENDING_IDLE_CAP_SECONDS = 0.7
 # already shows whenever you are not focused on an agent.
 #
 # `remote` is optional for the same reason: a snapshot without it is one from
-# before ssh panes were listed, which had none to list.
-OPTIONAL_FIELDS = {"active": False, "remote": ""}
+# before ssh panes were listed, which had none to list. And `session_label`
+# because a snapshot without it is one from before sessions had names to show.
+OPTIONAL_FIELDS = {"active": False, "remote": "", "session_label": ""}
 
 
 def _encode(pane: radar.Pane) -> dict:

@@ -95,6 +95,15 @@ class Repo:
     # The @ssh_target of an ssh session's row -- whose repository, and whose
     # `root`, are on that host. Empty for a local row.
     remote: str = ""
+    # The session's own name from prefix+$ (@session_label, see
+    # Set-SessionLabel.sh). Shown in place of `session`, which stays the row's
+    # identity for everything else: jumping, the rail, the home mark.
+    label: str = ""
+
+    @property
+    def shown(self) -> str:
+        """What the row is called on screen."""
+        return self.label or self.session
 
     @property
     def has_repo(self) -> bool:
@@ -148,6 +157,7 @@ class Session:
     # this dev-environment -- and so a git-radar to ask. Empty for a local one.
     remote: str = ""
     devenv: bool = False
+    label: str = ""
 
 
 def list_sessions() -> list[Session]:
@@ -164,10 +174,13 @@ def list_sessions() -> list[Session]:
     another machine: their local session_path is only the home directory their
     ssh commands are typed from. Their directory is @ssh_dir instead, on the
     host in @ssh_target, and detect() asks that host about it.
+
+    @session_label is last: it is the one field typed by hand, so the others
+    stay in place whatever it holds (Set-SessionLabel.sh keeps tabs out of it).
     """
     fmt = "\t".join([
         "#{session_name}", "#{session_path}", "#{pane_current_path}",
-        "#{@ssh_target}", "#{@ssh_dir}", "#{@ssh_devenv}",
+        "#{@ssh_target}", "#{@ssh_dir}", "#{@ssh_devenv}", "#{@session_label}",
     ])
     code, out = _run(["tmux", "list-sessions", "-F", fmt])
     if code != 0:
@@ -176,20 +189,20 @@ def list_sessions() -> list[Session]:
     sessions = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 6:
+        if len(fields) != 7:
             continue
-        name, session_path, pane_path, ssh_target, ssh_dir, ssh_devenv = fields
+        name, session_path, pane_path, ssh_target, ssh_dir, ssh_devenv, label = fields
         if not name:
             continue
         if ssh_target:
             if ssh_dir:
                 sessions.append(
-                    Session(name, ssh_dir, ssh_target, ssh_devenv == "yes")
+                    Session(name, ssh_dir, ssh_target, ssh_devenv == "yes", label)
                 )
             continue
         path = session_path or pane_path
         if path:
-            sessions.append(Session(name, os.path.normpath(path)))
+            sessions.append(Session(name, os.path.normpath(path), label=label))
     return sessions
 
 
@@ -348,9 +361,9 @@ def inspect_path(path: str) -> Repo:
 
 def copy_state(repo: Repo, source: Repo) -> None:
     """Give `repo` everything `source` knows about the repository, keeping its
-    own session, path and remote -- the three that say whose row it is."""
+    own session, path, remote and label -- the four that say whose row it is."""
     for field_name in FIELDS:
-        if field_name not in ("session", "path", "remote"):
+        if field_name not in ("session", "path", "remote", "label"):
             setattr(repo, field_name, getattr(source, field_name))
 
 
@@ -385,7 +398,8 @@ def detect(remote=None, extra_paths=()) -> list[Repo]:
     by_host: dict[str, list[Repo]] = {}
 
     for session in list_sessions():
-        repo = Repo(session=session.name, path=session.path, remote=session.remote)
+        repo = Repo(session=session.name, path=session.path, remote=session.remote,
+                    label=session.label)
         repos.append(repo)
         if session.remote:
             if session.devenv:
@@ -442,4 +456,18 @@ FIELDS = (
     "state",
     "detail",
     "remote",
+    "label",
 )
+
+# The FIELDS a payload may lack, with what they mean when it does: a snapshot
+# published before the field existed, or a remote whose git-radar is older than
+# ours answering --serve. Without a default those would fail to decode -- the
+# remote's rows turning OFFLINE "outdated" over a field it has no use for.
+OPTIONAL_FIELDS = {"label": ""}
+
+
+def decode(entry: dict) -> Repo:
+    """A Repo from its FIELDS dictionary (the snapshot's and --serve's rows)."""
+    values = {field: entry[field] for field in FIELDS if field not in OPTIONAL_FIELDS}
+    values.update({field: entry.get(field, default) for field, default in OPTIONAL_FIELDS.items()})
+    return Repo(**values)

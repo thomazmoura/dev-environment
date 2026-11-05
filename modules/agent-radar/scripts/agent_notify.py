@@ -82,7 +82,9 @@ class Event:
     def from_pane(cls, pane: radar.Pane) -> "Event":
         return cls(
             pane_id=pane.pane_id,
-            session=pane.session,
+            # Only ever shown, so the name the session was given with prefix+$
+            # when it has one.
+            session=pane.session_shown,
             window=pane.window,
             agent=AGENT_NAME.get(pane.agent or "", pane.agent or "agent"),
             state=pane.state,

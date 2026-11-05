@@ -4,6 +4,9 @@
 #
 #   Session - Pane label - Agent - State
 #
+# The session is shown by the name prefix+$ gave it, when it has one
+# (Set-SessionLabel.sh in modules/tmux/scripts).
+#
 # Bound to prefix+t then a, as a popup (see modules/tmux/common.conf). Meant to
 # be run from a tmux binding so the tmux commands below act on the client that
 # opened it.

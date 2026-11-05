@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Flattens every pane of every session into a single fzf list and switches to the chosen one.
 # The pane label comes from the @pane_label pane option set by the layout bindings, falling
-# back to the window name for panes created outside them.
+# back to the window name for panes created outside them. The session is shown by
+# its prefix+$ name when it has one (@session_label, see Set-SessionLabel.sh).
 #
 # Usage: Select-Pane.sh
 #   Meant to be run from a tmux binding (prefix+t then t, see modules/tmux/common.conf),
@@ -15,7 +16,7 @@ require_tools tmux fzf
 current="$(tmux display-message -p '#{pane_id}')"
 
 selection="$(
-  tmux list-panes -a -F $'#{pane_id}\t#{session_name}\t#{?@pane_label,#{@pane_label},#{window_name}}\t#{pane_current_command}' \
+  tmux list-panes -a -F $'#{pane_id}\t#{?@session_label,#{@session_label},#{session_name}}\t#{?@pane_label,#{@pane_label},#{window_name}}\t#{pane_current_command}' \
     | awk -F'\t' -v current="$current" '
         { ids[NR] = $1; session[NR] = $2; label[NR] = $3; command[NR] = $4
           if (length($2) > sessionWidth) sessionWidth = length($2)

@@ -101,7 +101,7 @@ def query(target: str, paths: list[str], fresh: bool = False) -> dict | str:
             return gitr.OUTDATED
         rows = {}
         for entry in payload["rows"]:
-            repo = gitr.Repo(**{field: entry[field] for field in gitr.FIELDS})
+            repo = gitr.decode(entry)
             rows[repo.path] = repo
         return rows
     except (ValueError, KeyError, TypeError, AttributeError):

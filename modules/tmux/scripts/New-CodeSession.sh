@@ -3,7 +3,9 @@
 # Agents and a picker pane (see Set-NeovimLayout.sh).
 #
 # Usage: New-CodeSession.sh [directory]
-#   no argument - fuzzy-find a directory under ~/code (bound to prefix+/)
+#   no argument - fuzzy-find a directory under ~/code (bound to prefix+/). The
+#                 sessions named with prefix+$ come first, as `★ <name>  <dir>`,
+#                 open or not (Set-SessionLabel.sh -l)
 #   directory   - use that directory directly (bound to prefix+C-c for ~/code)
 #
 # Bound as popup commands in modules/tmux/common.conf. The session is created
@@ -20,11 +22,18 @@ source "$scripts/worktree-helpers.sh"
 code="$HOME/code"
 
 directory="${1:-}"
+name=""
 if [ -z "$directory" ]; then
   require_tools tmux fzf fd
-  location="$(fd --type d . --base-directory "$code" | fzf --reverse --prompt='project> ' --header='New session from ~/code')" || exit 0
+  # A named line carries its directory and session name after tabs, which fzf
+  # does not show (--with-nth=1); fd's lines have no tab and show whole.
+  location="$({ "$scripts/Set-SessionLabel.sh" -l "" "$code"; fd --type d . --base-directory "$code"; } |
+    fzf --reverse --delimiter=$'\t' --with-nth=1 --prompt='project> ' --header='New session from ~/code')" || exit 0
   [ -n "$location" ] || exit 0
-  directory="$code/$location"
+  case "$location" in
+    *$'\t'*) IFS=$'\t' read -r _ directory name <<<"$location" ;;
+    *) directory="$code/$location" ;;
+  esac
 fi
 
 [ -d "$directory" ] || die "Not a directory: $directory"
@@ -32,8 +41,9 @@ fi
 # tmux session names cannot contain dots -- they are the separator in
 # session:window.pane targets -- so a directory like Foo.Bar.Api becomes
 # Foo_Bar_Api. A git worktree is prefixed with its repository's name
-# (session_name_for in worktree-helpers.sh).
-name="$(session_name_for_dir "$directory")"
+# (session_name_for in worktree-helpers.sh). A named entry brings the name its
+# label is kept under, so the session opens as the one that was named.
+[ -n "$name" ] || name="$(session_name_for_dir "$directory")"
 
 # Re-running the binding for a project that is already open should take you
 # there instead of failing on the duplicate name.

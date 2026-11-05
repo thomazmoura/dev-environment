@@ -36,6 +36,7 @@ Every key acts on the selected row's repository. On a row of an ssh session
 | Key | Does |
 |---|---|
 | `H` | Mark the row's session as home (`prefix+h`), or unmark it |
+| `n` | Name the row's session (`prefix+$`); an empty name takes it off |
 | `q` / `d` | Kill the row's session, after asking (`y` confirms) |
 
 ## Pane

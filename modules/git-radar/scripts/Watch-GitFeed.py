@@ -48,7 +48,7 @@ it too (as if it were killed), f fetches
 the selected repository and F fetches every listed one, p pulls it and P pushes
 it, c commits it, C checks out another branch, s shows its status, h its
 history, m merges its branch into another, H marks it as the home session
-(or unmarks it), q or d kills the selected session after asking, ? lists these
+(or unmarks it), n names the session (Set-SessionLabel.sh), q or d kills the selected session after asking, ? lists these
 keys (modules/git-radar/KEYS.md), Ctrl-C closes the pane.
 
 The home session is the one prefix+h switches to, and its row carries a home
@@ -540,6 +540,36 @@ def toggle_home(session: str) -> None:
         stderr=subprocess.DEVNULL,
         check=False,
     )
+
+
+def name_session(session: str) -> None:
+    """`n`. Give the session a name of your own, or take it off again.
+
+    Set-SessionLabel.sh asks for it, in a popup as small as one line to type
+    in, and nudges the sampler once it is saved: the row is renamed by the
+    sample that follows, in every feed at once. On a thread for the reason
+    show_status is: display-popup blocks until the popup closes.
+    """
+    popup = os.path.join(str(gitr.SHARED_SCRIPTS), "Invoke-Popup.sh")
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "64", "-h", "6", "-x", "C", "-y", "C",
+                    popup,
+                    os.path.join(str(gitr.SHARED_SCRIPTS), "Set-SessionLabel.sh"),
+                    session,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 def agent_generation() -> float:
@@ -1295,8 +1325,8 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
         name_room -= agent_width + 1
     # Cut from the middle, not the end: an ssh session's name starts with its
     # host and ends with its directory, and both are needed to tell the rows
-    # apart in a narrow pane.
-    name = ui.truncate_middle(repo.session, name_room)
+    # apart in a narrow pane. A name given with prefix+$ or n is shown instead.
+    name = ui.truncate_middle(repo.shown, name_room)
 
     first = [
         (gutter, rail_attr),
@@ -1373,7 +1403,9 @@ def draw(stdscr, repos: list, selected: int, use_colour: bool, palette, band,
          focused: bool, current: str, home: str, pending: str = "",
          agents: dict | None = None, home_session: str = "") -> None:
     if pending:
-        draw_confirm(stdscr, pending, use_colour, palette)
+        # The name the row is shown by, so the question names what was pressed on.
+        shown = next((repo.shown for repo in repos if repo.session == pending), pending)
+        draw_confirm(stdscr, shown, use_colour, palette)
         return
 
     stdscr.erase()
@@ -1643,6 +1675,9 @@ def run(stdscr, interval: float) -> str:
                     repos = home_first(sample(), marked)
                     selected = index_of(repos, session, selected)
                     redraw = True
+            elif key == ord("n"):
+                if repos:
+                    name_session(repos[selected].session)
             elif key == ord("?"):
                 ui.show_keys(os.path.join(HERE, "..", "KEYS.md"))
             elif key in (ord("q"), ord("d")):

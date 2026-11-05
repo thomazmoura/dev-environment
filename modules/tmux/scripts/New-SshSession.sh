@@ -11,7 +11,8 @@
 #      is on one host, it goes there without asking, from any session; leaving
 #      the directory picker of step 2 then asks after all;
 #   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
-#      has no ~/code -- the way prefix+/ does locally;
+#      has no ~/code -- the way prefix+/ does locally, the sessions on that
+#      host named with prefix+$ first (Set-SessionLabel.sh -l);
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
@@ -232,18 +233,29 @@ fi'
 # fzf leaving before ssh has finished sends ssh a SIGPIPE, and pipefail makes
 # that the pipeline's status -- so the answer is judged by whether a line came
 # out, not by the exit code.
+#
+# The named sessions on this host go in ahead of the listing. Their lines carry
+# the directory and the session name after tabs, which fzf does not show
+# (--with-nth=1); picking one opens the session under that name (-n), so it is
+# the one the label was given to. They are read here, not on the remote, and
+# not from the pipe, which is the listing's.
 pick() {
   local note="${1:-}" answer root picked
   answer="$("$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
     IFS= read -r root || exit 1
     IFS= read -r kind || exit 1
-    picked="$(sed -u 's|^\./||' | fzf --reverse --prompt='remote> ' --header="New session on $target:$root$note")" || exit 1
+    picked="$({ "$scripts/Set-SessionLabel.sh" -l "$target" "$root" </dev/null; sed -u 's|^\./||'; } |
+      fzf --reverse --delimiter=$'\t' --with-nth=1 --prompt='remote> ' --header="New session on $target:$root$note")" || exit 1
     printf '%s\t%s\t%s' "$root" "$kind" "$picked"
   })"
   [ -n "$answer" ] || return 1
+  # The last variable takes the rest of the line, a named line's tabs included.
   IFS=$'\t' read -r root kind picked <<<"$answer"
   [ -n "$picked" ] || return 1
-  dir="$root/${picked%/}"
+  case "$picked" in
+    *$'\t'*) IFS=$'\t' read -r _ dir name_override <<<"$picked" ;;
+    *) dir="$root/${picked%/}" ;;
+  esac
 }
 
 # Handed a host and a directory (-t/-d), there is nothing to ask: connect --
