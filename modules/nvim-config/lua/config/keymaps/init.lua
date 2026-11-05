@@ -27,6 +27,10 @@ map('n', '<C-c>', function()
   end
 end, { desc = 'Quit window (save / discard / cancel)' })
 
+-- Zoom the window, as tmux's prefix+z: in a 90% float, or alone in a tab (config/zoom.lua)
+map('n', '<Leader>z', function() require('config.zoom').toggle_float() end, { desc = 'Zoom window (float)' })
+map('n', '<Leader>Z', function() require('config.zoom').toggle_tab() end, { desc = 'Zoom window (tab)' })
+
 -- Quickfix window toggle
 map('n', '<Leader>Q', function()
   local open = vim.fn.getqflist({ winid = 0 }).winid ~= 0
