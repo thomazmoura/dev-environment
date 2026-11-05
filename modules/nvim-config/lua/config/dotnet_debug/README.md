@@ -44,6 +44,13 @@ Stepping and breakpoints keep their keys: `dh` continue, `dl`/`dj`/`dk` over/int
    `environmentVariables`, `applicationUrl` (as `ASPNETCORE_URLS`) and `commandLineArgs`.
    Without the profile, a web project would start in Production on port 5000.
 
+**An app that crashes on startup.** netcoredbg breaks on an unhandled exception where it's
+rethrown. From an async `Main` that's `ExceptionDispatchInfo.Throw()` under the generated
+`<Main>()`, and no frame has a source, so dap only says "Source missing, cannot jump to frame".
+`on_stopped` (a listener in `lua/plugins/debug.lua`) then shows the exception's message and
+puts the frames of our code from its stack traces (inner exceptions first) in the quickfix
+list.
+
 ### Tests (`<Leader>dt`)
 
 Roslyn already does this. The `textDocument/runTests` request behind VS Code's "Debug Test"

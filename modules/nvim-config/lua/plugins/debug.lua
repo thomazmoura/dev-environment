@@ -41,5 +41,9 @@ return {
     dap.listeners.before.event_exited.dapui_config = dapui.close
     -- Detaching (<Leader>ds on an attached process) ends with no terminated event
     dap.listeners.after.disconnect.dapui_config = dapui.close
+    -- An unhandled exception with no frame to jump to (one that stops the host)
+    dap.listeners.after.event_stopped.dotnet_debug = function(session, body)
+      require('config.dotnet_debug').on_stopped(session, body)
+    end
   end,
 }

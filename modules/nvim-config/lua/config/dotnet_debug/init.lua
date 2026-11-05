@@ -111,6 +111,46 @@ function M.repeat_last()
   debug_test_at(last.buf, pos)
 end
 
+-- The " at Method in /file.cs:line N" lines of an exception's stack traces (its own
+-- and its inner exceptions'), innermost exception first
+local function user_frames(details, items)
+  items = items or {}
+  for _, inner in ipairs(details.innerException or {}) do user_frames(inner, items) end
+  for line in (details.stackTrace or ''):gmatch('[^\n]+') do
+    local method, file, lnum = line:match('^%s*at (.-) in (.+):line (%d+)%s*$')
+    if method then
+      table.insert(items, { filename = file, lnum = tonumber(lnum), text = (details.typeName or '') .. ' in ' .. method })
+    end
+  end
+  return items
+end
+
+-- netcoredbg breaks on an unhandled exception where it's rethrown. Thrown from an
+-- async Main (a host that fails to start), that's ExceptionDispatchInfo.Throw()
+-- under the generated <Main>(), with no frame that has a source: dap only says
+-- "Source missing, cannot jump to frame", so show the exception here, with the
+-- frames of our code where it was thrown in the quickfix list
+function M.on_stopped(session, body)
+  if body.reason ~= 'exception' or session.config.type ~= 'coreclr' then return end
+  session:request('stackTrace', { threadId = body.threadId, startFrame = 0 }, function(err, trace)
+    if err or not trace then return end
+    for _, frame in ipairs(trace.stackFrames) do
+      if frame.source and frame.source.path then return end -- dap jumps there and shows it
+    end
+    session:request('exceptionInfo', { threadId = body.threadId }, function(info_err, info)
+      if info_err or not info then return notify(body.text or 'Stopped on an exception', vim.log.levels.ERROR) end
+      local items = user_frames(info.details or {})
+      local message = info.description or body.text
+      if items[1] then
+        vim.fn.setqflist({}, ' ', { title = info.exceptionId or 'Exception', items = items })
+        message = string.format('%s\n\nThrown from %s:%d; :copen lists its frames in our code.',
+          message, vim.fn.fnamemodify(items[1].filename, ':~:.'), items[1].lnum)
+      end
+      notify(message, vim.log.levels.ERROR)
+    end)
+  end)
+end
+
 -- An attached process (dotnet watch's app, a test host) keeps running
 function M.stop()
   local dap = require('dap')
