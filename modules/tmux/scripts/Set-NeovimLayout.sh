@@ -5,8 +5,7 @@
 # terminal or one of the coding agents (Select-PaneKind.sh) -- and turns into
 # it. With -f the rest of the window is NeoVim over a terminal running the
 # project's setup command instead. With -H it is the home layout: Paperboy's
-# inbox on the left half of the rest and Workhorse's last query on the right
-# -- or just the one of them this machine has, or, with neither, the picker.
+# inbox on the left half of the rest and Workhorse's last query on the right.
 #
 # A project that keeps a .notes file at the root of its repository gets a third
 # pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
@@ -48,12 +47,11 @@
 #            right beside the radar column even when other panes have taken
 #            its place.
 #   -H       the home layout (prefix+H): Paperboy and Workhorse side by side
-#            instead of the picker, each brought back when missing -- only
-#            those this machine has set up, and the standard layout when it
-#            has neither. Unlike the other two it never builds around other
-#            work: a window holding anything but the radar column and an
+#            instead of the picker, each brought back when missing, whether
+#            or not this machine has them set up. Unlike the other two it
+#            never builds around other work: a window holding anything but the radar column and an
 #            unanswered picker gets a new window with the layout instead, and
-#            the picker is turned into Paperboy (or Workhorse, alone).
+#            the picker is turned into Paperboy.
 #   -n       the target is the only pane of a window the caller has just
 #            created, still an idle shell: it becomes the picker (NeoVim with
 #            -f, Paperboy or Workhorse with -H) rather than being built around.
@@ -93,21 +91,13 @@ while getopts ":fnHk" option; do
 done
 shift $((OPTIND - 1))
 
-# The home layout holds what this machine has of the two: Paperboy where
-# $PAPERBOY_EWS_URL is set, Workhorse where $WORKHORSE_TMUX_QUERY_ID is. Both
-# sit side by side; one alone fills the content area; with neither, -H is
-# dropped and the window gets the standard layout, picker and all. Read from
-# Set-StatusSegments.sh's options, or from the variables themselves: vtmux
-# runs this from pwsh, with the profile's environment, while the server it
-# has just started is still working those options out.
+# The home layout always holds both, side by side, whether or not this machine
+# has them set up ($PAPERBOY_EWS_URL, $WORKHORSE_TMUX_QUERY_ID): Paperboy is
+# the main pane, Workhorse the one beside it.
 home_main="" home_side=""
 if [ -n "$home" ]; then
-  home_kinds=()
-  [ -z "${PAPERBOY_EWS_URL:-}$(tmux show -gqv @paperboy_enabled)" ] || home_kinds+=(Paperboy)
-  [ -z "${WORKHORSE_TMUX_QUERY_ID:-}$(tmux show -gqv @workhorse_enabled)" ] || home_kinds+=(Workhorse)
-  home_main=${home_kinds[0]:-}
-  home_side=${home_kinds[1]:-}
-  [ -n "$home_main" ] || home=""
+  home_main=Paperboy
+  home_side=Workhorse
 fi
 
 # One run at a time: the hooks run Repair-Layouts.sh on every resize and closed
@@ -528,8 +518,7 @@ main_split() {
     picker=$placed new_picker=$placed
   fi
 }
-# The home layout's main pane is Paperboy, or Workhorse on a machine without
-# Paperboy. By the check at the top, a window without either holds only the
+# The home layout's main pane is Paperboy. By the check at the top, a window without either holds only the
 # radar column and, maybe, a picker: the picker is turned into the main pane
 # where it stands, and a window with no picker gets it split off beside the
 # column, as the picker would be.
