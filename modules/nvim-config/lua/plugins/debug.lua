@@ -4,6 +4,7 @@
 -- runs, each <Leader>d{key} is also <M-{key}> and gH (or <CR>) opens the value
 -- under the cursor as an expandable tree in a popup (config/dap_session_keys).
 -- Values of types like Guid and DateTime show formatted (config/dotnet_debug/display).
+-- The Watches pane and the REPL complete from Roslyn (config/dotnet_debug/completion).
 local function dotnet(action)
   return function() require('config.dotnet_debug')[action]() end
 end

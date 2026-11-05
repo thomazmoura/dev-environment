@@ -24,6 +24,9 @@ back when the last session ends (`config/dap_session_keys.lua`).
 expandable tree (`<CR>` expands, `e` edits, `q` closes), like VS Code's debug hover. `<CR>` does the same in file buffers. Quickfix, terminals and
 plugin buffers keep their own `<CR>`.
 
+Typing in dap-ui's Watches pane or the dap REPL completes like a new line after the statement
+the debugger stopped at: the locals in scope there, then a variable's members after a `.`.
+
 ## How it works
 
 | File | |
@@ -33,6 +36,7 @@ plugin buffers keep their own `<CR>`.
 | `watch.lua` | Finding the app `dotnet watch` runs |
 | `test.lua` | Tree-sitter range, Roslyn's `textDocument/runTests`, the debugger attach handshake |
 | `display.lua` | Formatting values by type (Guid, DateTime...) with an expression evaluated in the debuggee |
+| `completion.lua` | Roslyn's completion in the Watches pane and the REPL, at the line the debugger stopped at |
 
 ### Projects (`<Leader>dr`, `<Leader>dR`)
 
@@ -163,3 +167,28 @@ then.
   effects belong there.
 - A value with no `evaluateName` (a collection's items, "Static members") keeps netcoredbg's text.
 - dap-ui's `e` starts from the formatted text: type a C# expression (`new DateTime(...)`).
+
+### Completion in the Watches pane and the REPL (`completion.lua`)
+
+netcoredbg has no DAP `completions` request, so blink's `dap_roslyn` provider (the only one for
+the `dapui_watches` and `dap-repl` filetypes, `lua/plugins/completion.lua`) asks Roslyn instead.
+For each request:
+
+1. **Where.** The stopped frame's file and line. Tree-sitter finds the statement that line starts,
+   up to its block, so a statement over several lines stays whole: the new line goes after it.
+   On a brace it goes after the `{` or before the `}`.
+2. **The line.** Roslyn alone gets a `didChange` with the typed expression (the prompt line up to
+   the cursor) and a `;` on a new line there. The buffer is untouched: no undo step, not
+   modified. Neovim's pending changes are flushed first, so both stay in step.
+3. **The completion** at the end of the expression. Then a second `didChange` takes the line out.
+   One request at a time: a newer one replaces the one waiting, and a request past 3 seconds is
+   dropped, with the text restored all the same.
+4. **The items** go to blink without their edits (their ranges are in the C# file, and an added
+   `using` has no place in an expression), so they replace the word at the cursor. Snippet items
+   are left out. Resolving an item (its signature and docs) puts the line back in for the request,
+   since Roslyn describes the item from the text it completed in.
+
+- The C# file must be loaded with Roslyn attached (the debugger opens it when it stops). Until
+  Roslyn has loaded the solution, the list is empty.
+- A semantic token or diagnostic request of Neovim's landing in those few milliseconds would
+  see the extra line. Nothing sends one while you type in the pane.

@@ -41,6 +41,10 @@ return {
       per_filetype = {
         sql = { 'sql_assist', 'snippets', 'dadbod', 'buffer' },
         lua = { inherit_defaults = true, 'lazydev' },
+        -- dap-ui's Watches pane and the dap REPL: Roslyn's completion at the line the
+        -- debugger stopped at (config/dotnet_debug/completion.lua)
+        dapui_watches = { 'dap_roslyn' },
+        ['dap-repl'] = { 'dap_roslyn' },
       },
       providers = {
         -- Also completes modules/az and mod without a leading ./
@@ -53,6 +57,7 @@ return {
         -- the offset leaves other filetypes' LSP items alone
         sql_assist = { name = 'SQL', module = 'blink.cmp.sources.lsp', score_offset = 100 },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },
+        dap_roslyn = { name = 'Roslyn', module = 'config.dotnet_debug.completion' },
       },
     },
     cmdline = {
