@@ -1,5 +1,6 @@
 -- Alt mirrors of the <Leader>d{key} debug mappings (plugins/debug.lua), only
--- while a dap session is running: <M-j> steps into, <M-k> steps out, and so on.
+-- while a dap session is running: <M-j> steps over, <M-k> steps out, and so on.
+-- gH and <CR> (inspect the value under the cursor) are taken the same way.
 -- While a session runs, these replace whatever else holds those keys (Harpoon's
 -- <M-j>/<M-k>/<M-l>/<M-o> slots). When the last session ends they're put back.
 local M = {}

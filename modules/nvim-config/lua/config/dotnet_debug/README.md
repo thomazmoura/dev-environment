@@ -13,12 +13,16 @@ VS Code-style debugging for .NET on top of nvim-dap and
 | `<Leader>d.` | Repeat the last of those three (it rebuilds) |
 | `<Leader>ds` | Stop. A process you attached to (the watched app, a test host) is detached from and keeps running |
 
-Stepping and breakpoints keep their keys: `dh` continue, `dl`/`dj`/`dk` over/into/out,
+Stepping and breakpoints keep their keys: `dh` continue, `dj`/`dl`/`dk` over/into/out,
 `dd`/`dD` breakpoint, `do` REPL.
 
-While a session is running, every `<Leader>d{key}` is also `<M-{key}>` (`<M-j>` steps into,
+While a session is running, every `<Leader>d{key}` is also `<M-{key}>` (`<M-j>` steps over,
 `<M-k>` out, `<M-h>` continues...). They take those keys over from Harpoon's slots and give them
 back when the last session ends (`config/dap_session_keys.lua`).
+
+`gH`, also only during a session, opens the value under the cursor in a centered popup as an
+expandable tree (`<CR>` expands, `e` edits, `q` closes), like VS Code's debug hover. `<CR>` does the same in file buffers. Quickfix, terminals and
+plugin buffers keep their own `<CR>`.
 
 ## How it works
 

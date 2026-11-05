@@ -1,7 +1,8 @@
 -- nvim-dap with netcoredbg (modules/debugging) for .NET. Starting a session is
 -- config/dotnet_debug: <Leader>dr the buffer's project, <Leader>dR a picked
 -- one, <Leader>dt the test or test class under the cursor. While a session
--- runs, each <Leader>d{key} is also <M-{key}> (config/dap_session_keys).
+-- runs, each <Leader>d{key} is also <M-{key}> and gH (or <CR>) opens the value
+-- under the cursor as an expandable tree in a popup (config/dap_session_keys).
 local function dotnet(action)
   return function() require('config.dotnet_debug')[action]() end
 end
@@ -18,9 +19,9 @@ local actions = {
   { '.', dotnet('repeat_last'), 'repeat the last' },
   { 's', dotnet('stop'), 'stop (detach when attached)' },
   { 'h', dap('continue'), 'continue' },
-  { 'l', dap('step_over'), 'step over' },
+  { 'j', dap('step_over'), 'step over' },
   { 'k', dap('step_out'), 'step out' },
-  { 'j', dap('step_into'), 'step into' },
+  { 'l', dap('step_into'), 'step into' },
   { 'd', dap('toggle_breakpoint'), 'breakpoint' },
   { 'D', function() require('dap').set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, 'conditional breakpoint' },
   { 'o', function() require('dap').repl.open() end, 'REPL' },
@@ -32,6 +33,36 @@ for _, action in ipairs(actions) do
   table.insert(keys, { '<Leader>d' .. key, rhs, desc = desc })
   table.insert(session_keys, { '<M-' .. key .. '>', rhs, desc })
 end
+
+-- VS Code's debug hover (gH there too): the value under the cursor in a centered
+-- popup sized like Workhorse's, as the tree the Watches pane shows (<CR> expands,
+-- e edits, q closes)
+local function inspect()
+  local expr = vim.fn.expand('<cexpr>')
+  if expr == '' then
+    vim.notify('Nothing to inspect under the cursor', vim.log.levels.WARN)
+    return
+  end
+  local columns, lines = vim.o.columns - 2, vim.o.lines - vim.o.cmdheight - 2
+  require('dapui').eval(expr, {
+    enter = true,
+    position = 'center',
+    width = math.floor(columns * 0.8),
+    height = math.floor(lines * 0.8),
+    title = ' ' .. expr .. ' ',
+  })
+end
+table.insert(session_keys, { 'gH', inspect, 'Debug: inspect the value under the cursor' })
+-- <CR> too, in file buffers: special ones (quickfix, terminal, the command-line
+-- window) keep Vim's own <CR>. Plugins' buffer-local <CR> (dap-ui's expand,
+-- nvim-tree, Trouble) wins over this anyway
+table.insert(session_keys, { '<CR>', function()
+  if vim.bo.buftype ~= '' then
+    vim.api.nvim_feedkeys(vim.v.count1 .. vim.keycode('<CR>'), 'n', false)
+  else
+    inspect()
+  end
+end, 'Debug: inspect the value under the cursor' })
 
 return {
   'mfussenegger/nvim-dap',
@@ -79,7 +110,8 @@ return {
     for name, sign in pairs(signs) do vim.fn.sign_define(name, sign) end
 
     require('nvim-dap-virtual-text').setup({})
-    dapui.setup()
+    -- Rounded like Workhorse's and Paperboy's popups
+    dapui.setup({ floating = { border = 'rounded' } })
     require('config.dap_session_keys').setup(session_keys)
     dap.listeners.after.event_initialized.dapui_config = dapui.open
     dap.listeners.before.event_terminated.dapui_config = dapui.close
