@@ -189,6 +189,15 @@ class Pane:
     # `devenv` is not published, for the same reason `attached` is not.
     remote: str = ""
     devenv: bool = False
+    # The name its session was given with prefix+$ (@session_label, see
+    # modules/tmux/scripts/Set-SessionLabel.sh): what to show for the session.
+    # `session` stays the identity everything else matches on.
+    session_label: str = ""
+
+    @property
+    def session_shown(self) -> str:
+        """What the pane's session is called on screen."""
+        return self.session_label or self.session
 
 
 def _run(argv: list[str]) -> str:
@@ -238,13 +247,16 @@ def list_panes() -> list[Pane]:
             # modules/tmux/scripts/ssh-helpers.sh and detect() below.
             "#{@ssh_target}",
             "#{@ssh_devenv}",
+            # Typed by hand, so last: whatever it holds, the fields before it
+            # stay in place.
+            "#{@session_label}",
         ]
     )
     out = _run(["tmux", "list-panes", "-a", "-F", fmt])
     panes = []
     for line in out.splitlines():
         fields = line.split("\t")
-        if len(fields) != 12:
+        if len(fields) != 13:
             continue
         panes.append(
             Pane(
@@ -254,6 +266,7 @@ def list_panes() -> list[Pane]:
                 attached=(fields[9] not in ("", "0")),
                 remote=fields[10],
                 devenv=(fields[11] == "yes"),
+                session_label=fields[12],
             )
         )
     return panes

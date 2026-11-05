@@ -19,7 +19,8 @@
 # session order. --agents adds agent-radar's status-bar summary for each
 # session after its name, idle agents included (󰚩 1 󰚩 2 󰚩 1), so a session with an
 # agent waiting, working or open shows it before you switch. Without git-radar the
-# list falls back to bare session names.
+# list falls back to bare session names. Either way a session named with
+# prefix+$ shows that name (Set-SessionLabel.sh); column one keeps the real one.
 #
 # Usage: Select-Session.sh [--list]
 #   --list  print the rows and exit; what ctrl-r reloads from
@@ -41,7 +42,7 @@ list_rows() {
     rows="$("$git_state" --format=fzf --sort=changes --agents --cached 2>/dev/null)"
   fi
   if [ -z "$rows" ]; then
-    rows="$(tmux list-sessions -F $'#{session_name}\t#{session_name}')"
+    rows="$(tmux list-sessions -F $'#{session_name}\t#{?@session_label,#{@session_label},#{session_name}}')"
   fi
 
   printf '%s\n' "$rows" | awk -F'\t' -v current="$current" 'NF && $1 != current'

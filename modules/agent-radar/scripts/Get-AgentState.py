@@ -222,7 +222,8 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
     """
     if not panes:
         return []
-    session_width = max(len(p.session) for p in panes)
+    # The prefix+$ name of a session that has one (Pane.session_shown).
+    session_width = max(len(p.session_shown) for p in panes)
     label_width = max(len(p.label) for p in panes)
     agent_width = max(len(p.agent) for p in panes)
     state_width = max(len(WAITING_LABEL[p.state]) for p in panes)
@@ -240,7 +241,7 @@ def render_fzf(panes: list[radar.Pane]) -> list[str]:
         if p.agent in AGENT_ANSI:
             agent = f"{AGENT_ANSI[p.agent]}{agent}{RESET}"
         rows.append(
-            f"{p.pane_id}\t{p.session:<{session_width}}  {p.label:<{label_width}}"
+            f"{p.pane_id}\t{p.session_shown:<{session_width}}  {p.label:<{label_width}}"
             f"  {agent}  {cell}{detail}"
         )
     return rows

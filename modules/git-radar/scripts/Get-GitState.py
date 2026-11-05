@@ -346,7 +346,8 @@ def render_rows(
                 agent_cells[repo.session] = (shown, len(text))
     agent_width = max((width for _, width in agent_cells.values()), default=0)
 
-    session_width = max(len(repo.session) for repo in repos)
+    # The name a session was given with prefix+$ when it has one (Repo.shown).
+    session_width = max(len(repo.shown) for repo in repos)
     branch_width = max(
         len(branch_label(repo)) + (len(upstream_note(repo)) + 1 if upstream_note(repo) else 0)
         for repo in repos
@@ -383,7 +384,7 @@ def render_rows(
             agent_column = f"{shown}{' ' * (agent_width - width)}  "
 
         rows.append(
-            f"{gutter}{glyph} {repo.session:<{session_width}}  {agent_column}"
+            f"{gutter}{glyph} {repo.shown:<{session_width}}  {agent_column}"
             f"{branch}{pad_branch}  {label}  {cells}{detail}".rstrip()
         )
     return rows

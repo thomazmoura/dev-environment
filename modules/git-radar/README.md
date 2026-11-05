@@ -94,7 +94,8 @@ feed (as if the pane were closed and reopened), `R` does that and restarts the
 sampler behind it too (as if it were killed),
 `f` fetches the selected repository and `F` fetches every listed one, `p` pulls
 it and `P` pushes it, `c` commits it, `C` checks out another branch, `s` shows its status, `h` its history,
-`m` merges its branch into another, `H` marks it as the home session, `q` or
+`m` merges its branch into another, `H` marks it as the home session, `n`
+names the session, `q` or
 `d` kills the selected session after asking, `?` lists these keys in a popup
 (rendered from `KEYS.md`, by `modules/tmux/scripts/Show-RadarKeys.py`),
 `Ctrl-C` closes the pane.
@@ -108,6 +109,19 @@ The mark is tmux's global `@home_session` option -- for bindings and formats --
 saved to `~/.cache/tmux/home-session` too, which is what the feed reads (a file
 read, not a tmux call per sample) and what puts the option back after a tmux
 server restart. See `modules/tmux/scripts/Set-HomeSession.sh`.
+
+**Session names.** `n` (or `prefix + $` for the current session) gives the
+row's session a name of your own, shown in place of its real one here, in the
+Agents pane, the status bar and the session, pane and agent pickers; an empty
+name takes it off. It is only a label: the session keeps its real name, which
+everything that looks a session up goes by. The names are kept in
+`~/.cache/tmux/session-names`, keyed by the session's name without a `user@`
+(`apollo-dev-environment`), so a session opened on that folder again gets its
+name back -- and `prefix + /` and `prefix + N` list the named ones first. The
+sampler reads the name off tmux's `@session_label` session option along with
+the rest of `list-sessions`, and `label` is the one row field a snapshot or a
+`--serve` answer may lack (`OPTIONAL_FIELDS`), so an older radar on a host
+still answers. See `modules/tmux/scripts/Set-SessionLabel.sh`.
 
 `c` opens a popup with the repository's `git status` and asks: `y` stages
 everything (untracked files included) and commits, with `$EDITOR` opening in
