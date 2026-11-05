@@ -16,6 +16,10 @@ VS Code-style debugging for .NET on top of nvim-dap and
 Stepping and breakpoints keep their keys: `dh` continue, `dl`/`dj`/`dk` over/into/out,
 `dd`/`dD` breakpoint, `do` REPL.
 
+While a session is running, every `<Leader>d{key}` is also `<M-{key}>` (`<M-j>` steps into,
+`<M-k>` out, `<M-h>` continues...). They take those keys over from Harpoon's slots and give them
+back when the last session ends (`config/dap_session_keys.lua`).
+
 ## How it works
 
 | File | |

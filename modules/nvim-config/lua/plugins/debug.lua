@@ -1,8 +1,36 @@
 -- nvim-dap with netcoredbg (modules/debugging) for .NET. Starting a session is
 -- config/dotnet_debug: <Leader>dr the buffer's project, <Leader>dR a picked
--- one, <Leader>dt the test or test class under the cursor.
+-- one, <Leader>dt the test or test class under the cursor. While a session
+-- runs, each <Leader>d{key} is also <M-{key}> (config/dap_session_keys).
 local function dotnet(action)
   return function() require('config.dotnet_debug')[action]() end
+end
+
+local function dap(method)
+  return function() require('dap')[method]() end
+end
+
+-- { key, action, desc }: <Leader>d{key} always, <M-{key}> during a session
+local actions = {
+  { 'r', dotnet('debug_current'), 'project of the buffer (or continue)' },
+  { 'R', dotnet('debug_pick'), 'pick a project' },
+  { 't', dotnet('debug_test'), 'test/test class under the cursor' },
+  { '.', dotnet('repeat_last'), 'repeat the last' },
+  { 's', dotnet('stop'), 'stop (detach when attached)' },
+  { 'h', dap('continue'), 'continue' },
+  { 'l', dap('step_over'), 'step over' },
+  { 'k', dap('step_out'), 'step out' },
+  { 'j', dap('step_into'), 'step into' },
+  { 'd', dap('toggle_breakpoint'), 'breakpoint' },
+  { 'D', function() require('dap').set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, 'conditional breakpoint' },
+  { 'o', function() require('dap').repl.open() end, 'REPL' },
+}
+
+local keys, session_keys = {}, {}
+for _, action in ipairs(actions) do
+  local key, rhs, desc = action[1], action[2], 'Debug: ' .. action[3]
+  table.insert(keys, { '<Leader>d' .. key, rhs, desc = desc })
+  table.insert(session_keys, { '<M-' .. key .. '>', rhs, desc })
 end
 
 return {
@@ -11,20 +39,7 @@ return {
     { 'rcarriga/nvim-dap-ui', dependencies = { 'nvim-neotest/nvim-nio' } },
     'theHamsta/nvim-dap-virtual-text',
   },
-  keys = {
-    { '<Leader>dr', dotnet('debug_current'), desc = 'Debug: project of the buffer (or continue)' },
-    { '<Leader>dR', dotnet('debug_pick'), desc = 'Debug: pick a project' },
-    { '<Leader>dt', dotnet('debug_test'), desc = 'Debug: test/test class under the cursor' },
-    { '<Leader>d.', dotnet('repeat_last'), desc = 'Debug: repeat the last' },
-    { '<Leader>ds', dotnet('stop'), desc = 'Debug: stop (detach when attached)' },
-    { '<Leader>dh', function() require('dap').continue() end, desc = 'Debug: continue' },
-    { '<Leader>dl', function() require('dap').step_over() end, desc = 'Debug: step over' },
-    { '<Leader>dk', function() require('dap').step_out() end, desc = 'Debug: step out' },
-    { '<Leader>dj', function() require('dap').step_into() end, desc = 'Debug: step into' },
-    { '<Leader>dd', function() require('dap').toggle_breakpoint() end, desc = 'Debug: breakpoint' },
-    { '<Leader>dD', function() require('dap').set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, desc = 'Debug: conditional breakpoint' },
-    { '<Leader>do', function() require('dap').repl.open() end, desc = 'Debug: REPL' },
-  },
+  keys = keys,
   config = function()
     local dap, dapui = require('dap'), require('dapui')
 
@@ -36,6 +51,7 @@ return {
 
     require('nvim-dap-virtual-text').setup({})
     dapui.setup()
+    require('config.dap_session_keys').setup(session_keys)
     dap.listeners.after.event_initialized.dapui_config = dapui.open
     dap.listeners.before.event_terminated.dapui_config = dapui.close
     dap.listeners.before.event_exited.dapui_config = dapui.close
