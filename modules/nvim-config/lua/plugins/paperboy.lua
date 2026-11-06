@@ -5,8 +5,9 @@ return {
   {
     'thomazmoura/paperboy.nvim',
     cond = not vim.g.vscode and vim.env.PAPERBOY_EWS_URL ~= nil,
-    -- The encrypted store holding the Exchange password, unlocked once per NeoVim
-    dependencies = { 'thomazmoura/locksmith.nvim' },
+    -- The encrypted store holding the Exchange password, unlocked once per NeoVim, and
+    -- the image previews / opening files over SSH (plugins/xray.lua configures it)
+    dependencies = { 'thomazmoura/locksmith.nvim', 'thomazmoura/xray.nvim' },
     event = 'VeryLazy',
     cmd = { 'Paperboy', 'PaperboyStatus' },
     keys = {
@@ -29,9 +30,6 @@ return {
         -- <Leader>ma in the compose buffer attaches a file from here
         attachment_dirs = { '~/Documents/Attachments' },
       },
-      -- Image previews on as Markdown files, compose buffers and e-mails from my
-      -- contacts open (others ask first); <Leader>mv outside Markdown switches it
-      preview = { auto = true },
     },
   },
 }
