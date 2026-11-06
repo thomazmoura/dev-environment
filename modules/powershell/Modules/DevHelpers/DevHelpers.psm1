@@ -1144,6 +1144,13 @@ function New-VerticalTmuxSession {
       for a mark saved before it kept one. Picking the home session's own
       project opens it just once, with the picker layout like any other.
 
+      An ssh or Docker home session is opened over ssh instead, on the target
+      and remote directory Set-HomeSession.sh saved in home-session-ssh, through
+      New-SshSession.sh -t/-d/-n with its standard layout. That runs in this
+      terminal before anything is attached, so a password, host key or the
+      remote's key passphrase is asked for here first; leaving the prompt opens
+      the picked project without it.
+
     .PARAMETER ExitOnCancel
       Exit the whole pwsh process with 130 -- fzf's own code for Esc/ctrl-c --
       when the project picker is aborted, instead of just returning.
@@ -1172,7 +1179,22 @@ function New-VerticalTmuxSession {
 		if([IO.File]::Exists($homeFile)) {
 			$homeSession = [IO.File]::ReadAllText($homeFile).Trim()
 			$homePath = if([IO.File]::Exists("$homeFile-path")) { [IO.File]::ReadAllText("$homeFile-path").Trim() } else { "$env:CODE_FOLDER/$homeSession" }
-			if($homeSession -and $homeSession -ne $currentDirectory -and [IO.Directory]::Exists($homePath)) {
+			$homeSsh = if([IO.File]::Exists("$homeFile-ssh")) { [IO.File]::ReadAllText("$homeFile-ssh").TrimEnd("`r", "`n").Split("`t") } else { @() }
+			if($homeSession -and $homeSsh.Count -ge 3 -and $homeSsh[0] -and $homeSsh[1]) {
+				$sshTarget, $sshDir, $sshName = $homeSsh[0..2]
+				& "$HOME/.modules/tmux/scripts/New-SshSession.sh" -t $sshTarget -d $sshDir -n $sshName
+				# The user@ in front of the name comes and goes with the other
+				# users' sessions on that host, so the session may have opened
+				# under another name than the mark's: the mark follows it.
+				if(-not (tmux list-sessions -F '#{session_name}' 2> $null | Where-Object { $_ -eq $homeSession })) {
+					$opened = tmux list-sessions -F "#{session_name}`t#{@ssh_target}`t#{@ssh_dir}" 2> $null |
+						Where-Object { $f = $_.Split("`t"); $f[1] -eq $sshTarget -and $f[2] -eq $sshDir } |
+						ForEach-Object { $_.Split("`t")[0] } | Select-Object -First 1
+					# Set-HomeSession.sh toggles, but tmux holds the old name (the
+					# config's -r put it back), so this sets the mark on the new one.
+					if($opened) { & "$HOME/.modules/tmux/scripts/Set-HomeSession.sh" $opened }
+				}
+			} elseif($homeSession -and $homeSession -ne $currentDirectory -and [IO.Directory]::Exists($homePath)) {
 				tmux new-session -d -s $homeSession -c $homePath -x $size.Width -y $size.Height
 				& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -H -n "${homeSession}:"
 			}

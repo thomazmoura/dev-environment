@@ -45,7 +45,12 @@
 #               already known, and only the half of this script below the
 #               questions is wanted. -n overrides the <host>-<directory> name,
 #               which a worktree spells its own way (session_name_for in
-#               worktree-helpers.sh).
+#               worktree-helpers.sh). vtmux (New-VerticalTmuxSession in
+#               DevHelpers.psm1) also comes this way to open an ssh home
+#               session again (Set-HomeSession.sh), from a terminal outside
+#               tmux: there is no client then, so the session is made the
+#               terminal's size and not switched to, and the password
+#               prompts have that terminal to ask in.
 set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -336,14 +341,19 @@ if tmux has-session -t "=$name" 2>/dev/null; then
     die "A session called $name is already open for something else"
   fi
   record_agent
-  tmux switch-client -t "=$name"
+  [ -n "${TMUX:-}" ] && tmux switch-client -t "=$name"
   exit 0
 fi
 
 # The session starts in the local home: its panes live on the remote, and the
 # local path is only where the ssh commands are typed from. The options go on
 # before the layout, which is what reads them.
-tmux new-session -s "$name" -d -c "$HOME" || die "Could not create session $name"
+# Outside tmux (vtmux) the new session takes the terminal's size, so the
+# layout's percentage splits land where they will be once it is attached,
+# rather than being scaled up from tmux's default 80x24.
+size=()
+[ -z "${TMUX:-}" ] && [ -t 1 ] && size=(-x "$(tput cols)" -y "$(tput lines)")
+tmux new-session -s "$name" -d -c "$HOME" "${size[@]}" || die "Could not create session $name"
 tmux set-option -t "=$name:" @ssh_target "$target"
 tmux set-option -t "=$name:" @ssh_dir "$dir"
 tmux set-option -t "=$name:" @ssh_devenv "$([ "$kind" = devenv ] && echo yes || echo no)"
@@ -359,6 +369,13 @@ record_agent
 # which runs in the background and would show the local colours first.
 "$scripts/Set-SshTheme.sh" "$name"
 
-tmux switch-client -t "=$name"
+# The remote learns this client's terminal before the layout starts its panes,
+# whose image previews read it (Sync-SshClientTerminal.sh). Outside tmux there
+# is no client yet: the client-attached hook does it when one arrives.
+if [ -n "${TMUX:-}" ]; then
+  "$scripts/Sync-SshClientTerminal.sh" "$(tmux display-message -p '#{client_tty}')" "=$name:"
+fi
+
+[ -n "${TMUX:-}" ] && tmux switch-client -t "=$name"
 "$scripts/Set-NeovimLayout.sh" -n "$name:"
 exit 0

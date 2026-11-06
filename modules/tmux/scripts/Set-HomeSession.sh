@@ -17,12 +17,21 @@
 # when it starts the first tmux server of the day. It is a file of its own
 # rather than a second line so the readers above keep reading the name whole.
 #
+# An ssh or Docker session (New-SshSession.sh) has no local directory worth
+# keeping -- it starts in the local ~ -- so a fourth file, home-session-ssh,
+# keeps what vtmux needs to open it over ssh again instead:
+#
+#   <@ssh_target> TAB <@ssh_dir> TAB <@ssh_name>
+#
+# It is there only while the home session is one of those.
+#
 # Pressed on the session that is already home, the mark comes off: one key both
 # ways, from the Git pane's H.
 set -uo pipefail
 
 file="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/home-session"
 path_file="$file-path"
+ssh_file="$file-ssh"
 
 if [ "${1:-}" = "-r" ]; then
   # Only when the option is unset, so a reload never undoes a mark made since.
@@ -36,12 +45,18 @@ session="${1:?usage: Set-HomeSession.sh <session> | -r}"
 
 if [ "$(tmux show -gqv @home_session)" = "$session" ]; then
   tmux set -gu @home_session
-  rm -f "$file" "$path_file"
+  rm -f "$file" "$path_file" "$ssh_file"
 else
   tmux set -g @home_session "$session"
   mkdir -p "$(dirname "$file")"
   printf '%s\n' "$session" >"$file"
   tmux display -p -t "=$session:" '#{session_path}' >"$path_file"
+  ssh="$(tmux display -p -t "=$session:" $'#{@ssh_target}\t#{@ssh_dir}\t#{@ssh_name}')"
+  if [ -n "${ssh%%$'\t'*}" ]; then
+    printf '%s\n' "$ssh" >"$ssh_file"
+  else
+    rm -f "$ssh_file"
+  fi
 fi
 
 # Every session's Git pane shows the icon, and each redraws on the sampler's
