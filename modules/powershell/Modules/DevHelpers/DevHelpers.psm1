@@ -1225,13 +1225,17 @@ function Start-Frontend() {
       as something interactive wants CPU the editor and browser win. That is why
       this uses CPUWeight rather than CPUQuota, which would slow rebuilds down
       unconditionally.
+
+      systemd-run --user needs the user's bus. A shell with no user session
+      (an ssh command, a container) has none to reach, so it falls back to nice.
   #>
   if (!(Test-Path "package.json")) {
     Write-Warning "No package.json here. Run this from the Angular project folder."
     return
   }
 
-  if (Get-Command systemd-run -ErrorAction SilentlyContinue) {
+  $userBus = $env:DBUS_SESSION_BUS_ADDRESS -or ($env:XDG_RUNTIME_DIR -and (Test-Path "$env:XDG_RUNTIME_DIR/bus"))
+  if ($userBus -and (Get-Command systemd-run -ErrorAction SilentlyContinue)) {
     Write-Verbose "Starting frontend in a de-prioritised systemd scope"
     & systemd-run --user --scope --quiet -p CPUWeight=20 -p IOWeight=50 -- npm run frontend
   } elseif (Get-Command nice -ErrorAction SilentlyContinue) {

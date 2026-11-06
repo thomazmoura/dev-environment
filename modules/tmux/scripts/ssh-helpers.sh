@@ -170,12 +170,15 @@ open_session_named() {
 # pointed at the shared agent: the shell sshd runs the command in is neither
 # login nor interactive, so it has none of the profile's PATH -- no
 # ~/.local/bin, where nvim is -- and without pwsh nothing else adds it.
+#
+# Either way a dev-environment remote also gets the user session's variables
+# (remote_session_env), which the shell sshd runs the command in may lack.
 remote_run() {
   local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
   if ssh_is_devenv "$pane" && [ -n "$no_pwsh" ]; then
-    printf '%sexec "$SHELL" -lc %s' "$(remote_agent_env)" "$(sq "$command")"
+    printf '%s%sexec "$SHELL" -lc %s' "$(remote_session_env)" "$(remote_agent_env)" "$(sq "$command")"
   elif ssh_is_devenv "$pane"; then
-    printf '%s%s' "$(remote_agent_env)" "$(pwsh_invocation "$command" "$no_exit" "$no_pwsh")"
+    printf '%s%s%s' "$(remote_session_env)" "$(remote_agent_env)" "$(pwsh_invocation "$command" "$no_exit" "$no_pwsh")"
   elif [ -z "$command" ]; then
     printf 'exec "$SHELL" -l'
   elif [ -n "$no_exit" ]; then
@@ -305,20 +308,31 @@ remote_agent_env() {
 # without one, a stand-in it takes for live: /dev/null for the socket and the
 # shell's own pid. Nothing here uses the agent.
 #
-# XDG_RUNTIME_DIR, which an ssh command may not have either, is where
-# paperboy.nvim's daemon writes its count and Get-PaperboyUnread.sh reads it:
-# set it as a login session would, so both find the same file a pane does. And
-# DBUS_SESSION_BUS_ADDRESS, the desktop session's bus in it, as both az's token
-# (az devops login) and Paperboy's password live in the keyring behind it.
+# It also gets the user session's variables (remote_session_env).
 remote_profile_command() {
   local a="$REMOTE_AGENT_DIR"
   printf 'p="$(cat "%s/agent.pid" 2>/dev/null)"; ' "$a"
   printf 'if [ -S "%s/agent.sock" ] && [ -n "$p" ] && [ -d "/proc/$p" ]; then export SSH_AUTH_SOCK="%s/agent.sock" SSH_AGENT_PID="$p"; ' \
     "$a" "$a"
   printf 'else export SSH_AUTH_SOCK=/dev/null SSH_AGENT_PID=$$; fi; '
+  remote_session_env
+  printf 'PWSH_LEAN=1 exec pwsh -NoLogo -Command %s' "$(sq "$1")"
+}
+
+# remote_session_env
+# Put in front of a remote command, on a pane (remote_run) or not
+# (remote_profile_command): sets the user session's XDG_RUNTIME_DIR and
+# DBUS_SESSION_BUS_ADDRESS, as a login session would, when the command has
+# none and the host has them to give. An ssh command may lack both.
+#
+# XDG_RUNTIME_DIR is where paperboy.nvim's daemon writes its count and
+# Get-PaperboyUnread.sh reads it, so both find the same file. The bus in it is
+# where systemctl/systemd-run --user reach the user's systemd (Start-Frontend,
+# prefix,a, runs the frontend in a scope there), and the keyring behind it
+# holds az's token (az devops login) and Paperboy's password.
+remote_session_env() {
   printf '[ -n "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "/run/user/$(id -u)" ] || export XDG_RUNTIME_DIR="/run/user/$(id -u)"; '
   printf '[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || [ ! -S "${XDG_RUNTIME_DIR:-}/bus" ] || export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"; '
-  printf 'PWSH_LEAN=1 exec pwsh -NoLogo -Command %s' "$(sq "$1")"
 }
 
 # remote_agent_unlock <target> [<key>]
