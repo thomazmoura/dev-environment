@@ -15,6 +15,9 @@
 #                 or what ~/.ssh/config picks when it has none (ssh_user)
 #   @ssh_name     the session's name without the user in front of it (see
 #                 ssh_session_name)
+#   @ssh_client_terminal  the line last written to the remote's client
+#                 terminal file (Sync-SshClientTerminal.sh), so a switch that
+#                 changes nothing makes no ssh
 #
 # pane_command in tmux-helpers.sh reads them to decide whether a new pane runs
 # its command here or over ssh.
@@ -202,6 +205,15 @@ remote_run() {
 # own bash when it runs the line -- the pane does not exist yet while the line
 # is being built. ssh joins its arguments with spaces, so the remote reads one
 # command: `export AGENT_RADAR_PANE=<host>/%12; cd ... && ...`.
+#
+# On every remote, the shell also carries TMUX_CLIENT_TERMINAL: the file on the
+# remote saying which terminal is attached to this tmux right now, which
+# Sync-SshClientTerminal.sh keeps up to date as clients come and go. An nvim
+# there has no $TMUX to ask, and a query to the terminal is answered by this
+# tmux for itself (DA1 always claims Sixel), so paperboy.nvim's image previews
+# read the file to pick Kitty, Sixel or half-blocks for the device actually
+# looking. Its `\$HOME`, escaped once more than $TMUX_PANE above, gets past the
+# pane's bash and is expanded on the remote.
 ssh_command() {
   local pane=$1 command=$2 no_exit=${3:-} no_pwsh=${4:-}
   local target dir remote opt line unlock="" tag=""
@@ -216,7 +228,18 @@ ssh_command() {
     unlock="$(printf '%q %q; ' "$(dirname "${BASH_SOURCE[0]}")/Unlock-RemoteKey.sh" "$target")"
     tag=" \"export AGENT_RADAR_PANE=$(hostname)/\$TMUX_PANE;\""
   fi
+  tag+=" \"export TMUX_CLIENT_TERMINAL=\\\$HOME/$(ssh_client_terminal_file "$pane");\""
   printf '%s%s %q%s %q' "$unlock" "$line" "$target" "$tag" "$remote"
+}
+
+# ssh_client_terminal_file <target>
+# Where, relative to the remote's home, the client terminal file of <target>'s
+# session lives (see ssh_command): one per local machine and session, named by
+# the session's id, which -- unlike its name -- a rename leaves alone.
+ssh_client_terminal_file() {
+  local id
+  id="$(tmux display-message -p -t "$1" '#{session_id}')"
+  printf '.cache/tmux-client/%s-%s' "$(hostname)" "${id#\$}"
 }
 
 # remote_directory_matches <pane> <glob>
