@@ -170,9 +170,8 @@ chmod +x $HOME/.modules/git-radar/scripts/*
 # $HOME/.modules, so a committed script is live without re-running this.
 chmod +x $HOME/.modules/scripts/scripts/* $HOME/.modules/scripts/library/*
 
-# Tmux plugins installation
+# tmux config (no plugins: the theme and status bar are modules/tmux's own)
 pwsh -NoProfile -Command "'source $HOME/.modules/wsl2/tmux.conf' > $HOME/.tmux.conf"
-chmod +x $HOME/.modules/tmux/tpm-setup.sh && export TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" && $HOME/.modules/tmux/tpm-setup.sh
 
 # Claude Code skills. Every folder in modules/skills is linked into
 # ~/.claude/skills under its own name, which keeps edits to them live without a

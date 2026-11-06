@@ -53,11 +53,9 @@ RUN chmod +x /home/developer/.modules/git-radar/scripts/*
 COPY --chown=developer:developer modules/scripts /home/developer/.modules/scripts
 RUN chmod +x /home/developer/.modules/scripts/scripts/* /home/developer/.modules/scripts/library/*
 
-# Tmux plugins installation
+# tmux config (no plugins: the theme and status bar are modules/tmux's own)
 COPY --chown=developer:developer modules/tmux /home/developer/.modules/tmux
 COPY --chown=developer:developer DockerUbuntu/tmux.conf /home/developer/.tmux.conf
-ENV TMUX_PLUGIN_MANAGER_PATH /home/developer/.tmux/plugins/
-RUN chmod +x /home/developer/.modules/tmux/tpm-setup.sh && /home/developer/.modules/tmux/tpm-setup.sh
 
 # Claude Code skills: every folder in modules/skills is linked into
 # ~/.claude/skills under its own name (herdr generates its own instead, see

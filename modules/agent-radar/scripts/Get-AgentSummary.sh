@@ -9,8 +9,8 @@
 # server would keep one lit all day. The grey 0 is there so the segment never
 # vanishes and shifts the rest of the bar.
 #
-# Drawn in tmux-power's inner right segment (@tmux_power_right_y, set in the
-# plugin section of modules/tmux/common.conf).
+# Drawn in the status bar's inner right segment (@status_right_inner, set in
+# the theme section of modules/tmux/common.conf).
 #
 # This no longer detects anything. Start-AgentRadar.py samples once a second for
 # the whole machine and publishes the rendered string; this reads it. That is

@@ -14,11 +14,8 @@
 # image copies modules/ in instead, so there is no clone to pull there (but
 # --no-pull still reloads).
 #
-# The reload is prefix+I's -- TPM's bindings/install_plugins: reload the config,
-# install any plugin it now lists, reload again. That binding is not called
-# as-is because it ends by printing "press ENTER to continue" into the pane
-# under the popup; the same steps run here, with the install output shown in
-# the popup and a status-line message at the end.
+# The reload sources the user's tmux config (~/.tmux.conf, or the XDG one when
+# there is one), which sources this repo's, and ends with a status-line message.
 set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -30,8 +27,9 @@ pull=1
 require_tools tmux
 [ -z "$pull" ] || require_tools git
 
-tpm="$HOME/.tmux/plugins/tpm"
-[ -d "$tpm" ] || die "TPM not found at $tpm"
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/tmux.conf"
+[ -f "$conf" ] || conf="$HOME/.tmux.conf"
+[ -f "$conf" ] || die "No tmux config found at $conf"
 
 if [ -n "$pull" ]; then
   repo="$(git -C "$scripts" rev-parse --show-toplevel 2>/dev/null)" \
@@ -44,14 +42,7 @@ git pull failed -- nothing was reloaded."
 fi
 
 printf 'Reloading tmux config\n'
-# TPM's helpers are not written for `set -u`, hence the subshell.
-(
-  set +u
-  source "$tpm/scripts/helpers/tmux_utils.sh"
-  reload_tmux_environment
-  "$tpm/scripts/install_plugins.sh"
-  reload_tmux_environment
-) || die "Reloading the tmux config failed."
+tmux source-file "$conf" || die "Reloading the tmux config failed."
 
 if [ -n "$pull" ]; then
   tmux display-message "dev-environment updated to $(git -C "$repo" log -1 --format='%h %s') and tmux config reloaded"

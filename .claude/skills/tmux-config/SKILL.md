@@ -10,9 +10,9 @@ when_to_use: Use when asked to add or change a tmux binding (written like `prefi
 
 | File | What lives there |
 |---|---|
-| `modules/tmux/common.conf` | Almost everything: options, every custom binding, hooks. Sections: terminal, behavior, prefix, pane navigation, number keys, fuzzy pickers, layouts and tool panes, key list, hooks, plugins |
-| `modules/wsl2/tmux.conf` | Host entry point: sources common.conf, sets the theme and TPM, puts status segments after the window list |
-| `modules/tmux/tmux.conf` | Container entry point: the same, with status segments prepended to `status-right` |
+| `modules/tmux/common.conf` | Almost everything: options, every custom binding, hooks. Sections: terminal, behavior, prefix, pane navigation, number keys, fuzzy pickers, layouts and tool panes, key list, hooks, theme and status bar |
+| `modules/wsl2/tmux.conf` | Host entry point: sets the theme, sources common.conf, puts the Workhorse segment after the window list |
+| `modules/tmux/tmux.conf` | Container entry point: the same, with the Workhorse segment in `status-right` |
 | `modules/tmux/native-overrides.conf` | Overrides inside the `native` table (prefix+C-b). Can't live in common.conf, see below |
 | `modules/tmux/scripts/` | One script per binding. **Each opens with a header comment naming its binding and usage: read it first** |
 
@@ -47,14 +47,14 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
   - `prefix,D`: the same in a Docker container (`-D`, through `Invoke-Remote.sh`).
   - On every client arrival, `Sync-SshClientTerminal.sh` writes the client's terminal (name, Sixel, passthrough, cell size) to a file on the remote, which the panes find through `$TMUX_CLIENT_TERMINAL`. A remote nvim can't ask this tmux, and DA1 is answered by tmux itself (always Sixel), so paperboy.nvim's image previews read this file instead.
   - `prefix,?` / `prefix,C-p`: session picker (`Select-Session.sh`). `prefix,h`: home session.
-- **Themes:** `Set-SshTheme.sh` recolors ssh (violet) and Docker (blue) sessions and restores the color when you switch back. `Set-PaneBackground.sh` makes backgrounds opaque only while a Termux client is attached.
-- **Status bar:** segments are `#()` jobs. Optional ones are gated by user options that `Set-StatusSegments.sh` sets at config load (`@paperboy_enabled`, `@workhorse_enabled`). `prefix,C-k` (`Select-StatusSource.sh`) can point the Workhorse and Paperboy segments at an ssh session's host (`@status_source`): `Get-RemoteStatus.sh` then runs that host's own segment scripts over the session's connection, in its profile's environment (`remote_profile_command`); choosing a host also starts its Paperboy daemon. Toasts and the agent count always stay local.
+- **Themes:** `Set-Theme.sh` draws the powerline bar and every theme colour from `@theme` (a name or `#rrggbb`, set by each entry point *before* it sources common.conf). There are no tmux plugins. `Set-SshTheme.sh` recolors ssh (violet) and Docker (blue) sessions and restores the color when you switch back. `Set-PaneBackground.sh` makes backgrounds opaque only while a Termux client is attached.
+- **Status bar:** `Set-Theme.sh` builds it from user options expanded at draw time: `@status_left_host`, `@status_right_lead`, `@status_right_inner`, `@status_right_outer`, `@status_after_windows` (after the session:window), and `@toast` first in status-right. Change a segment by setting its option, anywhere in the config; don't append to `status-left`/`status-right` or the window formats. Segments are `#()` jobs. Optional ones are gated by user options that `Set-StatusSegments.sh` sets at config load (`@paperboy_enabled`, `@workhorse_enabled`). `prefix,C-k` (`Select-StatusSource.sh`) can point the Workhorse and Paperboy segments at an ssh session's host (`@status_source`): `Get-RemoteStatus.sh` then runs that host's own segment scripts over the session's connection, in its profile's environment (`remote_profile_command`); choosing a host also starts its Paperboy daemon. Toasts and the agent count always stay local.
 - **Git and Agents panes** are separate modules: load the `radars` skill.
 
 ## Gotchas
 
-- **TPM re-sources the config**, and so does every reload. `set -ag` / `-gwa` stack duplicates, so guard appends or assign the whole value.
-- **tmux-power assigns `status-right` and the window formats when it loads.** Anything added to them goes *after* the `run '~/.tmux/plugins/tpm/tpm'` line, in both tmux.conf files.
+- **Every reload re-sources the config.** `set -ag` / `-gwa` stack duplicates, so guard appends or assign the whole value.
+- **`Set-Theme.sh` assigns the status formats and theme styles at every load** (at the end of common.conf). Theme colours written anywhere else get overwritten; per-session colours go through `Set-Theme.sh -t <session> <colour>`.
 - **Escaping:** inside `run-shell '... tmux set ... "##(...)"'`, use `##(` and `##{` to keep formats literal. A style's commas split a `#{?...}` conditional, so put styled segments in a user option and expand them with `#{E:@opt}`.
 - **`run-shell -b`** is needed whenever the script calls back into tmux during config load.
 - **The tmux server's environment doesn't include `~/.profile.ps1` variables** (tmux starts from bash). Read them through a lean pwsh, as `Start-PaperboyUnread.sh` and `Set-StatusSegments.sh` do.

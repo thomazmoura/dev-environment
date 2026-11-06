@@ -54,8 +54,8 @@ warn() { tmux display-message "$*"; exit 0; }
 exec 9>"${TMUX_TMPDIR:-/tmp}/tmux-pane-zoom-$(id -u).lock"
 flock 9
 
-# The stash window keeps only the tail wsl2/tmux.conf appends to the window
-# formats (Workhorse and Paperboy after the last window), which it may well be
+# The stash window keeps only the tail Set-Theme.sh puts in the window formats
+# (wsl2/tmux.conf's Workhorse segment after the last window), which it may well be
 # holding: it gets the next free index. Where that option is not set the tail
 # expands to nothing.
 stash_format='#{?window_end_flag,#{E:@status_after_windows},}'

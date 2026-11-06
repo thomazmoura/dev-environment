@@ -82,7 +82,7 @@ The `modules/` directory is the central hub shared by Docker builds and Linux ho
 | `rust/` | Rust toolchain installer |
 | `scripts/` | Your own scripts, versioned and run from a picker (`prefix + s`) |
 | `shell/` | Bash config, git config, global gitignore, inputrc |
-| `tmux/` | tmux config and TPM (Tmux Plugin Manager) setup |
+| `tmux/` | tmux config, its scripts, and the theme and status bar (no plugins) |
 | `universal-ctags/` | ctags installer |
 | `vim/` | NeoVim data behind `~/.local/share/nvim/site` (spell files, swap files) |
 | `wsl2/` | WSL2-specific bashrc, tmux config and `Start-DevSession.ps1` |
@@ -121,7 +121,7 @@ Same two-stage pattern but layered on `:base` instead of `:latest`. Adds QMK bui
 3. Installs `fzf` from GitHub releases (newer than the apt version)
 4. Creates `fd` as an alias for `fdfind`
 5. Creates a symlink from `~/.modules` to this repo's `modules/` directory
-6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, lazy.nvim plugins, Azure CLI, delta, agent-radar, tmux TPM, LSP)
+6. Runs all module scripts (dotnet, PowerShell modules, NeoVim, netcoredbg, Node/NVS, lazy.nvim plugins, Azure CLI, delta, agent-radar, tmux config, LSP)
 7. Creates all config symlinks (`~/.vim`, `~/.config/nvim`, `~/.config/powershell`, `~/.shell`, etc.)
 8. Writes PowerShell environment variables to `~/.profile.ps1`
 9. Creates a symlink to `win32yank.exe` if running under WSL2
@@ -154,7 +154,7 @@ Both run `claude --version && codex --version` after creation to verify the CLIs
 
 * **Docker** — the whole point: develop from inside a reproducible container.
 * **NeoVim** — primary editor, configured as a full IDE with LSP, treesitter, telescope, harpoon, and more.
-* **TMUX** — session and window management; TPM manages plugins.
+* **TMUX** — session and window management; the theme and status bar are drawn by the repo itself, with no plugins.
 * **PowerShell** — primary interactive shell (yes, on Linux).
 * **.NET / C#** — main professional language; multiple LTS SDK versions installed.
 * **Node.js** — managed via NVS; required for Angular and NeoVim Copilot integration.
