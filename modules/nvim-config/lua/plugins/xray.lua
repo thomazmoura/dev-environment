@@ -17,6 +17,10 @@ return {
       -- Image previews on as Markdown files, compose buffers and e-mails from my
       -- contacts open (others ask first)
       preview = { auto = true },
+      -- Over SSH, files are served as http://dev.internal:8484/… and links to localhost
+      -- open as dev.internal, which my devices reach the dev box by. Only the machine
+      -- dev.internal resolves to listens on it; anywhere else the URLs stay localhost
+      serve = { host = 'dev.internal' },
     },
     init = function()
       -- <Leader>mc copies as rich text (Teams) in Markdown buffers only: elsewhere it is
