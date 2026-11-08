@@ -21,7 +21,10 @@ set -euo pipefail
 #
 # The phone's browser: a third socket, answered by the same script, hands each
 # URL xray.nvim opens over there (paperboy's gb on an e-mail, gx on a link) to
-# termux-open-url, so it opens here instead of only being copied.
+# termux-open-url, so it opens here instead of only being copied. Name the PC
+# too when you ssh into its tmux and on to the dev machine from there: the PC's
+# bin/xray-open-listen (xray.nvim) hands the URLs on to the phone while Termux is
+# in front of its tmux, through the same socket forwarded to the PC.
 #
 # Usage: termux-setup.sh [host...]
 #   The hosts are the ones you ssh into, as you type them (aliases from
@@ -87,7 +90,7 @@ if [ "${#hosts[@]}" -gt 0 ]; then
 #
 # Answers the dev machine's NeoVim for the phone's clipboard and browser. ssh
 # forwards /tmp/termux-clipboard-<user>-{get,set}.sock and
-# /tmp/xray-open-<user>.sock over there to the sockets here, and each
+# /tmp/xray-open-termux-<user>.sock over there to the sockets here, and each
 # connection runs one request:
 #   get: "ok\\n" and the clipboard, once termux-clipboard-get worked
 #   set: the text on stdin to termux-clipboard-set, then "ok\\n"
@@ -187,7 +190,7 @@ sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
     echo "Host $pattern"
     echo "  RemoteForward /tmp/termux-clipboard-%r-get.sock $SOCKET_DIR/termux-clipboard-get.sock"
     echo "  RemoteForward /tmp/termux-clipboard-%r-set.sock $SOCKET_DIR/termux-clipboard-set.sock"
-    echo "  RemoteForward /tmp/xray-open-%r.sock $SOCKET_DIR/xray-open.sock"
+    echo "  RemoteForward /tmp/xray-open-termux-%r.sock $SOCKET_DIR/xray-open.sock"
     echo "  PermitLocalCommand yes"
     echo "  LocalCommand $SERVE"
     echo "$CLIP_END_MARK"
@@ -234,7 +237,7 @@ for host in "${check_hosts[@]}"; do
   [ "${#hosts[@]}" -gt 0 ] || continue
   forwards="$(grep -ic '^remoteforward /tmp/termux-clipboard-' <<<"$resolved" || true)"
   if [ "$forwards" -eq 2 ] \
-    && grep -qi '^remoteforward /tmp/xray-open-' <<<"$resolved" \
+    && grep -qi '^remoteforward /tmp/xray-open-termux-' <<<"$resolved" \
     && grep -qix "localcommand $SERVE" <<<"$resolved" \
     && grep -qix 'permitlocalcommand yes' <<<"$resolved"; then
     echo "OK: $label forwards the clipboard and the browser."

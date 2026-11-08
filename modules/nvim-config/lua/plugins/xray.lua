@@ -19,8 +19,9 @@ return {
       preview = { auto = true },
       -- Over SSH, files are served as http://dev.internal:8484/… and links to localhost
       -- open as dev.internal, which my devices reach the dev box by. Only the machine
-      -- dev.internal resolves to listens on it; anywhere else the URLs stay localhost
-      serve = { host = 'dev.internal' },
+      -- dev.internal resolves to listens on it; anywhere else the URLs stay localhost.
+      -- gx (vim.ui.open) opens on the device too, over SSH
+      serve = { host = 'dev.internal', ui_open = true },
     },
     init = function()
       -- <Leader>mc copies as rich text (Teams) in Markdown buffers only: elsewhere it is
