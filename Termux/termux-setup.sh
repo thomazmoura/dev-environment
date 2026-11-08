@@ -19,6 +19,10 @@ set -euo pipefail
 # ssh starts on every connection (LocalCommand), answers them with socat. The
 # dev machine's sshd needs LinuxDevEnv/sshd-termux-clipboard-setup.sh once.
 #
+# The phone's browser: a third socket, answered by the same script, hands each
+# URL xray.nvim opens over there (paperboy's gb on an e-mail, gx on a link) to
+# termux-open-url, so it opens here instead of only being copied.
+#
 # Usage: termux-setup.sh [host...]
 #   The hosts are the ones you ssh into, as you type them (aliases from
 #   ~/.ssh/config or names). Without any, every host gets the flag and the
@@ -81,15 +85,17 @@ if [ "${#hosts[@]}" -gt 0 ]; then
 # Written by Termux/termux-setup.sh in the dev-environment repo: rerun that
 # rather than editing this.
 #
-# Answers the dev machine's NeoVim for the phone's clipboard. ssh forwards
-# /tmp/termux-clipboard-<user>-{get,set}.sock over there to the two sockets
-# here, and each connection runs one request:
+# Answers the dev machine's NeoVim for the phone's clipboard and browser. ssh
+# forwards /tmp/termux-clipboard-<user>-{get,set}.sock and
+# /tmp/xray-open-<user>.sock over there to the sockets here, and each
+# connection runs one request:
 #   get: "ok\\n" and the clipboard, once termux-clipboard-get worked
 #   set: the text on stdin to termux-clipboard-set, then "ok\\n"
+#   open: an http(s) or mailto URL on a line to termux-open-url, then "ok\\n"
 #
-# Usage: termux-clipboard-serve           (re)start the listeners -- ssh's
-#                                         LocalCommand, on every connection
-#        termux-clipboard-serve get|set   one request (run by socat)
+# Usage: termux-clipboard-serve                (re)start the listeners -- ssh's
+#                                              LocalCommand, on every connection
+#        termux-clipboard-serve get|set|open   one request (run by socat)
 #
 # Restarted every time, so listeners Android killed in the background come back
 # with the next ssh.
@@ -113,6 +119,18 @@ case ${1:-} in
     termux-clipboard-set && printf 'ok\n'
     exit 0
     ;;
+  open)
+    # Only web and mailto links, no spaces or control characters: never a file
+    # or an app the dev machine picks
+    IFS= read -r url || [ -n "$url" ] || exit 0
+    case $url in
+      http://* | https://* | mailto:*) ;;
+      *) exit 0 ;;
+    esac
+    printf '%s' "$url" | LC_ALL=C grep -q '[^!-~]' && exit 0
+    termux-open-url "$url" && printf 'ok\n'
+    exit 0
+    ;;
 esac
 
 pids="$dir/termux-clipboard-serve.pids"
@@ -129,9 +147,11 @@ if [ -f "$pids" ]; then
 fi
 
 : > "$pids"
-for kind in get set; do
+for kind in get set open; do
+  socket="$dir/termux-clipboard-$kind.sock"
+  [ "$kind" = open ] && socket="$dir/xray-open.sock"
   # -t 10: after the request's EOF, time for termux-clipboard-set to answer
-  nohup socat -t 10 "UNIX-LISTEN:$dir/termux-clipboard-$kind.sock,fork,unlink-early,mode=600" \
+  nohup socat -t 10 "UNIX-LISTEN:$socket,fork,unlink-early,mode=600" \
     "EXEC:$self $kind" < /dev/null > /dev/null 2>&1 &
   echo $! >> "$pids"
 done
@@ -162,11 +182,12 @@ sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
   if [ -s "$tmp" ]; then echo; fi
   if [ "${#hosts[@]}" -gt 0 ]; then
     echo "$CLIP_BEGIN_MARK"
-    echo "# The phone's clipboard for NeoVim on these hosts: see Termux/termux-setup.sh"
+    echo "# The phone's clipboard and browser for NeoVim on these hosts: see Termux/termux-setup.sh"
     echo "# in the dev-environment repo. %r is the user on the host."
     echo "Host $pattern"
     echo "  RemoteForward /tmp/termux-clipboard-%r-get.sock $SOCKET_DIR/termux-clipboard-get.sock"
     echo "  RemoteForward /tmp/termux-clipboard-%r-set.sock $SOCKET_DIR/termux-clipboard-set.sock"
+    echo "  RemoteForward /tmp/xray-open-%r.sock $SOCKET_DIR/xray-open.sock"
     echo "  PermitLocalCommand yes"
     echo "  LocalCommand $SERVE"
     echo "$CLIP_END_MARK"
@@ -213,9 +234,10 @@ for host in "${check_hosts[@]}"; do
   [ "${#hosts[@]}" -gt 0 ] || continue
   forwards="$(grep -ic '^remoteforward /tmp/termux-clipboard-' <<<"$resolved" || true)"
   if [ "$forwards" -eq 2 ] \
+    && grep -qi '^remoteforward /tmp/xray-open-' <<<"$resolved" \
     && grep -qix "localcommand $SERVE" <<<"$resolved" \
     && grep -qix 'permitlocalcommand yes' <<<"$resolved"; then
-    echo "OK: $label forwards the clipboard."
+    echo "OK: $label forwards the clipboard and the browser."
   else
     status=1
     echo "Warning: $label doesn't get the clipboard block -- an earlier block in" >&2
@@ -233,7 +255,8 @@ attaches again. If it doesn't, the host's sshd may not accept LC_* -- check
 `AcceptEnv` in its /etc/ssh/sshd_config, or pass the flag in the command:
   ssh -t <host> 'LC_TERMINAL=Termux tmux new -A -s main'
 With hosts given, NeoVim's <Leader>y and <Leader>p there use this phone's
-clipboard while you type here. Run LinuxDevEnv/sshd-termux-clipboard-setup.sh
+clipboard while you type here, and the links NeoVim opens there open in this
+phone's browser. Run LinuxDevEnv/sshd-termux-clipboard-setup.sh
 on the host once, or every connection after the first fails to forward.
 EOF
 

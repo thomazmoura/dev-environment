@@ -10,7 +10,10 @@ set -euo pipefail
 # (modules/nvim-config/lua/config/termux_clipboard.lua). sshd doesn't remove
 # such a socket when the connection ends, and by default refuses to bind over
 # the one left behind, so every connection after the first would come without
-# the clipboard. StreamLocalBindUnlink lets it replace the old socket.
+# the clipboard. StreamLocalBindUnlink lets it replace the old socket. It is
+# global, so it also covers xray.nvim's sockets (/tmp/xray-{richcopy,open}-<user>.sock,
+# forwarded by the PC's ssh: xray.nvim's bin/xray-setup-client), and stands in for
+# xray.nvim's bin/xray-setup-server here.
 #
 # Idempotent: writes the drop-in only when it differs, then checks the config
 # and reloads sshd.
