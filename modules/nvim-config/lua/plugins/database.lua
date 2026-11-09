@@ -19,10 +19,15 @@ return {
   },
   keys = {
     -- Only once locksmith, where the passwords are, is unlocked (config/dadbod_locksmith.lua)
-    { '<Leader>db', function() require('config.dadbod_locksmith').open_ui() end, desc = 'Database UI' },
+    { '<Leader>db', '<cmd>DatabaseUI<cr>', desc = 'Database UI' },
     { '<Leader>dB', '<cmd>DBUIClose<cr><cmd>tabclose<cr>', desc = 'Close database UI' },
   },
   init = function()
+    -- <Leader>db, and the tmux picker's "DadBod (database)" pane (nvim -c DatabaseUI,
+    -- tmux/scripts/tmux-helpers.sh): DBUI in a new tab once locksmith is unlocked
+    vim.api.nvim_create_user_command('DatabaseUI', function() require('config.dadbod_locksmith').open_ui() end,
+      { desc = 'Database UI, once locksmith is unlocked' })
+
     vim.g.db_ui_save_location = '~/.shared/sql-saved-queries'
     vim.g.db_ui_tmp_query_location = '~/.shared/sql-queries'
     vim.g.db_ui_use_nvim_notify = 1

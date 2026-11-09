@@ -4,7 +4,7 @@
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents,
-# Workhorse and Paperboy, the script library), and the pane turns into whatever
+# Workhorse, Paperboy, the database UI, the script library), and the pane turns into whatever
 # is chosen -- Scripts into prefix+s's script picker, asking right here. Enter straight away picks NeoVim.
 # Enter on something that is not an option asks again; Esc or C-c closes the
 # pane, and Restore-PickerPane.sh puts a new picker back if that leaves the

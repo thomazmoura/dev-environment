@@ -293,7 +293,7 @@ replace_pane() {
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
-PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "Scripts")
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "DadBod (database)" "Scripts")
 
 # pane_kind <pane> <kind>
 # Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
@@ -369,6 +369,12 @@ pane_kind() {
       [ "$kind" = "Workhorse (builds)" ] && startup="Workhorse builds here"
       [ "$kind" = Paperboy ] && startup="Paperboy inbox"
       kind_command="nvim --cmd 'let g:no_statusline = 1' -c '$startup'"
+      ;;
+    "DadBod (database)")
+      # NeoVim followed by <Leader>db: DBUI in a new tab once locksmith is
+      # unlocked (:DatabaseUI, nvim-config/lua/plugins/database.lua). Through
+      # pwsh like NeoVim, and with its status bar: DBUI opens query buffers.
+      kind_command="nvim -c DatabaseUI"
       ;;
     Codex) kind_command="codex" ;;
     "Open Code") kind_command="nvs use latest && opencode" ;;
