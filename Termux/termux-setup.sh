@@ -17,7 +17,7 @@ set -euo pipefail
 # modules/nvim-config/lua/config/termux_clipboard.lua. ssh forwards two Unix
 # sockets back here (RemoteForward), and ~/.ssh/termux-clipboard-serve, which
 # ssh starts on every connection (LocalCommand), answers them with socat. The
-# dev machine's sshd needs LinuxDevEnv/sshd-termux-clipboard-setup.sh once.
+# dev machine's sshd needs LinuxDevEnv/sshd-setup.sh once.
 #
 # The phone's browser: a third socket, answered by the same script, hands each
 # URL xray.nvim opens over there (paperboy's gb on an e-mail, gx on a link) to
@@ -259,7 +259,7 @@ attaches again. If it doesn't, the host's sshd may not accept LC_* -- check
   ssh -t <host> 'LC_TERMINAL=Termux tmux new -A -s main'
 With hosts given, NeoVim's <Leader>y and <Leader>p there use this phone's
 clipboard while you type here, and the links NeoVim opens there open in this
-phone's browser. Run LinuxDevEnv/sshd-termux-clipboard-setup.sh
+phone's browser. Run LinuxDevEnv/sshd-setup.sh
 on the host once, or every connection after the first fails to forward.
 EOF
 

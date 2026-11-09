@@ -287,6 +287,10 @@ if ! grep -q "^fs\.inotify\.max_user_instances" /etc/sysctl.conf; then
     echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 fi
 
+# What the ssh clients reaching tmux here need from sshd (asks for sudo)
+echo "Setting up sshd for the ssh clients"
+"$script_path/sshd-setup.sh"
+
 # Run environment initialization
 pwsh -File $HOME/.modules/wsl2/Start-DevSession.ps1
 

@@ -39,6 +39,13 @@
 # a new pane, prefix+N's connection -- hangs waiting for a host that is no
 # longer there, until TCP gives up hours later. With them the master sees the
 # link is gone within half a minute and exits, and the next ssh connects anew.
+#
+# One master carries every pane of every session on that host, and the Git and
+# Agents radars' queries too, while sshd allows 10 sessions per connection by
+# default (MaxSessions). A few sessions fill that: then every new pane and
+# radar query gets "Session open refused by peer", and the radars call the
+# sessions unreachable. The dev machine's LinuxDevEnv/sshd-setup.sh
+# raises the limit.
 SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/tmux-%C" -o ControlPersist=10m
           -o ServerAliveInterval=10 -o ServerAliveCountMax=3)
 

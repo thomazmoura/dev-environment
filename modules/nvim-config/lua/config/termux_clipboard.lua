@@ -15,7 +15,7 @@
 -- sshd creates the sockets 0600, so only this user can read the phone's
 -- clipboard. The host's sshd needs StreamLocalBindUnlink, or the socket the
 -- last connection left behind blocks the next forward
--- (LinuxDevEnv/sshd-termux-clipboard-setup.sh).
+-- (LinuxDevEnv/sshd-setup.sh).
 
 local M = {}
 
