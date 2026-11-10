@@ -24,7 +24,8 @@
 #        Sync-LinkGroup.sh current [<group>]
 #          Two lines, the identity (user@hostname) of the machine the group's
 #          current session is on and the session's name. Nothing when there is
-#          none, or when it is a session of this tmux that is gone.
+#          none, or when the session is gone -- here, or on a linked machine
+#          that says so (its server killed since): the state outlives both.
 #        Sync-LinkGroup.sh group <client pid>
 #          The group that client belongs to.
 #
@@ -100,6 +101,18 @@ lock() {
 }
 
 unlock() { exec 9>&-; }
+
+# address_of <identity>: how to reach it, as Connect-Tmux.sh's address()
+# looks it up -- the aliases, then the peers, then the identity itself.
+address_of() {
+  local file found
+  for file in "$config/aliases" "$config/peers"; do
+    [ -f "$file" ] || continue
+    found="$(awk -F '\t' -v id="$1" '$1 == id && $2 != "" { print $2; exit }' "$file")"
+    [ -n "$found" ] && { printf '%s\n' "$found"; return; }
+  done
+  printf '%s\n' "$1"
+}
 
 # identity_of <host>: the linked machine with that host name, or this one.
 identity_of() {
@@ -232,6 +245,15 @@ case "${1:-}" in
     [ -n "$identity" ] || exit 0
     if [ "$identity" = "$me" ]; then
       tmux has-session -t "=${current#*:}" 2>/dev/null || exit 0
+    else
+      # Asked of that machine over the link's connection, with nothing of
+      # this dev-environment needed there -- it may be a version behind. Only
+      # its own "no" (1) drops it: when it cannot be asked (255: no
+      # connection, a key to unlock) the attach's own ssh is left to try.
+      ssh -n -o ControlMaster=no -o "ControlPath=$HOME/.ssh/tmux-%C" -o BatchMode=yes \
+        -o ConnectTimeout=5 "$(address_of "$identity")" \
+        "tmux has-session -t $(sq "=${current#*:}")" >/dev/null 2>&1 9>&-
+      [ $? -ne 1 ] || exit 0
     fi
     printf '%s\n%s\n' "$identity" "${current#*:}"
     ;;
