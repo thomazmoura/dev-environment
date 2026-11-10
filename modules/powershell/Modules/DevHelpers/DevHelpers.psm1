@@ -1121,8 +1121,8 @@ function New-HorizontalDoubleTmuxSession  ($FirstFolder="*angular",$FirstCommand
 function New-VerticalTmuxSession {
   <#
     .SYNOPSIS
-      Opens tmux in this terminal: what is already open, else the home
-      session, else a project picked as prefix+/ picks one.
+      Opens tmux in this terminal: what is already open, else a project picked
+      as prefix+/ picks one, with the home session beside it.
 
     .DESCRIPTION
       With a tmux server running here this is tmuxa (Get-TmuxSession): the
@@ -1130,30 +1130,29 @@ function New-VerticalTmuxSession {
       machine's. A linked machine with nothing open any more sends it back
       here (Connect-Tmux.sh).
 
-      With none, it opens the home session -- the one marked with H in the Git
-      pane -- on its own, with the home layout (Paperboy | Workhorse,
-      Set-NeovimLayout.sh -H), in the directory Set-HomeSession.sh saved next
-      to the mark, or $CODE_FOLDER/<name> for a mark saved before it kept one.
-
-      An ssh or Docker home session is opened over ssh instead, on the target
-      and remote directory Set-HomeSession.sh saved in home-session-ssh, through
-      New-SshSession.sh -t/-d/-n with its standard layout. That runs in this
-      terminal before anything is attached, so a password, host key or the
-      remote's key passphrase is asked for here first.
-
-      Only when there is no home session, or it could not be opened, is a
-      project asked for -- with prefix+/'s own picker,
+      With none, a project is asked for with prefix+/'s own picker,
       modules/tmux/scripts/New-CodeSession.sh -d: the ★ named sessions, the
       folders under ~/code and the linked machines'. It opens the session
       detached with the standard layout and prints where it is; a linked
       machine's folder is opened on that machine and attached to over ssh.
 
-      The home code stays inline rather than in a helper returning the name: a
-      function's native commands write into its return value, and
-      New-SshSession.sh talks to this terminal.
+      The home session -- the one marked with H in the Git pane -- is opened
+      too, so it is always there to come back to with prefix+h. It gets the
+      home layout (Paperboy | Workhorse, Set-NeovimLayout.sh -H) in the
+      directory Set-HomeSession.sh saved next to the mark, or
+      $CODE_FOLDER/<name> for a mark saved before it kept one. Picking the
+      home session's own project opens it just once, with the picker layout
+      like any other.
+
+      An ssh or Docker home session is opened over ssh instead, on the target
+      and remote directory Set-HomeSession.sh saved in home-session-ssh, through
+      New-SshSession.sh -t/-d/-n with its standard layout. That runs in this
+      terminal before anything is attached, so a password, host key or the
+      remote's key passphrase is asked for here first; leaving the prompt opens
+      the picked project without it.
 
       Detached matters twice over: Connect-Tmux below only gets a terminal once
-      the layout is in place, and the explicit -x/-y give the window the real
+      the layouts are in place, and the explicit -x/-y give the windows the real
       terminal's size, so Set-NeovimLayout's percentage splits land where they
       will still be after attaching rather than being scaled up from tmux's
       default 80x24.
@@ -1165,7 +1164,7 @@ function New-VerticalTmuxSession {
       For callers that run this as the process's only job and need to tell "the
       user did not want tmux" apart from "the tmux session ended", which a plain
       return cannot express. modules/ghostty/scripts/Select-Shell.sh uses it to
-      fall back to its shell picker. Off by default: exiting is the wrong answer
+      start plain pwsh instead. Off by default: exiting is the wrong answer
       when vtmux is typed at an interactive prompt, since it would take the
       session down with it.
   #>
@@ -1177,7 +1176,17 @@ function New-VerticalTmuxSession {
   }
 
 	$size = $Host.UI.RawUI.WindowSize
-	$homeOpened = $null
+	# The session's name last, after the identity of the linked machine it is
+	# on when it is not here. Nothing when the picker is left.
+	$picked = @(& "$HOME/.modules/tmux/scripts/New-CodeSession.sh" -d -x $size.Width -y $size.Height | Where-Object { $_ })
+	if(-not $picked) {
+		Write-Information "Cancelled by user"
+		if($ExitOnCancel) { exit 130 }
+		return
+	}
+	$session = $picked[-1]
+	$target = if($picked.Count -ge 2) { $picked[-2] } else { $null }
+
 	$homeFile = "$(if($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } else { "$HOME/.cache" })/tmux/home-session"
 	if([IO.File]::Exists($homeFile)) {
 		$homeSession = [IO.File]::ReadAllText($homeFile).Trim()
@@ -1186,47 +1195,25 @@ function New-VerticalTmuxSession {
 		if($homeSession -and $homeSsh.Count -ge 3 -and $homeSsh[0] -and $homeSsh[1]) {
 			$sshTarget, $sshDir, $sshName = $homeSsh[0..2]
 			& "$HOME/.modules/tmux/scripts/New-SshSession.sh" -t $sshTarget -d $sshDir -n $sshName
-			if(tmux list-sessions -F '#{session_name}' 2> $null | Where-Object { $_ -eq $homeSession }) {
-				$homeOpened = $homeSession
-			} else {
-				# The user@ in front of the name comes and goes with the other
-				# users' sessions on that host, so the session may have opened
-				# under another name than the mark's: the mark follows it.
+			# The user@ in front of the name comes and goes with the other
+			# users' sessions on that host, so the session may have opened
+			# under another name than the mark's: the mark follows it.
+			if(-not (tmux list-sessions -F '#{session_name}' 2> $null | Where-Object { $_ -eq $homeSession })) {
 				$opened = tmux list-sessions -F "#{session_name}`t#{@ssh_target}`t#{@ssh_dir}" 2> $null |
 					Where-Object { $f = $_.Split("`t"); $f[1] -eq $sshTarget -and $f[2] -eq $sshDir } |
 					ForEach-Object { $_.Split("`t")[0] } | Select-Object -First 1
 				# Set-HomeSession.sh toggles, but tmux holds the old name (the
 				# config's -r put it back), so this sets the mark on the new one.
-				if($opened) {
-					& "$HOME/.modules/tmux/scripts/Set-HomeSession.sh" $opened
-					$homeOpened = $opened
-				}
+				if($opened) { & "$HOME/.modules/tmux/scripts/Set-HomeSession.sh" $opened }
 			}
-		} elseif($homeSession -and [IO.Directory]::Exists($homePath)) {
+		} elseif($homeSession -and ($target -or $homeSession -ne $session) -and [IO.Directory]::Exists($homePath)) {
 			tmux new-session -d -s $homeSession -c $homePath -x $size.Width -y $size.Height
 			if($LASTEXITCODE -eq 0) {
 				& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -H -n "${homeSession}:"
-				$homeOpened = $homeSession
 			}
 		}
 	}
-	if($homeOpened) {
-		Connect-Tmux $homeOpened
-		return
-	}
-
-	# The session's name last, after the identity of the linked machine it is
-	# on when it is not here. Nothing when the picker is left.
-	$picked = @(& "$HOME/.modules/tmux/scripts/New-CodeSession.sh" -d -x $size.Width -y $size.Height | Where-Object { $_ })
-	if($picked.Count -ge 2) {
-		Connect-Tmux $picked[-1] -Target $picked[-2]
-		return
-	} elseif($picked.Count -eq 1) {
-		Connect-Tmux $picked[0]
-		return
-	}
-	Write-Information "Cancelled by user"
-	if($ExitOnCancel) { exit 130 }
+	Connect-Tmux $session -Target $target
 }
 
 function Start-Frontend() {

@@ -20,7 +20,8 @@
 # anyway to run herdr, so running the picker under that same pwsh costs no
 # extra profile load.
 #
-# Run for the "herdr" row of modules/ghostty/scripts/Select-Shell.sh.
+# Run by hand, or as Ghostty's `command` in place of
+# modules/ghostty/scripts/Select-Shell.sh, for a herdr-first terminal.
 
 set -uo pipefail
 
