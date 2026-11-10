@@ -77,6 +77,7 @@
     'Copy-NewGuidToClipboard',
     'Create-SshKey',
     'Add-SshKey',
+    'Invoke-GitWithSshKey',
     'Start-DotnetWatchRunDockerContainer',
     'New-DotnetCommandDockerContainer',
     'Start-NpmStartDockerContainer',

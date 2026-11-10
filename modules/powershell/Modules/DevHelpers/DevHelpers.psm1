@@ -210,11 +210,79 @@ function Git-AddAll() {
 }
 
 function Git-Pull() {
-  git pull
+  Invoke-GitWithSshKey -GitArgs (@('pull') + $args)
 }
 
 function Git-Fetch() {
-  git fetch
+  Invoke-GitWithSshKey -GitArgs (@('fetch') + $args)
+}
+
+# Runs a git command that reaches a remote -- gitf, gitpl, gitpu -- and, when
+# what turned it away was a key the agent does not hold, unlocks that key in
+# this machine's shared agent (Add-SshKey) and runs it again.
+#
+# git runs with ssh in BatchMode, so a missing key fails at once rather than
+# leaving ssh to ask for some passphrase on its own. A failure is put down to
+# the key only when a quiet ls-remote of the same remote is refused by ssh too
+# (Test-GitSshRefused): a merge conflict or a rejected push is left as it is,
+# and never costs a passphrase.
+#
+# The key to unlock is the one Find-SshKey.sh (git-radar's) finds the server
+# accepts among those this machine would try. When it cannot tell, or that key
+# did not do, every other key in ~/.ssh with a .pub beside it is tried in turn
+# -- the one the profile unlocks at startup first (Get-DefaultSshKeyFile) --
+# skipping the ones the agent already holds, until git gets through.
+#
+# -Remote is the remote the command reaches: by default the current branch's,
+# else origin. Ends with git's exit code in $LASTEXITCODE.
+function Invoke-GitWithSshKey([string[]] $GitArgs, [string] $Remote) {
+  if (!$Remote) {
+    $branch = git branch --show-current 2> $null
+    if ($branch) { $Remote = git config "branch.$branch.remote" 2> $null }
+    if (!$Remote) { $Remote = 'origin' }
+  }
+  # Only an ssh remote has a key to unlock: https and local paths run as they are.
+  $url = git remote get-url $Remote 2> $null
+  $isSsh = $url -and ($url -match '^ssh://' -or ($url -notmatch '://' -and $url -match '^[^/:]+:'))
+  if (!$isSsh) {
+    git @GitArgs
+    return
+  }
+  # BatchMode on top of whatever ssh git would have run.
+  $sshCommand = if ($env:GIT_SSH_COMMAND) { $env:GIT_SSH_COMMAND } else { git config core.sshCommand }
+  if (!$sshCommand) { $sshCommand = 'ssh' }
+  $previous = $env:GIT_SSH_COMMAND
+  $env:GIT_SSH_COMMAND = "$sshCommand -o BatchMode=yes"
+  try {
+    git @GitArgs
+    $code = $LASTEXITCODE
+    if ($code -eq 0 -or !(Test-GitSshRefused $Remote)) { return }
+    $root = git rev-parse --show-toplevel
+    $found = sh "$HOME/.modules/git-radar/scripts/Find-SshKey.sh" $root $Remote 2> $null
+    $tried = @()
+    foreach ($key in @($found) + @(Get-SshKeyCandidates)) {
+      if (!$key -or $tried -contains $key) { continue }
+      $tried += $key
+      Write-Host "`n->> $Remote turned the ssh key away: unlocking $key" -ForegroundColor Yellow
+      Add-SshKey -SshKeyFolder (Split-Path $key) -SshKeyFile (Split-Path $key -Leaf)
+      git @GitArgs
+      $code = $LASTEXITCODE
+      if ($code -eq 0 -or !(Test-GitSshRefused $Remote)) { return }
+    }
+    Write-Host "`n->> No ssh key here gets into $Remote" -ForegroundColor Red
+  }
+  finally {
+    $env:GIT_SSH_COMMAND = $previous
+    $global:LASTEXITCODE = $code
+  }
+}
+
+# Whether <Remote> turns this machine away for want of an ssh key: a quiet
+# ls-remote, under the caller's BatchMode ssh, refused with ssh's publickey
+# error rather than failing for any other reason.
+function Test-GitSshRefused($Remote) {
+  $out = git ls-remote $Remote HEAD 2>&1 | Out-String
+  return $LASTEXITCODE -ne 0 -and $out -match 'Permission denied|publickey'
 }
 
 function Git-Undo() {
@@ -509,7 +577,7 @@ function GitList-ModifiedFiles() {
 }
 
 function GitPush-UpstreamBranch() {
-  & git push --set-upstream origin (git branch --show-current)
+  Invoke-GitWithSshKey -GitArgs @('push', '--set-upstream', 'origin', (git branch --show-current)) -Remote origin
 }
 
 function GitDiff-UnstagedChanges() {
@@ -714,15 +782,33 @@ function Create-SshKey($SshKeyFolder = "$HOME/.ssh", $Comment = "$(whoami)@$env:
   }
 }
 
+# The key the profile unlocks at startup, as a file name in <SshKeyFolder>:
+# the one $env:SSH_KEY_FILE names, else the first key in the folder that has a
+# .pub beside it. Nothing when there is neither.
+function Get-DefaultSshKeyFile($SshKeyFolder = "$HOME/.ssh") {
+  if ($env:SSH_KEY_FILE) { return $env:SSH_KEY_FILE }
+  $pub = Get-ChildItem -Path $SshKeyFolder -Filter "*.pub" -File -ErrorAction SilentlyContinue |
+    Sort-Object Name | Select-Object -First 1
+  if ($pub) { return $pub.BaseName }
+}
+
+# Every key in <SshKeyFolder> with a .pub beside it that the agent does not
+# hold, as paths: the startup key first (Get-DefaultSshKeyFile), then by name.
+# A key is told apart by its public half, the .pub's type and key fields
+# against each line of ssh-add -L.
+function Get-SshKeyCandidates($SshKeyFolder = "$HOME/.ssh") {
+  $loaded = @(ssh-add -L 2> $null) | ForEach-Object { ($_ -split ' ')[0..1] -join ' ' }
+  $first = Get-DefaultSshKeyFile $SshKeyFolder
+  Get-ChildItem -Path $SshKeyFolder -Filter "*.pub" -File -ErrorAction SilentlyContinue |
+    Sort-Object @{ Expression = { $_.BaseName -ne $first } }, Name |
+    Where-Object { [IO.File]::Exists("$SshKeyFolder/$($_.BaseName)") } |
+    Where-Object { $loaded -notcontains (((Get-Content $_.FullName -TotalCount 1) -split ' ')[0..1] -join ' ') } |
+    ForEach-Object { "$SshKeyFolder/$($_.BaseName)" }
+}
+
 function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
-  # The key to add: the one asked for, else the one $env:SSH_KEY_FILE names,
-  # else the first key in the folder that has a .pub beside it.
-  if (!$SshKeyFile) { $SshKeyFile = $env:SSH_KEY_FILE }
-  if (!$SshKeyFile) {
-    $pub = Get-ChildItem -Path $SshKeyFolder -Filter "*.pub" -File -ErrorAction SilentlyContinue |
-      Sort-Object Name | Select-Object -First 1
-    if ($pub) { $SshKeyFile = $pub.BaseName }
-  }
+  # The key to add: the one asked for, else the profile's startup key.
+  if (!$SshKeyFile) { $SshKeyFile = Get-DefaultSshKeyFile $SshKeyFolder }
   if (!$SshKeyFile) {
     Write-Information "`n->> No SSH key found in $SshKeyFolder"
     return

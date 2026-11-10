@@ -116,65 +116,11 @@ is_auth_failure() {
 }
 
 # --- Which key would have helped ----------------------------------------------
-# `ssh -G` answers with the identity files *this host would actually try* for
-# this remote, config and defaults included -- far better than guessing at
-# ~/.ssh/id_*. A candidate is one of those that exists on disk and whose
-# fingerprint the agent does not already hold: a key already loaded plainly did
-# not work, so re-adding it would just cost a passphrase for nothing.
-#
-# Of the candidates, the one offered is the first the server says it would
-# accept. Being first in ssh's list is not enough: GitHub may know only a
-# host's id_ed25519 while id_rsa comes first, and unlocking id_rsa would cost a
-# passphrase and still fail the retry. So the probe makes one connection with
-# the agent out of the way, in which ssh offers each key's public half; the
-# server answers "accepts key" for the ones it knows, and BatchMode stops ssh
-# there, when it would need the passphrase to go on. The accepted keys are
-# picked out by fingerprint -- the one field every OpenSSH's -v prints on its
-# "Offering public key" line. A server that saw the keys and accepts none of the
-# candidates gets no offer at all; only when the connection never got as far as
-# offering one (an older ssh, a network hiccup) is the first candidate offered,
-# as before.
-#
-# The same question for a remote row has to be asked *on the host*: its keys,
-# its ~/.ssh/config and its shared agent are all over there. So the probe is a
-# POSIX sh script, run here for a local row and over ssh for a remote one, and
-# the two can never disagree about which key to offer. It takes the repository
-# as $1 and compares against the agent in SSH_AUTH_SOCK, and prints the key, or
-# nothing when no key would help.
-#
-# The .pub file is fingerprinted first: reading the private key works for
-# OpenSSH-format keys but is the path that could ask for a passphrase, which is
-# the one thing this probe must never do. https and friends have no key to add.
-key_probe='
-url=$(git --no-optional-locks -C "$1" remote get-url origin 2>/dev/null) || exit 1
-case $url in
-  ssh://*) dest=${url#ssh://}; dest="ssh://${dest%%/*}" ;;
-  *://*)   exit 1 ;;
-  *:*)     dest=${url%%:*} ;;
-  *)       exit 1 ;;
-esac
-loaded=$(ssh-add -l 2>/dev/null)
-candidates=$(ssh -G "$dest" 2>/dev/null | sed -n "s/^identityfile //p" |
-while IFS= read -r file; do
-  case $file in "~"/*) file="$HOME/${file#"~/"}" ;; esac
-  [ -f "$file" ] || continue
-  fp=$({ ssh-keygen -lf "$file.pub" 2>/dev/null || ssh-keygen -lf "$file" 2>/dev/null; } | cut -d" " -f2)
-  [ -n "$fp" ] || continue
-  case $loaded in *"$fp"*) continue ;; esac
-  printf "%s %s\n" "$fp" "$file"
-done)
-[ -n "$candidates" ] || exit 1
-log=$(SSH_AUTH_SOCK= ssh -v -o BatchMode=yes -o IdentitiesOnly=yes \
-  -o PreferredAuthentications=publickey -o ConnectTimeout=5 "$dest" true </dev/null 2>&1)
-case $log in
-  *"Offering public key"*) ;;
-  *) printf "%s\n" "$candidates" | head -n 1 | cut -d" " -f2-; exit 0 ;;
-esac
-accepted=$(printf "%s\n" "$log" |
-  awk "/Offering public key/ { offer = \$0 } /Server accepts key/ { print offer }")
-printf "%s\n" "$candidates" | while read -r fp file; do
-  case $accepted in *"$fp"*) printf "%s" "$file"; break ;; esac
-done'
+# The key the remote would accept that the agent does not hold yet:
+# Find-SshKey.sh, which says why. A POSIX sh script, run here for a local row
+# and sent as text over ssh for a remote one, whose keys, ~/.ssh/config and
+# shared agent are all over there.
+key_probe="$(cat "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/Find-SshKey.sh")"
 
 # A missing agent is its own problem here: there is nowhere to put the key.
 candidate_key() {
