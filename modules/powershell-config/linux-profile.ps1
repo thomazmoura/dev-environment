@@ -26,18 +26,27 @@ if(!$env:ConnectionStrings__Log) {
 	Set-LocalContextDatabase -DatabaseName "Log" -ContextName "Log"
 }
 
-# An agent handed down with SSH_AUTH_SOCK and SSH_AGENT_PID -- by the tmux
-# server locally, or by an ssh session's pane from the host's shared agent
-# (modules/tmux/scripts/ssh-helpers.sh) -- is trusted while its socket and
-# process are there, without asking it for its keys: that ssh-add -L cost
-# ~40ms, plus Add-SshKey's own ~50ms, on every shell start. A key that has
-# left the agent since is added back by ssh itself on first use
-# (AddKeysToAgent, set up by LinuxDevEnv/host-setup.sh). Add-SshKey runs --
-# and autoloads from DevHelpers -- only when there is no live agent.
+# Every shell on this machine uses its one shared ssh-agent, at a fixed socket
+# in ~/.ssh/tmux-agent (modules/tmux/scripts/Unlock-SshAgent.sh), so a key is
+# typed once per machine. That agent wins over one handed down in the
+# environment. A handed-down agent is whichever one the last client to attach
+# to tmux brought along, or none, and a key added to it reaches no other pane.
+# While the shared agent's socket and process are there it is taken as is,
+# without asking it for its keys: that ssh-add -L cost ~40ms, plus Add-SshKey's
+# own ~50ms, on every shell start. A key that has left the agent since is added
+# back by ssh itself on first use (AddKeysToAgent, set up by
+# LinuxDevEnv/host-setup.sh). Add-SshKey -- autoloaded from DevHelpers -- runs
+# only when the agent is not running: it starts it and asks for the key.
 $SshKeyFolder = "$HOME/.ssh"
-$sshAgentAlive = $env:SSH_AUTH_SOCK -and $env:SSH_AGENT_PID -and
-  [IO.File]::Exists($env:SSH_AUTH_SOCK) -and [IO.Directory]::Exists("/proc/$env:SSH_AGENT_PID")
-if( !$sshAgentAlive -and ![IO.File]::Exists("$HOME/.skip-ssh") -and
+$sshAgentDir = "$SshKeyFolder/tmux-agent"
+$sshAgentPid = if ([IO.File]::Exists("$sshAgentDir/agent.sock") -and [IO.File]::Exists("$sshAgentDir/agent.pid")) {
+  [IO.File]::ReadAllText("$sshAgentDir/agent.pid").Trim()
+}
+if ($sshAgentPid -and [IO.Directory]::Exists("/proc/$sshAgentPid")) {
+  $env:SSH_AUTH_SOCK = "$sshAgentDir/agent.sock"
+  $env:SSH_AGENT_PID = $sshAgentPid
+}
+elseif( ![IO.File]::Exists("$HOME/.skip-ssh") -and
     ($env:SSH_KEY_FILE -or ([IO.Directory]::Exists($SshKeyFolder) -and [IO.Directory]::GetFiles($SshKeyFolder, "*.pub"))) ) {
     Add-SshKey -SshKeyFolder $SshKeyFolder
 }

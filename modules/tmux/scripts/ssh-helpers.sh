@@ -63,22 +63,21 @@ is_docker_target() {
   [[ $1 == docker:* ]]
 }
 
-# The remote's ssh key, unlocked once per host rather than once per pane.
+# The ssh key, unlocked once per machine rather than once per pane.
 #
-# Locally the key is unlocked before tmux starts: Add-SshKey
-# (modules/powershell/Modules/DevHelpers/DevHelpers.psm1) puts SSH_AUTH_SOCK and
-# SSH_AGENT_PID in the environment the tmux server inherits, and every pane's
-# profile finds the agent there and asks nothing. A remote pane inherits
-# nothing, so its profile used to start an agent of its own and ask for the
-# password again, in every pane.
+# Every machine runs one shared agent, at a fixed socket in a private directory,
+# ~/.ssh/tmux-agent (Unlock-SshAgent.sh). Its own panes use it: the tmux server
+# hands the socket to every pane, whichever device's client attached last
+# (common.conf), and the pwsh profile points at it whatever it inherited
+# (linux-profile.ps1). So do an ssh session's panes on that machine, here.
+# Its own (linked) panes and the ssh sessions into it share the one key.
 #
-# So an ssh session runs one agent per host, at a fixed socket in a private
-# directory on the remote. New-SshSession.sh starts it and adds the key in its
-# popup (remote_agent_unlock), where ssh-add has a terminal to read the
-# password from; the password goes from there to ssh-add and nowhere else --
-# not into a variable, an option or a file. Every pane then gets the same two
-# variables a local pane inherits (remote_agent_env), so the profile finds a
-# live agent there and leaves it alone (linux-profile.ps1).
+# New-SshSession.sh makes sure of the host's agent and its key in its popup
+# (remote_agent_unlock), where ssh-add has a terminal to read the password
+# from; the password goes from there to ssh-add and nowhere else -- not into a
+# variable, an option or a file. Every pane then gets the agent's two variables
+# (remote_agent_env), so the profile finds a live agent there and leaves it
+# alone.
 #
 # Every new pane also runs remote_agent_unlock before it connects
 # (Unlock-RemoteKey.sh, see ssh_command). When the key is there that is one
@@ -86,15 +85,12 @@ is_docker_target() {
 # key has expired, it is that pane that asks, once, and puts the key back in
 # the shared agent for the panes after it.
 #
-# The key is held for no longer than the sessions that use it: the
-# session-closed hook kills the agent once no session for that host is left
-# (Close-SshAgent.sh), and the agent itself drops the key after
-# SSH_AGENT_LIFETIME, for when tmux goes away without running the hook.
+# Closing sessions leaves the agent alone -- the host's own panes use it too.
+# The agent drops the key itself after its lifetime (Unlock-SshAgent.sh).
 #
 # REMOTE_AGENT_DIR is expanded by the remote shell, not this one: it is always
 # spliced into double quotes in a remote command.
 REMOTE_AGENT_DIR='$HOME/.ssh/tmux-agent'
-SSH_AGENT_LIFETIME=12h
 
 # sq <string>
 # Quotes a string for a POSIX shell: wrapped in single quotes, with each
@@ -344,107 +340,25 @@ remote_session_env() {
 
 # remote_agent_unlock <target> [<key>]
 # Makes sure the host's shared agent is running and holding the key, asking
-# for the password when it is not. Needs a terminal -- ssh-add reads the
-# password from it -- so it runs in New-SshSession.sh's popup, through the
-# master connection the popup has just made, and in each new pane before its
-# own ssh (Unlock-RemoteKey.sh). -q because a pane runs it every time: it keeps
-# ssh's "Shared connection ... closed" off the pane, and leaves the password
-# prompt, which comes from the remote's ssh-add, alone.
+# for the password when it is not: Unlock-SshAgent.sh, run on the host. Needs
+# a terminal -- ssh-add reads the password from it -- so it runs in
+# New-SshSession.sh's popup, through the master connection the popup has just
+# made, and in each new pane before its own ssh (Unlock-RemoteKey.sh). -q
+# because a pane runs it every time: it keeps ssh's "Shared connection ...
+# closed" off the pane, and leaves the password prompt, which comes from the
+# remote's ssh-add, alone.
 #
-# Panes opened together while the key is missing each ask on their own; there
-# is no lock between them. Unlocking in one pane and reopening the others is
-# the way out of that.
+# The script is sent as text rather than run from the host's ~/.modules, so a
+# host whose checkout is older still gets this version.
 #
-# The key, and the condition for adding it at all, are linux-profile.ps1's and
-# Add-SshKey's: the one SSH_KEY_FILE names, else the first ~/.ssh/*.pub's; a
-# host with neither, or with ~/.skip-ssh, is left alone. SSH_KEY_FILE is taken
-# from the environment ssh hands this script or, since this is sh and not the
-# pwsh profile, from its `$env:SSH_KEY_FILE = ...` line in ~/.profile.ps1,
-# where the host's own panes read it -- otherwise the panes would find their
-# key missing from the agent and ask again. An agent
-# that already holds the key -- another session on this host unlocked it --
-# means there is nothing to ask. A socket nobody answers on is what an agent
-# that died leaves behind, and ssh-agent will not bind over it, so it goes.
-#
-# <key>, a path on the remote, replaces that default key and its condition:
+# <key>, a path on the remote, replaces the default key and its condition:
 # git-radar's failure popup names the key the host's git would have tried for
-# one repository's remote (Show-GitFailure.sh), and that is often not id_rsa --
-# GitHub may only know the host's id_ed25519. Asked for by a keypress, so
-# ~/.skip-ssh, which is about panes asking on their own, does not apply.
+# one repository's remote (Show-GitFailure.sh).
 #
 # Exits with ssh-add's status: non-zero when the password was never given.
 remote_agent_unlock() {
   local target=$1 key=${2:-} script
-  script="a=\"$REMOTE_AGENT_DIR\""'
-key="$2"
-if [ -z "$key" ]; then
-  [ -e "$HOME/.skip-ssh" ] && exit 0
-  f="${SSH_KEY_FILE:-}"
-  [ -n "$f" ] || f="$(sed -n "s/^[[:space:]]*\$env:SSH_KEY_FILE[[:space:]]*=//p" "$HOME/.profile.ps1" 2>/dev/null |
-    tail -n 1 | tr -d "\"\047[:space:]")"
-  if [ -z "$f" ]; then
-    for p in "$HOME"/.ssh/*.pub; do
-      [ -f "$p" ] && { f="$(basename "$p" .pub)"; break; }
-    done
-  fi
-  [ -n "$f" ] || exit 0
-  key="$HOME/.ssh/$f"
-  [ -f "$key" ] || exit 0
-fi
-command -v ssh-agent >/dev/null 2>&1 || exit 0
-umask 077
-mkdir -p "$a" && chmod 700 "$a" || exit 1
-SSH_AUTH_SOCK="$a/agent.sock"; export SSH_AUTH_SOCK
-if [ -f "$key.pub" ]; then
-  id="$(cut -d" " -f1,2 "$key.pub")"
-  ssh-add -L 2>/dev/null | grep -qF "$id" && exit 0
-fi
-ssh-add -l >/dev/null 2>&1
-if [ $? -eq 2 ]; then
-  rm -f "$a/agent.sock" "$a/agent.pid"
-  agent="$(ssh-agent -s -a "$a/agent.sock" -t "$1")" || exit 1
-  eval "$agent" >/dev/null
-  echo "$SSH_AGENT_PID" > "$a/agent.pid"
-fi
-ssh-add "$key"'
+  script="$(cat "$(dirname "$REMOTE_SSH")/Unlock-SshAgent.sh")" || return 1
   "$REMOTE_SSH" "${SSH_OPTS[@]}" -q -t "$target" \
-    "sh -c $(sq "$script") sh $(sq "$SSH_AGENT_LIFETIME") $(sq "$key")"
-}
-
-# remote_agent_kill <target>
-# Stops the host's shared agent, and the key goes with it. Run from the
-# session-closed hook, which has no terminal -- BatchMode, as in
-# remote_directory_matches -- and which fires while the master connection is
-# still being kept around by ControlPersist, so it needs no password.
-#
-# The pid file is only trusted while the socket answers: then the agent that
-# wrote it is still the one running. A socket nobody answers on means the agent
-# is already gone and the pid may by now be someone else's.
-remote_agent_kill() {
-  local target=$1 script
-  script="a=\"$REMOTE_AGENT_DIR\""'
-SSH_AUTH_SOCK="$a/agent.sock" ssh-add -l >/dev/null 2>&1
-if [ $? -ne 2 ] && [ -f "$a/agent.pid" ]; then kill "$(cat "$a/agent.pid")"; fi
-rm -f "$a/agent.sock" "$a/agent.pid"'
-  "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
-    "sh -c $(sq "$script")" </dev/null
-}
-
-# The hosts that may have a shared agent running, as a space-separated
-# server-wide option: New-SshSession.sh adds one when it unlocks a key, and
-# Close-SshAgent.sh takes it off when it kills that agent. A server option
-# rather than a file, since it describes this tmux server's sessions and goes
-# away with them.
-agent_targets() {
-  tmux show-options -gqv @ssh_agent_targets 2>/dev/null
-}
-
-# add_agent_target <target>
-add_agent_target() {
-  local targets
-  targets="$(agent_targets)"
-  case " $targets " in
-    *" $1 "*) ;;
-    *) tmux set-option -g @ssh_agent_targets "${targets:+$targets }$1" ;;
-  esac
+    "sh -c $(sq "$script") sh $(sq "$key")"
 }

@@ -728,58 +728,33 @@ function Add-SshKey($SshKeyFolder = "$HOME/.ssh", $SshKeyFile = $null) {
     return
   }
   $sshKey = "$SshKeyFolder/$SshKeyFile"
-  # An agent handed down with both variables -- by the tmux server locally, or
-  # by an ssh session's pane from the host's shared agent
-  # (modules/tmux/scripts/ssh-helpers.sh) -- is the one to use while it still
-  # answers. ssh-add -L exits 2 only when there is no agent to talk to, and its
-  # output is kept for Test-SshKeyInAgent below, so every shell start pays for
-  # one ssh-add launch instead of two.
-  $agentAlive = $env:SSH_AUTH_SOCK -and $env:SSH_AGENT_PID
-  $agentKeys = $null
-  $agentExitCode = 2
-  if ($agentAlive) {
-    $agentKeys = ssh-add -L 2> $null
-    $agentExitCode = $LASTEXITCODE
-    $agentAlive = $agentExitCode -ne 2
+  if (![IO.File]::Exists($sshKey)) {
+    Write-Information "`n->> No SSH key at $sshKey"
+    return
   }
-  if ( !$agentAlive -and (Test-Path $sshKey) ) {
-    Write-Verbose "`n->> Adding SSH key"
+  # This machine's shared agent, the one every pane uses (see
+  # linux-profile.ps1): Unlock-SshAgent.sh starts it when it is not running and
+  # asks for the key when it does not hold it. Panes asking at the same time
+  # wait for the first one's password instead of each asking.
+  $agentDir = "$HOME/.ssh/tmux-agent"
+  $unlock = "$HOME/.modules/tmux/scripts/Unlock-SshAgent.sh"
+  if ([IO.File]::Exists($unlock)) {
+    sh $unlock $sshKey
+  }
+  if ([IO.File]::Exists("$agentDir/agent.sock") -and [IO.File]::Exists("$agentDir/agent.pid")) {
+    $env:SSH_AUTH_SOCK = "$agentDir/agent.sock"
+    $env:SSH_AGENT_PID = [IO.File]::ReadAllText("$agentDir/agent.pid").Trim()
+  }
+  else {
+    # No shared agent to be had -- no ~/.modules, or no socket where ~/.ssh
+    # lives: an agent of this shell's own, as before there was a shared one.
+    Write-Verbose "`n->> Adding SSH key to a private agent"
     $sshAgent = ssh-agent;
     $env:SSH_AUTH_SOCK = $sshAgent[0].Split("=").Split(";")[1]
     $env:SSH_AGENT_PID = $sshAgent[1].Split("=").Split(";")[1]
     ssh-add $sshKey
   }
-  elseif ( (Test-Path $sshKey) -and !(Test-SshKeyInAgent $sshKey -AgentKeys $agentKeys -AgentExitCode $agentExitCode) ) {
-    # The agent is running but no longer has the key: it outlived the key's
-    # lifetime, or the key was removed. Added back into that same agent, so
-    # this pane asks and the ones after it don't.
-    Write-Verbose "`n->> Adding SSH key to the running agent"
-    ssh-add $sshKey
-  }
-  else {
-    Write-Information "`n->> SSH Agent already added"
-  }
   Write-Information "`n->> Agent PID: $env:SSH_AGENT_PID"
-}
-
-# Whether the agent in SSH_AUTH_SOCK holds this private key, judged by its
-# public half: the first two fields of the .pub (type and key) against each
-# line of ssh-add -L. Without a .pub there is nothing to compare, and any key
-# in the agent is taken to be this one -- what Add-SshKey assumed before it
-# compared at all. -AgentKeys/-AgentExitCode take an ssh-add -L the caller
-# already ran; without them it asks the agent itself.
-function Test-SshKeyInAgent($SshKey, $AgentKeys, $AgentExitCode) {
-  if (!$PSBoundParameters.ContainsKey('AgentExitCode')) {
-    $AgentKeys = ssh-add -L 2> $null
-    $AgentExitCode = $LASTEXITCODE
-  }
-  $pub = "$SshKey.pub"
-  if (!(Test-Path $pub)) {
-    return $AgentExitCode -eq 0
-  }
-  $id = ((Get-Content $pub -TotalCount 1) -split ' ')[0..1] -join ' '
-  $loaded = $AgentKeys | Where-Object { (($_ -split ' ')[0..1] -join ' ') -eq $id }
-  return [bool]$loaded
 }
 
 function Start-DotnetWatchRunDockerContainer($Version = "3.1", $Port = "5001") {

@@ -244,7 +244,6 @@ if [ -n "$target" ]; then
   read -rsn1 answer || answer=""
   [ "$answer" = "u" ] || exit 1
   printf '\n'
-  add_agent_target "$target"
   if ! remote_agent_unlock "$target" "$key"; then
     printf '\n\033[31mkey not added\033[0m\n'
     hold

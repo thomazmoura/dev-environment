@@ -63,6 +63,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 - **`Set-Theme.sh` assigns the status formats and theme styles at every load** (at the end of common.conf). Theme colours written anywhere else get overwritten; per-session colours go through `Set-Theme.sh -t <session> <colour>`.
 - **Escaping:** inside `run-shell '... tmux set ... "##(...)"'`, use `##(` and `##{` to keep formats literal. A style's commas split a `#{?...}` conditional, so put styled segments in a user option and expand them with `#{E:@opt}`.
 - **`run-shell -b`** is needed whenever the script calls back into tmux during config load.
+- **One ssh-agent per machine** at `~/.ssh/tmux-agent/agent.sock` (`Unlock-SshAgent.sh`): every pane gets that socket from the server's global environment (`SSH_AUTH_SOCK`/`SSH_AGENT_PID` are kept out of `update-environment`, so an attaching client never replaces it), the pwsh profile points at it, and an ssh session's panes on a host use that host's one. It ends only by its 12h lifetime; nothing kills it on session close.
 - **The tmux server's environment doesn't include `~/.profile.ps1` variables** (tmux starts from bash). Read them through a lean pwsh, as `Start-PaperboyUnread.sh` and `Set-StatusSegments.sh` do.
 - **Host and container both load common.conf.** A change to one entry point (wsl2/tmux.conf vs tmux/tmux.conf) usually needs a twin in the other.
 

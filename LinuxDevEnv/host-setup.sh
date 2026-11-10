@@ -72,9 +72,9 @@ if ! grep -q "^DOTNET_SKIP_FIRST_TIME_EXPERIENCE" $environment_file; then
     echo "DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1" | sudo tee -a $environment_file
 fi
 
-# The pwsh profile trusts an ssh-agent it inherits without asking it for its
-# keys (linux-profile.ps1), so a key that left the agent is put back by ssh
-# itself the first time it is used. At the top of the file: an option after the
+# The pwsh profile takes the machine's shared ssh-agent as is, without asking it
+# for its keys (linux-profile.ps1), so a key that left the agent is put back by
+# ssh itself the first time it is used. At the top of the file: an option after the
 # first Host block would only apply to that host.
 echo "Letting ssh add keys back to the agent on first use"
 ssh_config="$HOME/.ssh/config"

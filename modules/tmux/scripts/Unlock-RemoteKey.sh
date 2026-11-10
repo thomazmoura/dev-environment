@@ -10,12 +10,8 @@
 #
 # The normal case is silent: the agent holds the key and this is one round
 # trip over the master connection. When the agent has died -- the remote
-# rebooted, or another machine's session-closed hook stopped it -- or the key
-# has expired, this pane asks for the password, once, and the panes after it
-# find the key again. See remote_agent_unlock.
-#
-# The host is also recorded for the session-closed hook, so an agent this
-# starts is stopped with the host's last session, like one started by prefix+N.
+# rebooted -- or the key has expired, this pane asks for the password, once,
+# and the panes after it find the key again. See remote_agent_unlock.
 set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -24,5 +20,4 @@ source "$scripts/tmux-helpers.sh"
 target="${1:-}"
 [ -n "$target" ] || exit 0
 
-add_agent_target "$target"
 remote_agent_unlock "$target"

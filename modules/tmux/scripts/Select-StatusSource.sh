@@ -17,7 +17,7 @@
 # Only hosts with this dev-environment (@ssh_devenv) are offered, as the
 # segments come from its scripts there (see Get-RemoteStatus.sh). Once the last
 # session on the chosen host closes, the bar goes back to this machine
-# (Close-SshAgent.sh, on session-closed).
+# (Reset-StatusSource.sh, on session-closed).
 #
 # Choosing a host also starts its Paperboy unread-count daemon when it is not
 # running, in this popup, so a password prompt has somewhere to go.

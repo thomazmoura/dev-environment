@@ -348,14 +348,6 @@ if [ -n "${asked:-}" ] && [ "$kind" = devenv ] && ! is_docker_target "$target"; 
   fi
 fi
 
-# Recorded once there is a session for the host, not before: the
-# session-closed hook kills the agent of any recorded host without one, and a
-# session closing elsewhere in between must not take this agent with it.
-record_agent() {
-  [ "$kind" = devenv ] && add_agent_target "$target"
-  return 0
-}
-
 # Re-running prefix+N for a directory that is already open takes you there, as
 # prefix+/ does. A session with the same name for somewhere else -- a local
 # one, or the same folder name elsewhere on that host -- is not ours to reuse.
@@ -364,7 +356,6 @@ if tmux has-session -t "=$name" 2>/dev/null; then
      [ "$(ssh_option "=$name:" @ssh_dir)" != "$dir" ]; then
     die "A session called $name is already open for something else"
   fi
-  record_agent
   [ -n "${TMUX:-}" ] && tmux switch-client -t "=$name"
   exit 0
 fi
@@ -383,7 +374,6 @@ tmux set-option -t "=$name:" @ssh_dir "$dir"
 tmux set-option -t "=$name:" @ssh_devenv "$([ "$kind" = devenv ] && echo yes || echo no)"
 tmux set-option -t "=$name:" @ssh_name "$base"
 [ -n "$user" ] && tmux set-option -t "=$name:" @ssh_user "$user"
-record_agent
 
 # The first session of a second user on this host: the first user's sessions
 # take their user in front too.
