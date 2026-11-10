@@ -87,7 +87,7 @@ if [ -n "$dir$target" ] && { [ -z "$dir" ] || [ -z "$target" ]; }; then
 fi
 
 # fzf only for the path that picks a directory; the -t/-d path has one.
-require_tools timeout tmux
+require_tools setsid tmux
 if [ -n "$docker" ] || is_docker_target "$target"; then require_tools docker; else require_tools ssh; fi
 [ -n "$dir" ] || require_tools fzf
 
@@ -111,29 +111,68 @@ ask_target() {
   [ -n "$target" ]
 }
 
-# wait_cancellable <pid>
-# Waits for the background process <pid>, killing it when Esc or Ctrl+C is
-# pressed in the popup. Returns its exit status, or 130 when it was cancelled.
+# run_cancellable <seconds> <stdout file> <stderr file> <command...>
+# Runs the command with no terminal, giving up on it when Esc or Ctrl+C is
+# pressed in the popup, or after <seconds>. Returns its exit status, 130 when
+# it was cancelled and 124 when it ran out of time.
 #
-# Esc is read off the terminal; Ctrl+C comes as a SIGINT, which is trapped
-# rather than left to take this script down and the ssh running behind it.
-# (read -n turns the terminal's signal keys back on for itself, so Ctrl+C
-# cannot be read as a byte instead.) The SIGINT reaches only this script:
-# timeout runs its command in a process group of its own.
-wait_cancellable() {
-  local pid=$1 key cancelled=
-  [ -t 0 ] || { wait "$pid"; return; }
+# Everything that waits on the network before the picker is up goes through
+# here, because of what the terminal does otherwise: a command left in the
+# foreground has it in its line mode, where Esc and every other key are only
+# echoed (^[), and Ctrl+C is a signal that the command is free to outlive.
+# Here the keys are read by this script, which is the one thing in the popup
+# sure to be listening: Esc as a byte, Ctrl+C as a byte or as the SIGINT it
+# becomes -- read -n turns the terminal's signal keys back on for itself --
+# trapped rather than left to take the script down.
+#
+# The command is put in a session of its own (setsid), so that it cannot ask
+# anything on the terminal, the SIGINT does not reach it, and it can be ended
+# whole, with whatever it started: asked to (TERM), and half a second later
+# made to (KILL). Nothing here waits on a process that may not answer.
+run_cancellable() {
+  local limit=$1 out=$2 err=$3 pid key status cancelled= timed_out=
+  shift 3
+  setsid "$@" </dev/null >"$out" 2>"$err" &
+  pid=$!
   trap 'cancelled=1' INT
+  SECONDS=0
   while [ -z "$cancelled" ] && kill -0 "$pid" 2>/dev/null; do
-    IFS= read -rsn1 -t 0.2 key && [ "$key" = $'\e' ] && cancelled=1
+    if [ "$SECONDS" -ge "$limit" ]; then timed_out=1; break; fi
+    key=
+    if [ -t 0 ]; then
+      IFS= read -rsn1 -t 0.2 key
+      status=$?
+      case "$key" in $'\e'|$'\003') cancelled=1 ;; esac
+      # Neither a key nor the timeout: a terminal that cannot be read from.
+      # Still polled, without spinning.
+      [ "$status" -eq 0 ] || [ "$status" -gt 128 ] || sleep 0.2
+    else
+      # No terminal to cancel from (a session opened by a hook): the time
+      # limit is all there is.
+      sleep 0.2
+    fi
   done
   trap - INT
-  if [ -n "$cancelled" ]; then
-    kill "$pid" 2>/dev/null
+  if [ -n "$cancelled$timed_out" ]; then
+    end_group "$pid"
     wait "$pid" 2>/dev/null
-    return 130
+    [ -n "$cancelled" ] && return 130
+    return 124
   fi
   wait "$pid"
+}
+
+# end_group <pid>
+# Ends the session started by `setsid ... &` as <pid>, every process of it.
+end_group() {
+  local pid=$1 try
+  kill -TERM -- "-$pid" 2>/dev/null || return 0
+  for try in 1 2 3 4 5; do
+    kill -0 -- "-$pid" 2>/dev/null || return 0
+    sleep 0.1
+  done
+  kill -KILL -- "-$pid" 2>/dev/null
+  return 0
 }
 
 # ask_container
@@ -147,55 +186,116 @@ ask_container() {
   target="docker:${picked%% *}"
 }
 
+# Whether the remote has this dev-environment -- the check ssh_is_devenv relies
+# on later, through @ssh_devenv.
+devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi'
+
+# What connecting asks the remote, run under sh because the login shell may be
+# anything: the root the picker lists -- ~/code, or ~ when the remote has none
+# -- and whether the remote has this dev-environment. Two lines.
+probe='
+root="$HOME/code"
+[ -d "$root" ] || root="$HOME"
+cd "$root" || exit 1
+pwd
+'"$devenv_test"
+
 # connect
-# Connects to $target. Fails when cancelled; any other failure ends the script.
+# Connects to $target, and reads the picker's root and the remote's kind off it
+# into $root and $kind. Fails when cancelled; any other failure ends the script.
 #
 # Connecting on its own first is what makes this the connection that
 # authenticates: it becomes the ControlMaster every later ssh to this host goes
 # through (see SSH_OPTS). The listing below has its output in a pipe, which is
 # no place for a password prompt.
 #
-# It is tried first without a terminal (BatchMode), in the background, so that
-# it can be given up on: at Esc or Ctrl+C, or after connect_timeout seconds.
-# ConnectTimeout is not enough on its own. It bounds opening a connection, and
-# when a master for this host is already up -- a session on it is open, or
-# ControlPersist is keeping one -- the ssh goes through that master and opens
-# none; a master whose network went away takes the request and never answers.
-# Such a master is dropped on a timeout, so that trying again connects anew.
+# It is tried first without a terminal (BatchMode), under run_cancellable, so
+# that it can be given up on: at Esc or Ctrl+C, or after connect_timeout
+# seconds. ConnectTimeout is not enough on its own. It bounds opening a
+# connection, and when a master for this host is already up -- a session on it
+# is open, or ControlPersist is keeping one -- the ssh goes through that master
+# and opens none; a master whose network went away takes the request and never
+# answers. Such a master is dropped on a timeout, so that trying again connects
+# anew.
 #
 # Only when the batch try is turned away -- a password or a host key to
-# confirm is needed -- does the ssh run again with the terminal, where it can
-# ask. That one has no timeout, since it may be waiting on you, but by then the
-# host has answered; Ctrl+C still ends it, as it does any password prompt.
+# confirm is needed -- does an ssh run with the terminal, where it can ask. A
+# host that could not be reached at all is not tried a second time: that ssh
+# would sit on the terminal for as long again, deaf to Esc. The one that asks
+# has no timeout, since it is waiting on you, but by then the host has
+# answered; Ctrl+C ends it, as it does any password prompt. It asks here even
+# where the desktop would rather ask in a window (SSH_ASKPASS_REQUIRE=prefer,
+# as KDE sets it): that window opens on this machine's screen, which is not
+# where a linked or ssh'd-in client is looking.
 connect_timeout=20
+unreachable='timed out|could not resolve|refused|no route to host|unreachable|connection (reset|closed)'
+needs_you='permission denied|host key verification failed|authentication'
 connect() {
-  # A container is local: nothing to authenticate and no network to time out
-  # on. Only starting it, when it is stopped, and no history -- ask_container
-  # lists what there is.
+  local out err status why try
+  # What the batch try printed and why it failed, for the two connects a
+  # script may make (the guessed host, then the one asked for).
+  if [ -z "${connect_files:-}" ]; then
+    connect_files="$(mktemp -d)" || die "Could not create a temporary directory"
+    # shellcheck disable=SC2064
+    trap "rm -rf $(sq "$connect_files")" EXIT
+  fi
+  out="$connect_files/out" err="$connect_files/err"
+
+  # A container is local: nothing to authenticate, and no history --
+  # ask_container lists what there is. Only starting it, when it is stopped.
   if is_docker_target "$target"; then
     local container="${target#docker:}"
     if [ "$(docker container inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" != true ]; then
       printf '\nStarting %s...\n' "$container"
       docker start "$container" >/dev/null || die "Could not start $container"
     fi
-    "$REMOTE_SSH" "$target" true </dev/null || die "Could not run a command in $container"
+    run_cancellable "$connect_timeout" "$out" "$err" "$REMOTE_SSH" "$target" "sh -c $(sq "$probe")"
+    case $? in
+      0) ;;
+      130) return 1 ;;
+      *) die "Could not run a command in $container" ;;
+    esac
+    read_probe "$out" || die "Could not run a command in $container"
     return 0
   fi
 
   printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
-  timeout "$connect_timeout" "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" true \
-    </dev/null 2>/dev/null &
-  wait_cancellable $!
-  case $? in
+  # Twice when ssh failed for a reason of its own (255) that is neither of the
+  # two it names: a master that died under the first try -- its network was
+  # already gone -- leaves the second to connect anew, still without the
+  # terminal. LC_ALL=C: the reason is read off ssh's own words.
+  for try in 1 2; do
+    run_cancellable "$connect_timeout" "$out" "$err" env LC_ALL=C \
+      "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" "sh -c $(sq "$probe")"
+    status=$?
+    [ "$status" -eq 255 ] || break
+    grep -qiE "$unreachable|$needs_you" "$err" && break
+  done
+  case $status in
     0) ;;
     130) return 1 ;;
     124)
-      "$REMOTE_SSH" "${SSH_OPTS[@]}" -O exit "$target" 2>/dev/null &&
+      run_cancellable 5 /dev/null /dev/null "$REMOTE_SSH" "${SSH_OPTS[@]}" -O exit "$target" &&
         die "No answer from $target in ${connect_timeout}s; its stale connection was closed, try again"
       die "No answer from $target in ${connect_timeout}s" ;;
-    *)
-      "$REMOTE_SSH" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true || die "Could not connect to $target" ;;
+    255)
+      why="$(grep -v '^$' "$err" | tail -n 1)"
+      if grep -qiE "$unreachable" "$err" && ! grep -qiE "$needs_you" "$err"; then
+        die "Could not connect to $target${why:+: $why}"
+      fi
+      SSH_ASKPASS_REQUIRE=never "$REMOTE_SSH" "${SSH_OPTS[@]}" -o ConnectTimeout=10 "$target" true ||
+        die "Could not connect to $target"
+      # Over the connection just made, and as bounded as the first try.
+      run_cancellable "$connect_timeout" "$out" "$err" \
+        "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=10 "$target" "sh -c $(sq "$probe")"
+      case $? in
+        0) ;;
+        130) return 1 ;;
+        *) die "No answer from $target after signing in" ;;
+      esac ;;
+    *) die "Could not look at $target's folders" ;;
   esac
+  read_probe "$out" || die "Could not look at $target's folders"
 
   # Only a host that connected goes into the history: a typo should not be the
   # first thing up-arrow offers next time. Moved to the end if it was already
@@ -204,65 +304,59 @@ connect() {
     mv "$history_file.tmp" "$history_file"
 }
 
-# Whether the remote has this dev-environment -- the check ssh_is_devenv relies
-# on later, through @ssh_devenv. Named once and spliced into both the listing
-# below and probe_kind, so the path that asks for a directory and the path that
-# is handed one cannot drift apart on the answer.
-devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi'
-
-# probe_kind
-# The same question, for the -t/-d path, which has no listing to answer it as a
-# side effect. One round trip over the master connection just made.
-probe_kind() {
-  "$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$devenv_test")" </dev/null 2>/dev/null
+# read_probe <file>
+# The two lines the probe printed, into $root and $kind. The last two: a
+# remote's shell profile may have had something to say first.
+read_probe() {
+  { IFS= read -r root && IFS= read -r kind; } < <(tail -n 2 "$1")
+  [ -n "${root:-}" ] && [ "${root#/}" != "$root" ] || return 1
+  [ "$kind" = devenv ] || kind=plain
 }
 
-# One round trip for everything the picker needs, run under sh because the
-# login shell may be anything. The first line is the root the list is relative
-# to, the second whether the remote has this dev-environment, and the rest the
-# directories. fd -- or Debian's fdfind -- when there is one, so .gitignore is
+# The picker's directories, relative to the probe's root, run under sh like the
+# probe. fd -- or Debian's fdfind -- when there is one, so .gitignore is
 # honoured as it is by prefix+/; otherwise find, skipping hidden folders and
 # build output.
 listing='
 root="$HOME/code"
 [ -d "$root" ] || root="$HOME"
 cd "$root" || exit 1
-pwd
-'"$devenv_test"'
 if command -v fd >/dev/null 2>&1; then fd --type d --follow .
 elif command -v fdfind >/dev/null 2>&1; then fdfind --type d --follow .
 else find . -mindepth 1 \( -name ".*" -o -name node_modules -o -name bin -o -name obj \) -prune -o -type d -print
 fi'
 
+# What fills the picker, as a `bash -c` script: the named sessions on this
+# host, then the listing. Arguments: Set-SessionLabel.sh, the target, the root,
+# and the ssh command that lists.
+feed='"$1" -l "$2" "$3"; shift 3; "$@" 2>/dev/null | sed -u "s|^\./||"'
+
 # pick [header note]
-# Fuzzy-finds a directory on $target into $dir, and whether the remote has this
-# dev-environment into $kind. Fails when nothing was picked.
+# Fuzzy-finds a directory on $target, under the $root connect found, into $dir.
+# Fails when nothing was picked.
 #
 # The list streams into fzf rather than being collected first, so a big tree on
-# a slow link is searchable while it is still arriving. The two header lines
-# are read off the pipe before fzf gets the rest of it.
-#
-# fzf leaving before ssh has finished sends ssh a SIGPIPE, and pipefail makes
-# that the pipeline's status -- so the answer is judged by whether a line came
-# out, not by the exit code.
+# a slow link is searchable while it is still arriving. It comes from a session
+# of its own (setsid), read through a descriptor rather than a pipeline: fzf is
+# then the only thing waited for, on screen from the first moment and the one
+# reading the keys, and whatever is still listing when it leaves -- or is stuck
+# on a connection that went away -- is ended instead of waited for. In a
+# pipeline the script would wait for that ssh too, with the picker gone and
+# the keys going nowhere.
 #
 # The named sessions on this host go in ahead of the listing. Their lines carry
 # the directory and the session name after tabs, which fzf does not show
 # (--with-nth=1); picking one opens the session under that name (-n), so it is
-# the one the label was given to. They are read here, not on the remote, and
-# not from the pipe, which is the listing's.
+# the one the label was given to. They are read here, not on the remote.
 pick() {
-  local note="${1:-}" answer root picked
-  answer="$("$REMOTE_SSH" "${SSH_OPTS[@]}" "$target" "sh -c $(sq "$listing")" | {
-    IFS= read -r root || exit 1
-    IFS= read -r kind || exit 1
-    picked="$({ "$scripts/Set-SessionLabel.sh" -l "$target" "$root" </dev/null; sed -u 's|^\./||'; } |
-      fzf --reverse --delimiter=$'\t' --with-nth=1 --prompt='remote> ' --header="New session on $target:$root$note")" || exit 1
-    printf '%s\t%s\t%s' "$root" "$kind" "$picked"
-  })"
-  [ -n "$answer" ] || return 1
-  # The last variable takes the rest of the line, a named line's tabs included.
-  IFS=$'\t' read -r root kind picked <<<"$answer"
+  local note="${1:-}" picked feeder
+  exec 3< <(exec setsid bash -c "$feed" feed "$scripts/Set-SessionLabel.sh" "$target" "$root" \
+    "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes "$target" "sh -c $(sq "$listing")" </dev/null)
+  feeder=$!
+  picked="$(fzf --reverse --delimiter=$'\t' --with-nth=1 --prompt='remote> ' \
+    --header="New session on $target:$root$note" <&3)"
+  end_group "$feeder"
+  exec 3<&-
   [ -n "$picked" ] || return 1
   case "$picked" in
     *$'\t'*) IFS=$'\t' read -r _ dir name_override <<<"$picked" ;;
@@ -271,9 +365,9 @@ pick() {
 }
 
 # Handed a host and a directory (-t/-d), there is nothing to ask: connect --
-# which is a no-op when the session it came from already holds the master, and
-# the cancellable prompt-capable path when that master has gone -- and ask the
-# host the one question the picker would have answered on the way past.
+# one round trip when the session it came from already holds the master, and
+# the cancellable prompt-capable path when that master has gone -- which also
+# says what kind of remote it is.
 #
 # Otherwise: the host of the open ssh sessions, when they are all on one, is
 # tried without asking; several hosts are not guessed between. Leaving it --
@@ -282,8 +376,6 @@ pick() {
 # towards the guess, and only the host ones without it.
 if [ -n "$dir" ]; then
   connect || exit 0
-  kind="$(probe_kind)"
-  [ "$kind" = devenv ] || kind=plain
 else
   asked="yes"
   if [ -n "$docker" ]; then
