@@ -34,6 +34,10 @@
 #          started (a plain `tmux attach`) becomes the loop instead.
 #        Connect-Tmux.sh --take <id>
 #          Prints and removes the handoff left here for the loop with that id.
+#        Connect-Tmux.sh --spotlight <id>
+#          The far end of the loop's second ssh, for SpotlightDimmer: prints
+#          the focused pane's geometry of that loop's client here, a line per
+#          change, for the daemon beside the terminal. See below.
 #
 # A machine is named by its identity, user@hostname, which is the same from
 # everywhere. How to reach it may not be, so the address is looked up on the
@@ -52,6 +56,14 @@
 #   ~/.config/tmux-link/group     on the device this loop runs on
 #
 # else `shared`. A device with a name of its own there keeps its own pair.
+#
+# SpotlightDimmer lights the focused pane from reports made by tmux's hooks,
+# which on a linked machine run over there. So beside the ssh that shows that
+# tmux, the loop runs a second one on the same connection, bringing the
+# reports back: SpotlightDimmer's own relay script at both ends (send there,
+# receive here), told by --spotlight which client over there is this loop's.
+# Only where both machines have that script; without it the whole window is
+# lit, as before.
 #
 # Self-contained on purpose -- nothing sourced, nothing but bash, ssh and tmux
 # -- since on the phone it is a single copied file.
@@ -91,6 +103,17 @@ address() {
 }
 
 sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+
+# SpotlightDimmer's relay script, where it is installed: from source in the
+# home, from a package under /usr/share. Nothing where it is not.
+spotlight_relay() {
+  local file
+  for file in "$HOME/.config/SpotlightDimmer/tools" /usr/share/spotlight-dimmer/tools; do
+    file="$file/spotlight-dimmer-tmux-relay.sh"
+    [ -x "$file" ] && { printf '%s\n' "$file"; return; }
+  done
+  return 0
+}
 
 # The group of a terminal that names none: this device's file, else `shared`.
 default_group() {
@@ -169,6 +192,25 @@ case "${1:-}" in
     take "${2:?id}"
     exit 0
     ;;
+  --spotlight)
+    id="${2:?id}"
+    relay="$(spotlight_relay)"
+    [ -n "$relay" ] || exit 0
+    # The loop's client is the one attach_here started with its id. It may not
+    # be there yet, this ssh racing the one that attaches -- and never is when
+    # --remote answered with a handoff instead.
+    for ((try = 0; try < 50; try++)); do
+      while IFS=$'\t' read -r pid tty; do
+        [ -r "/proc/$pid/environ" ] || continue
+        if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qxF "TMUX_LINK_CLIENT=$id"; then
+          # Ends by itself when that client is gone.
+          exec "$relay" send "$tty"
+        fi
+      done < <(tmux list-clients -F $'#{client_pid}\t#{client_tty}' 2>/dev/null)
+      sleep 0.2
+    done
+    exit 0
+    ;;
   --handoff)
     target="${2:?identity}" session="${3:-}" pane="${4:-}"
     if [ -n "${TMUX_LINK_CLIENT:-}" ]; then
@@ -227,11 +269,29 @@ while :; do
     next="$(take "$id")"
   else
     host="$(address "$target")"
+    # SpotlightDimmer's reports from over there, into the daemon here. On the
+    # hop's connection once it is up, so it never asks for a password of its
+    # own. exec, so that the pid to end it by is the ssh: the receiving end
+    # then clears the pane it was told about.
+    relay_pid=""
+    relay="$(spotlight_relay)"
+    if [ -n "$relay" ]; then
+      (
+        for ((try = 0; try < 150; try++)); do
+          ssh "${ssh_opts[@]}" -O check "$host" 2>/dev/null && break
+          sleep 0.2
+        done
+        exec ssh -o ControlMaster=no "${ssh_opts[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$host" \
+          "$remote_self --spotlight $(sq "$id")" 2>/dev/null > >("$relay" receive)
+      ) </dev/null >/dev/null 2>&1 &
+      relay_pid=$!
+    fi
     # LogLevel=ERROR: without it every way out of that tmux ends in ssh's
     # "Shared connection to <host> closed.", which says nothing.
     ssh -t "${ssh_opts[@]}" -o LogLevel=ERROR "$host" \
       "$remote_self --remote $(sq "$id") $(sq "$session") $(sq "$pane") $(sq "$group")"
     status=$?
+    [ -z "$relay_pid" ] || kill "$relay_pid" 2>/dev/null
     # ControlMaster=no, ahead of the options it overrides: this rides the
     # hop's connection while ControlPersist keeps it, and when that is gone it
     # must not become the master itself -- a master keeps the pipe it was
