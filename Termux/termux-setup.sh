@@ -285,7 +285,12 @@ cat <<'EOF'
 Connect with tmux-link, naming the machine as ssh would:
   tmux-link -t <host>
 It attaches to that machine's tmux, and follows you to a linked machine's
-session when you pick one there (prefix+?, the Git pane). Without it, as before:
+session when you pick one there (prefix+?, the Git pane). With no session
+named it lands on the current session of this device's group, and follows the
+group's other devices from then on. The group is `shared` unless
+~/.config/tmux-link/group names another (or tmux-link -g <name>): give this
+device a name of its own there to keep its sessions to itself. Without
+tmux-link, as before:
   ssh -t <host> tmux new -A -s main
 tmux switches to opaque backgrounds as you attach, and back when the PC
 attaches again. If it doesn't, the host's sshd may not accept LC_* -- check

@@ -1278,6 +1278,10 @@ function Connect-Tmux ($Session) {
 function Get-TmuxSession ($Session=$null) {
 	if($Session) {
 		Connect-Tmux $Session
+	} elseif(& "$HOME/.modules/tmux/scripts/Sync-LinkGroup.sh" current 2> $null) {
+		# No session asked for and this terminal's group has a current one, here
+		# or on a linked machine: Connect-Tmux.sh goes to it by itself.
+		Connect-Tmux
 	} else {
 		$tmuxListSessionsResult = tmux list-sessions;
 		if($tmuxListSessionsResult -is [array]) {

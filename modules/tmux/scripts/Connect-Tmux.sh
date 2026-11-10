@@ -15,12 +15,14 @@
 # as ~/bin/tmux-link). Switch-LinkSession.sh is what leaves the handoff, for
 # every picker and feed that lands on a linked session.
 #
-# Usage: Connect-Tmux.sh [-t <identity>] [-p <pane>] [<session>]
+# Usage: Connect-Tmux.sh [-t <identity>] [-p <pane>] [-g <group>] [<session>]
 #          The loop. Attaches to <session> here, or with -t on the machine
 #          <identity> names (user@hostname, an address, or an alias), over ssh.
-#          -p lands on that pane. Ends when the tmux it shows is detached from
-#          (prefix+d) or ends, as `tmux attach` does.
-#        Connect-Tmux.sh --remote <id> [<session> [<pane>]]
+#          -p lands on that pane. With neither a session nor a pane it goes to
+#          its group's current session, on whichever machine that is. Ends
+#          when the tmux it shows is detached from (prefix+d) or ends, as
+#          `tmux attach` does.
+#        Connect-Tmux.sh --remote <id> [<session> [<pane> [<group>]]]
 #          The far end of the loop's ssh: attaches here, on behalf of the loop
 #          with that id.
 #        Connect-Tmux.sh --handoff <identity> <session> [<pane>]
@@ -38,6 +40,15 @@
 #   ~/.config/tmux-link/peers     <identity> TAB <address>, kept by prefix+N
 #
 # and is the identity itself when neither has it.
+#
+# A terminal belongs to a group, a name: the terminals of a group share a
+# current and a previous session across the linked machines, which prefix+l
+# swaps, and follow each other from one to the next (Sync-LinkGroup.sh). The
+# group is -g, else $TMUX_LINK_GROUP, else the first line of
+#
+#   ~/.config/tmux-link/group     on the device this loop runs on
+#
+# else `shared`. A device with a name of its own there keeps its own pair.
 #
 # Self-contained on purpose -- nothing sourced, nothing but bash, ssh and tmux
 # -- since on the phone it is a single copied file.
@@ -78,13 +89,33 @@ address() {
 
 sq() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
 
-# attach_here <id> <session> <pane>
+# The group of a terminal that names none: this device's file, else `shared`.
+default_group() {
+  local name=""
+  [ -f "$config/group" ] && IFS= read -r name <"$config/group"
+  printf '%s\n' "${name:-shared}"
+}
+
+# group_current <group>
+# Where the group's current session is, as two lines: the machine's identity
+# and the session. Nothing when the group has none yet -- or on a device that
+# is only a terminal, where Sync-LinkGroup.sh is not: the machine it attaches
+# to answers instead (--remote).
+group_current() {
+  local sync="$HOME/.modules/tmux/scripts/Sync-LinkGroup.sh"
+  [ -x "$sync" ] && "$sync" current "$1" 2>/dev/null
+  return 0
+}
+
+# attach_here <id> <session> <pane> <group>
 # The tmux client, as a child, carrying the loop's id: `detach-client -E` runs
 # its command with the client's environment, which is how --handoff knows
-# whose client it replaced. A pane given without a session says which session
-# it is in itself: the Agents pane knows a linked agent by its pane alone.
+# whose client it replaced. The group rides the same way, for
+# Sync-LinkGroup.sh to read off the client. A pane given without a session
+# says which session it is in itself: the Agents pane knows a linked agent by
+# its pane alone.
 attach_here() {
-  local id=$1 session=$2 pane=$3
+  local id=$1 session=$2 pane=$3 group=$4
   if [ -n "$pane" ]; then
     # Out of list-panes: display-message has no client to resolve a format
     # against out here, and prints an empty line for it.
@@ -94,9 +125,9 @@ attach_here() {
     tmux select-pane -t "$pane" 2>/dev/null
   fi
   if [ -n "$session" ] && tmux has-session -t "=$session" 2>/dev/null; then
-    TMUX_LINK_CLIENT="$id" tmux attach-session -t "=$session"
+    TMUX_LINK_CLIENT="$id" TMUX_LINK_GROUP="$group" tmux attach-session -t "=$session"
   else
-    TMUX_LINK_CLIENT="$id" tmux attach-session
+    TMUX_LINK_CLIENT="$id" TMUX_LINK_GROUP="$group" tmux attach-session
   fi
 }
 
@@ -109,7 +140,23 @@ take() {
 
 case "${1:-}" in
   --remote)
-    attach_here "${2:?id}" "${3:-}" "${4:-}"
+    id="${2:?id}" session="${3:-}" pane="${4:-}" group="${5:-}"
+    # A loop older than groups sends none: this machine's own.
+    [ -n "$group" ] || group="$(default_group)"
+    if [ -z "$session$pane" ]; then
+      # Nowhere asked for: the group's current session. On another machine,
+      # that is a handoff for the loop to take, as if picked here.
+      where="$(group_current "$group")"
+      if [ -n "$where" ]; then
+        { IFS= read -r target; IFS= read -r session; } <<<"$where"
+        if [ "$target" != "$(identity)" ]; then
+          mkdir -p "$handoffs"
+          printf '%s\n%s\n%s\n' "$target" "$session" "" >"$handoffs/$id"
+          exit 0
+        fi
+      fi
+    fi
+    attach_here "$id" "$session" "$pane" "$group"
     exit $?
     ;;
   --take)
@@ -133,16 +180,19 @@ case "${1:-}" in
     ;;
 esac
 
-target="" pane=""
-while getopts ":t:p:" option; do
+target="" pane="" group="${TMUX_LINK_GROUP:-}"
+while getopts ":t:p:g:" option; do
   case "$option" in
     t) target="$OPTARG" ;;
     p) pane="$OPTARG" ;;
+    g) group="$OPTARG" ;;
     *) printf 'Connect-Tmux.sh: unknown option -%s\n' "$OPTARG" >&2; exit 2 ;;
   esac
 done
 shift $((OPTIND - 1))
 session="${1:-}"
+[ -n "$group" ] || group="$(default_group)"
+group="$(printf '%s' "$group" | tr -c 'A-Za-z0-9_-' '_')"
 
 me="$(identity)"
 id="$(printf '%s-%s-%s' "$(hostname | cut -d. -f1)" "$$" "$RANDOM" | tr -c 'A-Za-z0-9_\n-' '_')"
@@ -150,19 +200,29 @@ mkdir -p -m 700 "$HOME/.ssh"
 
 has_tmux() { command -v tmux >/dev/null 2>&1 && tmux has-session 2>/dev/null; }
 
+# Only the first time round: after a handoff the place is named, and after a
+# lost connection the group's session may be the one that cannot be reached.
+resolve="yes"
 while :; do
   next=""
+  if [ -n "$resolve" ] && [ -z "$session$pane" ] && { [ -z "$target" ] || [ "$target" = "$me" ]; }; then
+    # Nowhere asked for: the group's current session, which may be on a
+    # linked machine. With -t that machine is asked instead (--remote).
+    where="$(group_current "$group")"
+    [ -z "$where" ] || { IFS= read -r target; IFS= read -r session; } <<<"$where"
+  fi
+  resolve=""
   if [ -z "$target" ] || [ "$target" = "$me" ]; then
     if ! has_tmux; then
       printf 'No tmux sessions here.\n' >&2
       exit 1
     fi
-    attach_here "$id" "$session" "$pane"
+    attach_here "$id" "$session" "$pane" "$group"
     next="$(take "$id")"
   else
     host="$(address "$target")"
     ssh -t "${ssh_opts[@]}" "$host" \
-      "$remote_self --remote $(sq "$id") $(sq "$session") $(sq "$pane")"
+      "$remote_self --remote $(sq "$id") $(sq "$session") $(sq "$pane") $(sq "$group")"
     status=$?
     # ControlMaster=no, ahead of the options it overrides: this rides the
     # hop's connection while ControlPersist keeps it, and when that is gone it

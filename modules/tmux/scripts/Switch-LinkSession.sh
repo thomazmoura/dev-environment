@@ -8,7 +8,9 @@
 #   <key>    a session of this tmux, by name, or <host>:<session> for a session
 #            on a linked machine -- how the radars name those rows
 #            (tmux_link.session_key). A tmux session name cannot hold a colon,
-#            so the two never read as each other
+#            so the two never read as each other. A key naming this machine
+#            itself is a session of this tmux: how Sync-LinkGroup.sh writes
+#            every session, so that its state reads the same on each machine
 #   <pane>   the pane to land on (%12, as that machine's tmux numbers it)
 #   -c       the client to move; the one this runs under when left out
 #
@@ -27,6 +29,14 @@ if [ "${1:-}" = "-c" ]; then
 fi
 key="${1:?session}"
 pane="${2:-}"
+
+# This machine's host name, as Connect-Tmux.sh and tmux_link.identity() have it.
+if [ -n "${TMUX_LINK_IDENTITY:-}" ]; then
+  self="${TMUX_LINK_IDENTITY##*@}"
+else
+  self="$(hostname | cut -d. -f1 | tr '[:upper:]' '[:lower:]')"
+fi
+[[ $key == "$self":* ]] && key="${key#*:}"
 
 if [[ $key != *:* ]]; then
   tmux switch-client ${client:+-c "$client"} -t "=$key" || exit 1
