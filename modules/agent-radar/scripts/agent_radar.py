@@ -83,9 +83,10 @@ PUBLISHED_STATES = STATES + (DONE,)
 
 # Presentation lives with the consumers, but the ordering is a detection fact:
 # the two states that mean "your turn" sort above the four that do not, blocked
-# first because it is the reason you opened the list. BACKGROUND sits under
-# WORKING: busy, but less so.
-STATE_ORDER = {BLOCKED: 0, DONE: 1, WORKING: 2, BACKGROUND: 3, UNKNOWN: 4, IDLE: 5}
+# first because it is the reason you opened the list. BACKGROUND sorts last,
+# under even IDLE: an agent parked on its own shell or subagents leaves you
+# nothing to do but wait, where an idle one will at least take a new prompt.
+STATE_ORDER = {BLOCKED: 0, DONE: 1, WORKING: 2, UNKNOWN: 3, IDLE: 4, BACKGROUND: 5}
 
 # --- Layer 1: identification -------------------------------------------------
 # Executable basename -> canonical agent label. Reverse of herdr's agent table
