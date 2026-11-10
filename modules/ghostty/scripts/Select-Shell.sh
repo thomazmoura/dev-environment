@@ -6,8 +6,9 @@
 # the surface from then on. tmux is what nearly every surface is for, and a
 # picker you answer the same way every time is a keystroke tax rather than a
 # choice -- so tmux is not offered, it just starts. `vtmux` attaches to a live
-# session if there is one and otherwise asks fzf which project to open, and
-# that second question is the real fork in the road: aborting it is the signal
+# session if there is one, else opens the home session, and only without one
+# asks fzf which project to open (prefix+/'s picker). That question is the
+# real fork in the road: aborting it is the signal
 # that this surface was meant for something else, and only then does the shell
 # picker (herdr, tmux, bash, PowerShell) appear.
 #

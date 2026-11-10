@@ -15,7 +15,13 @@
 #                 ssh, for a folder picked there -- which then moves its client
 #                 over (Switch-LinkSession.sh). -x and -y are that client's
 #                 size, so the layout's splits land where they will be once it
-#                 is attached, as New-SshSession.sh does outside tmux
+#                 is attached, as New-SshSession.sh does outside tmux.
+#                 With no directory it is the picker from outside tmux, for
+#                 vtmux (DevHelpers.psm1) when there is no home session to
+#                 open: a linked machine's folder is opened there and its
+#                 identity printed on a line before the session's name, for
+#                 the caller to attach to (Connect-Tmux.sh -t). Nothing is
+#                 printed when the picker is left
 #
 # A folder on a linked machine is opened in that machine's tmux, by this script
 # run there with -d, and the client is taken to it: nothing of it lives here.
@@ -34,12 +40,12 @@ source "$scripts/link-helpers.sh"
 
 code="$HOME/code"
 
-detached="" size=()
+detached="" size=() columns="" rows=""
 while getopts ":dx:y:" option; do
   case "$option" in
     d) detached="yes" ;;
-    x) size+=(-x "$OPTARG") ;;
-    y) size+=(-y "$OPTARG") ;;
+    x) size+=(-x "$OPTARG"); columns="$OPTARG" ;;
+    y) size+=(-y "$OPTARG"); rows="$OPTARG" ;;
     *) die "New-CodeSession.sh: unknown option -$OPTARG" ;;
   esac
 done
@@ -59,7 +65,13 @@ if [ -z "$directory" ]; then
   case "$location" in
     *$'\t'*$'\t'*$'\t'*)
       IFS=$'\t' read -r _ identity address directory <<<"$location"
-      open_on_peer "$identity" "$address" "$directory"
+      if [ -n "$detached" ]; then
+        # No client to move: the caller attaches to it.
+        name="$(create_on_peer "$identity" "$address" "$directory" "${columns:-80}" "${rows:-24}")" || exit 1
+        printf '%s\n%s\n' "$identity" "$name"
+      else
+        open_on_peer "$identity" "$address" "$directory"
+      fi
       exit 0 ;;
     *$'\t'*) IFS=$'\t' read -r _ directory name <<<"$location" ;;
     *) directory="$code/$location" ;;

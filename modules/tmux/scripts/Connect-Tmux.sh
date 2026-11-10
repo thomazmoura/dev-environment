@@ -24,7 +24,10 @@
 #          `tmux attach` does.
 #        Connect-Tmux.sh --remote <id> [<session> [<pane> [<group>]]]
 #          The far end of the loop's ssh: attaches here, on behalf of the loop
-#          with that id.
+#          with that id. Exits 3 when this tmux has no sessions at all -- the
+#          group's current session can name a machine whose server has since
+#          been killed -- and the loop goes back to its own tmux instead, as
+#          it does when the connection is lost.
 #        Connect-Tmux.sh --handoff <identity> <session> [<pane>]
 #          Run in the client's place by `tmux detach-client -E`: leaves the
 #          handoff for the loop this client belongs to. A client that no loop
@@ -156,6 +159,9 @@ case "${1:-}" in
         fi
       fi
     fi
+    # Nothing to attach to: tmux would only say "no sessions". The loop tells
+    # this apart from an ended session by the status.
+    tmux has-session 2>/dev/null || exit 3
     attach_here "$id" "$session" "$pane" "$group"
     exit $?
     ;;
@@ -221,7 +227,9 @@ while :; do
     next="$(take "$id")"
   else
     host="$(address "$target")"
-    ssh -t "${ssh_opts[@]}" "$host" \
+    # LogLevel=ERROR: without it every way out of that tmux ends in ssh's
+    # "Shared connection to <host> closed.", which says nothing.
+    ssh -t "${ssh_opts[@]}" -o LogLevel=ERROR "$host" \
       "$remote_self --remote $(sq "$id") $(sq "$session") $(sq "$pane") $(sq "$group")"
     status=$?
     # ControlMaster=no, ahead of the options it overrides: this rides the
@@ -230,13 +238,22 @@ while :; do
     # started with, and this would wait on it for ten minutes.
     next="$(ssh -o ControlMaster=no "${ssh_opts[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$host" \
       "$remote_self --take $(sq "$id")" </dev/null 2>/dev/null)"
-    if [ -z "$next" ] && [ "$status" -eq 255 ] && has_tmux; then
-      # The connection went, not the session: back to this machine's tmux
-      # rather than to a bare prompt.
-      printf '\nLost %s; back to the local tmux.\n' "$host" >&2
-      sleep 1
-      target="" session="" pane=""
-      continue
+    if [ -z "$next" ] && { [ "$status" -eq 255 ] || [ "$status" -eq 3 ]; }; then
+      if [ "$status" -eq 3 ]; then why="Nothing open on $host"; else why="Lost $host"; fi
+      if has_tmux; then
+        # The connection went, or there was nothing there (a group's current
+        # session from before that server was killed), not the session: back
+        # to this machine's tmux rather than to a bare prompt. Attaching
+        # records the local session as the group's current.
+        printf '\n%s; back to the local tmux.\n' "$why" >&2
+        sleep 1
+        target="" session="" pane=""
+        # The local tmux's own ending is what this loop exits with now.
+        unset status
+        continue
+      fi
+      # ssh has said why for a lost connection; nothing has for this.
+      [ "$status" -ne 3 ] || printf '%s.\n' "$why" >&2
     fi
   fi
   [ -n "$next" ] || exit "${status:-0}"
