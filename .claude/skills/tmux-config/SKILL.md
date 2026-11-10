@@ -34,7 +34,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 - `PANE_KINDS` / `pane_kind`: the kinds the picker pane offers (NeoVim, Terminal, Claude Code, Copilot, Codex, Open Code, Workhorse, Workhorse (builds), Paperboy, DadBod (database), Scripts) and what each runs.
 - `label_pane`: sets `@pane_label`, which layouts, zoom and pane jumping key on.
 - `die` / `warn`: fail inside a popup (waits for a key press) or as a tmux message.
-- `ssh-helpers.sh`: ssh sessions (`ssh_option`, `remote_run`, `ssh_command`, remote agent unlock). `worktree-helpers.sh`: the `prefix,t,w` worktree registry.
+- `ssh-helpers.sh`: ssh sessions (`ssh_option`, `remote_run`, `ssh_command`, remote agent unlock). `worktree-helpers.sh`: the `prefix,t,w` worktree registry. `link-helpers.sh`: linked machines (`link_probe`, `link_make`, `open_on_peer`).
 
 ## Concepts you'll be asked about
 
@@ -45,6 +45,11 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
   - `prefix,/`: a new project session under `~/code` (`New-CodeSession.sh`).
   - `prefix,N` / `prefix,C-n` (always asks for the host): an ssh session (`New-SshSession.sh`), where every pane is a shell on one remote host. Named `<host>-<dir>`, or `user@<host>-<dir>` while two users have sessions on that host (`ssh_session_name`; `Rename-SshSessions.sh` renames the open ones on open and on session-closed). Look a session up with `open_session_named`, not by its exact name.
   - `prefix,D`: the same in a Docker container (`-D`, through `Invoke-Remote.sh`).
+  - **Linked machines** replace ssh sessions for a host that has this dev-environment: `prefix,N` links the two machines instead (`link_probe` decides; any other host still gets an ssh session). Each machine keeps its own tmux server; the peer's sessions show in `prefix,?`, the Git and Agents panes, and its first-level code folders in `prefix,/`, all in grey. `prefix,t,l` lists the links and removes one.
+    - `tmux_link.py` is the library (identity `user@hostname`, the peers file `~/.config/tmux-link/peers`, `--serve` over ssh); `Start-TmuxLink.py` the sampler on the radars' cache; `Get-TmuxLink.py` the CLI.
+    - A peer's session is named `<host>:<session>` everywhere. **Never `switch-client` to a picked session: call `Switch-LinkSession.sh <key> [pane]`**, which switches locally or, for a peer key, runs `detach-client -E "Connect-Tmux.sh --handoff …"`.
+    - `Connect-Tmux.sh` is the loop around the tmux client (vtmux, tmuxa, and `tmux-link` on Termux run it instead of `tmux attach`): on a handoff it attaches locally or over one ssh to the other machine, so the device being typed on is never more than one ssh away. A device reaches an identity through `~/.config/tmux-link/aliases`, then `peers`, then the identity itself.
+    - A folder picked on a peer is opened there by `New-CodeSession.sh -d` over ssh (`open_on_peer`), then the client hops.
   - On every client arrival, `Sync-SshClientTerminal.sh` writes the client's terminal (name, Sixel, passthrough, cell size) to a file on the remote, which the panes find through `$TMUX_CLIENT_TERMINAL`. A remote nvim can't ask this tmux, and DA1 is answered by tmux itself (always Sixel), so paperboy.nvim's image previews read this file instead.
   - `prefix,?` / `prefix,C-p`: session picker (`Select-Session.sh`). `prefix,h`: home session.
 - **Themes:** `Set-Theme.sh` draws the powerline bar and every theme colour from `@theme` (a name or `#rrggbb`, set by each entry point *before* it sources common.conf). There are no tmux plugins. `Set-SshTheme.sh` recolors ssh (violet) and Docker (blue) sessions and restores the color when you switch back. `Set-PaneBackground.sh` makes backgrounds opaque only while a Termux client is attached.

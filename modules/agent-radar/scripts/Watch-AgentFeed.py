@@ -166,6 +166,19 @@ def sample() -> list:
 
 
 def jump(pane_id: str) -> None:
+    # A linked machine's agent (<host>:%12, see agent_radar.Pane.link) is in
+    # that machine's tmux: the client leaves for it, landing on the pane, which
+    # is Switch-LinkSession.sh's to arrange. An empty session after the colon
+    # leaves the pane to say which session it is in.
+    if ":" in pane_id:
+        host, _, pane = pane_id.partition(":")
+        subprocess.run(
+            [os.path.join(str(radar.SHARED_SCRIPTS), "Switch-LinkSession.sh"), f"{host}:", pane],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
     # All three, and in this order -- switch-client alone lands on the session's
     # current window, which is not necessarily the one holding the pane. Lifted
     # from Watch-Agents.sh so both watchers behave identically on Enter.
@@ -242,6 +255,10 @@ def _row_segments(pane, chosen: bool, width: int, palette, use_colour: bool, ban
         if not use_colour:
             return body
         return palette.attr(colour, chosen) | (body & curses.A_REVERSE)
+
+    # A linked machine's agent recedes the way its session does in the Git pane.
+    if pane.link:
+        name_attr |= curses.A_DIM
 
     state = state_cli.WAITING_LABEL[pane.state]
     state_attr = coloured(COLOUR[pane.state]) | STATE_EMPHASIS[pane.state]

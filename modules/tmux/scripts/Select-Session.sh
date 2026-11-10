@@ -22,11 +22,17 @@
 # list falls back to bare session names. Either way a session named with
 # prefix+$ shows that name (Set-SessionLabel.sh); column one keeps the real one.
 #
+# The sessions of linked machines (tmux_link.py) are listed too, in grey, as
+# they are in the Git pane: git-radar's rows carry them as <host>:<session>.
+# Picking one moves the client to that machine's tmux rather than switching
+# it, which Switch-LinkSession.sh tells apart by the colon.
+#
 # Usage: Select-Session.sh [--list]
 #   --list  print the rows and exit; what ctrl-r reloads from
 set -uo pipefail
 
-source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/tmux-helpers.sh"
+scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+source "$scripts/tmux-helpers.sh"
 
 require_tools tmux fzf
 
@@ -42,7 +48,8 @@ list_rows() {
     rows="$("$git_state" --format=fzf --sort=changes --agents --cached 2>/dev/null)"
   fi
   if [ -z "$rows" ]; then
-    rows="$(tmux list-sessions -F $'#{session_name}\t#{?@session_label,#{@session_label},#{session_name}}')"
+    rows="$(tmux list-sessions -F $'#{session_name}\t#{?@session_label,#{@session_label},#{session_name}}'
+      "$scripts/Get-TmuxLink.py" --format=sessions 2>/dev/null)"
   fi
 
   printf '%s\n' "$rows" | awk -F'\t' -v current="$current" 'NF && $1 != current'
@@ -66,4 +73,4 @@ selection="$(
 )" || exit 0
 [ -n "$selection" ] || exit 0
 
-tmux switch-client -t "${selection%%$'\t'*}"
+"$scripts/Switch-LinkSession.sh" "${selection%%$'\t'*}"

@@ -99,6 +99,13 @@ class Repo:
     # Set-SessionLabel.sh). Shown in place of `session`, which stays the row's
     # identity for everything else: jumping, the rail, the home mark.
     label: str = ""
+    # The identity (user@hostname) of the linked machine whose tmux the session
+    # is in (modules/tmux/scripts/tmux_link.py). Such a row is not a session of
+    # this tmux at all: `session` is <host>:<name> (tmux_link.session_key),
+    # `remote` the address that machine is reached at -- so everything a row
+    # of an ssh session does over ssh works on it as it is -- and Enter moves
+    # the client there instead of switching it. Empty for every other row.
+    link: str = ""
 
     @property
     def shown(self) -> str:
@@ -361,9 +368,10 @@ def inspect_path(path: str) -> Repo:
 
 def copy_state(repo: Repo, source: Repo) -> None:
     """Give `repo` everything `source` knows about the repository, keeping its
-    own session, path, remote and label -- the four that say whose row it is."""
+    own session, path, remote, label and link -- the five that say whose row
+    it is."""
     for field_name in FIELDS:
-        if field_name not in ("session", "path", "remote", "label"):
+        if field_name not in ("session", "path", "remote", "label", "link"):
             setattr(repo, field_name, getattr(source, field_name))
 
 
@@ -384,13 +392,20 @@ def detect(remote=None, extra_paths=()) -> list[Repo]:
     passes a RemotePoller (git_remote.poller) instead, whose threads do the
     asking, so a host that is slow to answer never holds up the local rows.
 
+    The sessions of linked machines (tmux_link.py) come after this tmux's own:
+    each peer's git-radar is asked for all of its session rows at once, through
+    the same `remote` under a target of its own (git_remote.link_target), and
+    they are listed as <host>:<name>. A peer that does not answer has no rows
+    -- which sessions it has is part of what it did not say; prefix+t,l shows
+    the link's state.
+
     `extra_paths` are directories a *remote* client has asked this machine
     about (git_feed.serve). They come back as rows with no session, after the
     session rows; git_feed keeps them away from everything that lists sessions.
     """
-    if remote is None:
-        import git_remote
+    import git_remote
 
+    if remote is None:
         remote = git_remote.query
 
     by_root: dict[str, Repo] = {}
@@ -431,7 +446,18 @@ def detect(remote=None, extra_paths=()) -> list[Repo]:
             else:
                 copy_state(repo, found)
 
-    repos.sort(key=lambda repo: repo.session.lower())
+    for identity, address in git_remote.link_peers():
+        answer = remote(git_remote.link_target(address), None)
+        if not isinstance(answer, dict):
+            continue
+        host = identity.rsplit("@", 1)[-1]
+        for name, found in answer.items():
+            repo = Repo(session=f"{host}:{name}", path=found.path, remote=address,
+                        label=found.label or f"{host}-{name}", link=identity)
+            copy_state(repo, found)
+            repos.append(repo)
+
+    repos.sort(key=lambda repo: (bool(repo.link), repo.session.lower()))
 
     for path in extra_paths:
         repos.append(inspect_path(path))
@@ -457,13 +483,14 @@ FIELDS = (
     "detail",
     "remote",
     "label",
+    "link",
 )
 
 # The FIELDS a payload may lack, with what they mean when it does: a snapshot
 # published before the field existed, or a remote whose git-radar is older than
 # ours answering --serve. Without a default those would fail to decode -- the
 # remote's rows turning OFFLINE "outdated" over a field it has no use for.
-OPTIONAL_FIELDS = {"label": ""}
+OPTIONAL_FIELDS = {"label": "", "link": ""}
 
 
 def decode(entry: dict) -> Repo:

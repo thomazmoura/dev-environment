@@ -33,6 +33,8 @@ ssh sessions (prefix+N) are listed too, their state asked of the host they are
 on. `--serve` is that question's other end: run over ssh by the asking
 machine's git-radar (git_remote.query), it reads directories on stdin and
 prints their rows as JSON, from this machine's snapshot -- see git_feed.serve.
+`--serve --sessions` answers a linked machine (modules/tmux/scripts/tmux_link.py)
+instead: this tmux's own sessions' rows, which that machine lists beside its own.
 
 Where the data comes from is a separate axis from how it is formatted. By
 default this samples live. `--cached` reads the shared snapshot published by
@@ -46,6 +48,7 @@ Usage:
   Get-GitState.py --format=fzf --sort=changes   # dirty, then unpushed, then unpulled, then clean
   Get-GitState.py --format=fzf --agents --cached
   Get-GitState.py --serve [--fresh] < paths
+  Get-GitState.py --serve --sessions [--fresh]
 """
 
 from __future__ import annotations
@@ -444,6 +447,11 @@ def main() -> int:
         help="answer a remote client: directories on stdin, their rows as JSON",
     )
     parser.add_argument(
+        "--sessions",
+        action="store_true",
+        help="with --serve, answer a linked machine: this tmux's own sessions' rows",
+    )
+    parser.add_argument(
         "--fresh",
         action="store_true",
         help="with --serve, sample the directories now instead of reading the snapshot",
@@ -462,8 +470,11 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.serve:
-        paths = [line for line in sys.stdin.read().splitlines() if line]
-        rows = feed.serve(paths, fresh=args.fresh)
+        if args.sessions:
+            rows = feed.serve_sessions(fresh=args.fresh)
+        else:
+            paths = [line for line in sys.stdin.read().splitlines() if line]
+            rows = feed.serve(paths, fresh=args.fresh)
         json.dump(
             {
                 "version": PROTOCOL,

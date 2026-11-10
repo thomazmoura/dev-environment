@@ -24,7 +24,9 @@ Panes of ssh sessions (prefix+N) are listed too, their agent identified by the
 host they are on. `--serve <client>` is that question's other end: run over ssh
 by the asking machine's agent-radar (agent_remote.query), it prints which of
 <client>'s panes hold an agent on this machine, as JSON -- see
-agent_radar.serve.
+agent_radar.serve. `--serve-panes` answers a linked machine
+(modules/tmux/scripts/tmux_link.py) instead: this tmux's own agents, as
+published, which that machine lists beside its own.
 
 Usage:
   Get-AgentState.py                 # raw states, no smoothing -- sampled live
@@ -33,6 +35,7 @@ Usage:
   Get-AgentState.py --format=fzf --cached
   Get-AgentState.py --format=status --cached
   Get-AgentState.py --serve <client>
+  Get-AgentState.py --serve-panes
 """
 
 from __future__ import annotations
@@ -346,7 +349,17 @@ def main() -> int:
         metavar="CLIENT",
         help="answer a remote client: which of its ssh panes hold an agent here",
     )
+    parser.add_argument(
+        "--serve-panes",
+        action="store_true",
+        help="answer a linked machine: this tmux's own agents, as published",
+    )
     args = parser.parse_args()
+
+    if args.serve_panes:
+        json.dump({"version": PROTOCOL, "panes": feed.serve_panes()}, sys.stdout)
+        sys.stdout.write("\n")
+        return 0
 
     if args.serve is not None:
         json.dump({"version": PROTOCOL, "agents": radar.serve(args.serve)}, sys.stdout)

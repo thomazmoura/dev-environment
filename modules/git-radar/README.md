@@ -418,6 +418,37 @@ by host and root, so `~/code/x` here and `~/code/x` there never share a busy fla
 **Both machines need this version.** The remote runs its own `~/.modules`
 checkout; until it is pulled, its rows say `git-radar outdated`.
 
+## Linked machines
+
+A machine linked with `prefix + N` (`modules/tmux/scripts/tmux_link.py`) runs its
+own tmux, and its sessions are listed here after this machine's, in the same
+grey as an ssh session's. They are not sessions of this tmux:
+
+```
+local Start-GitRadar.py
+  RemotePoller, target link:<address>, once a tick
+    ssh host  sh -c '"$HOME/.modules/git-radar/scripts/Get-GitState.py" --serve --sessions'
+        stdout  {"version": 1, "rows": [...]}     that tmux's own sessions' rows
+```
+
+Each comes back as a row with `session` `<host>:<name>`, `remote` the address the
+machine is reached at and `link` its identity (`user@hostname`). Because `remote`
+and `root` are set as on an ssh session's row, `f`, `F`, `p`, `P` and the `c`,
+`C`, `s`, `S`, `h`, `m` popups run on that machine with no code of their own.
+What does differ is everything that takes the session as a tmux target:
+
+    Enter   moves the client to that machine's tmux (Switch-LinkSession.sh),
+            instead of switching it
+    q / d   kills the session there, over ssh, after the same question
+    n, H    do nothing: the name and the home mark belong to the tmux the
+            session is in
+
+A peer that does not answer has no rows -- which sessions it has is part of what
+it did not say. `prefix + t, l` shows each link's state. Nothing else holds a
+connection to a linked machine open, so the query keeps a master up itself
+(`tmux_link.ensure_master`). The status-bar summary counts this machine's
+sessions only.
+
 ## How it works
 
 ```

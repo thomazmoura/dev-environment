@@ -29,9 +29,29 @@ import agent_radar as radar
 sys.path.insert(0, str(radar.SHARED_SCRIPTS))
 
 import radar_remote  # noqa: E402
+import tmux_link  # noqa: E402
 
 # Where the remote's agent-radar is. $HOME is left for the remote shell.
 SERVE = '"$HOME/.modules/agent-radar/scripts/Get-AgentState.py" --serve'
+
+# What a linked machine (tmux_link.py) is asked instead: the rows its own
+# agent-radar publishes for its own panes.
+SERVE_PANES = '"$HOME/.modules/agent-radar/scripts/Get-AgentState.py" --serve-panes'
+
+# A linked machine may be the same host as an ssh session's, and is asked a
+# different question, so it is asked under a target of its own: the poller
+# keeps a thread and an answer per target (as in git_remote.py).
+LINK_PREFIX = "link:"
+
+
+def link_target(address: str) -> str:
+    return LINK_PREFIX + address
+
+
+def link_peers() -> list[tuple[str, str]]:
+    """(identity, address) of every linked machine."""
+    return tmux_link.read_peers()
+
 
 # The reply's format. Bumped whenever what --serve prints changes shape, so an
 # older remote is told apart from a broken one.
@@ -64,7 +84,15 @@ def query(target: str, client: str | None = None, fresh: bool = False) -> dict |
     accepted for the poller's sake and means nothing here: the host keeps no
     snapshot that could predate the question.
     """
-    script = f"{SERVE} {shlex.quote(client or client_id())}"
+    linked = target.startswith(LINK_PREFIX)
+    if linked:
+        # {pane_id: row}, the row as that machine published it.
+        target = target[len(LINK_PREFIX):]
+        # Nothing else holds a connection to a linked machine open.
+        tmux_link.ensure_master(target)
+        script = SERVE_PANES
+    else:
+        script = f"{SERVE} {shlex.quote(client or client_id())}"
     try:
         result = subprocess.run(
             radar_remote.remote_argv(target, script),
@@ -91,6 +119,14 @@ def query(target: str, client: str | None = None, fresh: bool = False) -> dict |
         payload = json.loads(result.stdout)
         if payload.get("version") != PROTOCOL:
             return OUTDATED
+        if linked:
+            rows = {}
+            for entry in payload["panes"]:
+                for name in ("session", "window", "label", "tty", "title",
+                             "current_command", "agent", "state", "detail", "rule_id"):
+                    entry[name]
+                rows[entry["pane_id"]] = entry
+            return rows
         return {
             entry["pane"]: {
                 "agent": str(entry["agent"]),

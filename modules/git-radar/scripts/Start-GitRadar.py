@@ -118,8 +118,8 @@ def run(interval: float) -> int:
         try:
             repos = feed.sample(poller.lookup)
             # The summary is of this machine's sessions, not of the
-            # directories it is only serving.
-            sessions = [repo for repo in repos if repo.session]
+            # directories it is only serving or of a linked machine's.
+            sessions = [repo for repo in repos if repo.session and not repo.link]
             feed.CACHE.publish(repos, state_cli.render_status(sessions))
         except Exception as error:  # noqa: BLE001
             # Fail open, like the agent sampler does: one bad tick -- a

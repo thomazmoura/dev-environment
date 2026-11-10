@@ -193,6 +193,13 @@ class Pane:
     # modules/tmux/scripts/Set-SessionLabel.sh): what to show for the session.
     # `session` stays the identity everything else matches on.
     session_label: str = ""
+    # The identity (user@hostname) of the linked machine whose tmux the pane is
+    # in (modules/tmux/scripts/tmux_link.py). Such a row is that machine's own
+    # answer -- its agent-radar read the screen, decided the state and
+    # debounced it -- listed here as it came: `pane_id` and `session` carry the
+    # host in front (<host>:%12, <host>:<name>), `remote` is the address the
+    # machine is reached at, and Enter moves the client there. Empty otherwise.
+    link: str = ""
 
     @property
     def session_shown(self) -> str:
@@ -935,10 +942,15 @@ def detect(remote=None) -> list[Pane]:
     threads do the asking, so a host that is slow to answer never holds up the
     local rows. Everything after identification -- the capture, the rules, the
     debounce -- is the same for both, and happens here: the screen is local.
-    """
-    if remote is None:
-        import agent_remote
 
+    The agents on linked machines (tmux_link.py) are the opposite case: their
+    screens are in those machines' tmux, so each peer's agent-radar is asked
+    for its own published rows (agent_remote.link_target) and they are listed
+    as they are, after everything above.
+    """
+    import agent_remote
+
+    if remote is None:
         remote = agent_remote.query
 
     panes = list_panes()
@@ -1020,6 +1032,31 @@ def detect(remote=None) -> list[Pane]:
             verdict.rule_id,
         )
         found.append(pane)
+
+    for identity, address in agent_remote.link_peers():
+        answer = remote(agent_remote.link_target(address), None)
+        if not isinstance(answer, dict):
+            continue
+        host = identity.rsplit("@", 1)[-1]
+        for pane_id, entry in answer.items():
+            found.append(
+                Pane(
+                    pane_id=f"{host}:{pane_id}",
+                    session=f"{host}:{entry['session']}",
+                    window=entry["window"],
+                    label=entry["label"],
+                    tty=entry["tty"],
+                    title=entry["title"],
+                    current_command=entry["current_command"],
+                    agent=entry["agent"],
+                    state=entry["state"],
+                    detail=entry["detail"],
+                    rule_id=entry["rule_id"],
+                    remote=address,
+                    session_label=entry.get("session_label") or f"{host}-{entry['session']}",
+                    link=identity,
+                )
+            )
 
     found.sort(key=lambda p: (STATE_ORDER.get(p.state, 9), p.session, p.pane_id))
     return found

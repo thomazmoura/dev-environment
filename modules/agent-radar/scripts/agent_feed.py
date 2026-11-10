@@ -92,6 +92,9 @@ FIELDS = (
     "remote",
     # The session's prefix+$ name, shown in its place. Empty when it has none.
     "session_label",
+    # The linked machine a row came from (agent_radar.Pane.link). Empty for a
+    # pane of this tmux.
+    "link",
 )
 
 # Agents blink through an idle-looking frame between tool calls, so a consumer
@@ -120,7 +123,8 @@ PENDING_IDLE_CAP_SECONDS = 0.7
 # `remote` is optional for the same reason: a snapshot without it is one from
 # before ssh panes were listed, which had none to list. And `session_label`
 # because a snapshot without it is one from before sessions had names to show.
-OPTIONAL_FIELDS = {"active": False, "remote": "", "session_label": ""}
+# And `link`: a snapshot without it predates linked machines.
+OPTIONAL_FIELDS = {"active": False, "remote": "", "session_label": "", "link": ""}
 
 
 def _encode(pane: radar.Pane) -> dict:
@@ -229,6 +233,10 @@ def debounce(panes: list[radar.Pane]) -> None:
     now = time.time()
     current = {}
     for pane in panes:
+        if pane.link:
+            # A linked machine's row is already what its own sampler published:
+            # smoothed there, and DONE or not by who was looking there.
+            continue
         entry = previous.get(pane.pane_id, {})
         published = entry.get("published")
         raw = pane.state
@@ -294,6 +302,16 @@ def sample(remote=None) -> list[radar.Pane]:
 
 
 # --- The shared cache, under the names this module has always used ------------
+
+
+def serve_panes() -> list[dict]:
+    """This tmux's own agents, as published, for a linked machine
+    (tmux_link.py). What --serve-panes prints.
+
+    Only the rows that are this machine's to give: an ssh session's pane counts
+    (its screen is here), a row that came from another linked machine does not.
+    """
+    return [_encode(pane) for pane in sample_cached() if not pane.link]
 
 
 def publish(panes: list[radar.Pane], status: str) -> None:

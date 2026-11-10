@@ -31,6 +31,11 @@ one of them: their rows are asked of their host's own git-radar (git_remote),
 and f/p/P on such a row run on the host over ssh. A host that cannot be asked
 shows its row as offline, saying why. See the README's "ssh sessions".
 
+So are the sessions of linked machines (modules/tmux/scripts/tmux_link.py),
+which are in those machines' own tmux: Enter on one moves the client there,
+q kills it there, and n and H leave it alone. See the README's "Linked
+machines".
+
 Each entry's first line ends, flush right, with the agents running in that
 session -- agent-radar's status-bar summary filtered to it, plus its idle
 agents, ●1●2●1 coloured by state -- so a session with an agent waiting on you,
@@ -132,6 +137,7 @@ from __future__ import annotations
 import curses
 import importlib.util
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -1141,7 +1147,19 @@ def jump(session: str) -> None:
 
     `=` makes the target an exact name rather than an fnmatch pattern, the same
     guard New-CodeSession.sh uses.
+
+    A linked machine's row (<host>:<name>, see git_radar.Repo.link) is not a
+    session of this tmux: the client leaves for that machine's, which is
+    Switch-LinkSession.sh's to arrange.
     """
+    if ":" in session:
+        subprocess.run(
+            [os.path.join(str(gitr.SHARED_SCRIPTS), "Switch-LinkSession.sh"), session],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return
     editor = editor_pane(session)
     subprocess.run(
         ["tmux", "switch-client", "-t", f"={session}"],
@@ -1209,7 +1227,28 @@ def kill(session: str) -> None:
     Nothing special is done about killing the session this pane is in: it is a
     legitimate thing to want, and tmux already does the right thing -- the
     client moves to another session, or exits when that was the last one.
+
+    A linked machine's row (<host>:<name>) is killed in that machine's tmux,
+    over ssh, by its exact name: there is no id to ask for from here.
     """
+    if ":" in session:
+        host, _, name = session.partition(":")
+        for identity, address in git_remote.link_peers():
+            if identity.rsplit("@", 1)[-1] != host:
+                continue
+            try:
+                subprocess.run(
+                    git_remote.remote_argv(address, f"tmux kill-session -t {shlex.quote('=' + name)}"),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=10,
+                )
+            except (OSError, subprocess.SubprocessError):
+                pass
+            break
+        return
     target = session_id(session)
     if not target:
         return
@@ -1665,7 +1704,9 @@ def run(stdscr, interval: float) -> str:
                 if repos:
                     start_merge(repos[selected])
             elif key == ord("H"):
-                if repos:
+                # Not on a linked machine's row: the home session is one of
+                # this tmux's.
+                if repos and not repos[selected].link:
                     session = repos[selected].session
                     toggle_home(session)
                     # Shown now rather than on the sample the script asks for.
@@ -1676,7 +1717,8 @@ def run(stdscr, interval: float) -> str:
                     selected = index_of(repos, session, selected)
                     redraw = True
             elif key == ord("n"):
-                if repos:
+                # Nor this: a name is kept by the tmux the session is in.
+                if repos and not repos[selected].link:
                     name_session(repos[selected].session)
             elif key == ord("?"):
                 ui.show_keys(os.path.join(HERE, "..", "KEYS.md"))

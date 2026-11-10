@@ -29,6 +29,7 @@ one detached sampler per machine (Start-GitRadar.py / Start-AgentRadar.py)
   - `radar_remote.py`: the ssh poller thread per host.
   - `Request-RadarSample.sh`: the close hooks' "sample now".
 - **ssh sessions** (`prefix,N`): the local radar asks the remote host's radar about that session's panes (`git_remote.py` / `agent_remote.py`, which run `--serve` there). New features must work for ssh-session rows too: that's a recurring request.
+- **Linked machines** (`prefix,N` to a host with the dev-environment; `modules/tmux/scripts/tmux_link.py`, see the tmux-config skill): each peer's radar is asked for its *own* rows (`Get-GitState.py --serve --sessions`, `Get-AgentState.py --serve-panes`) under a `link:<address>` poller target. Those rows have `link` set (the peer's identity), `session` as `<host>:<name>` (agents: `pane_id` as `<host>:%N`) and `remote` as the address, so everything that works over ssh on an ssh-session row works on them. What differs is whatever treats the session as a local tmux target: Enter goes through `Switch-LinkSession.sh` (the client moves to that machine), `q` kills over ssh, `n`/`H` do nothing. Agent rows from a peer are not debounced, counted in the status bar or notified here: the peer does all three for itself.
 - Consumers never sample themselves. They read the snapshot, and the first one to notice the sampler is missing starts it.
 
 ## Git pane keys (`Watch-GitFeed.py`, the main key loop near the end)

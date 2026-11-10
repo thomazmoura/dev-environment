@@ -176,6 +176,25 @@ def serve(paths: list[str], fresh: bool = False) -> list[git_radar.Repo]:
     return rows
 
 
+def serve_sessions(fresh: bool = False) -> list[git_radar.Repo]:
+    """This tmux's own sessions' rows, for a linked machine (tmux_link.py).
+    What --serve --sessions prints.
+
+    Only the sessions whose repository is here: an ssh session's is on a third
+    machine, and a linked machine's rows are that machine's to give. `fresh`
+    asks the sampler for a sample first -- the client has just fetched -- and
+    gives it a moment to publish.
+    """
+    if fresh:
+        before = CACHE.generation()
+        CACHE.ensure_daemon()
+        request_sample()
+        deadline = time.monotonic() + DEFAULT_INTERVAL
+        while CACHE.generation() == before and time.monotonic() < deadline:
+            time.sleep(0.05)
+    return [repo for repo in sample_cached() if not repo.remote]
+
+
 def request_sample() -> None:
     """Ask the sampler to publish now rather than at the end of its three seconds.
 

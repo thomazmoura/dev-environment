@@ -47,6 +47,12 @@ selection="$(
 
 pane="${selection%%$'\t'*}"
 
+# An agent on a linked machine (<host>:%12, see agent_radar.Pane.link) is in
+# that machine's tmux: the client goes there, to the pane.
+if [[ $pane == *:* ]]; then
+  exec "$here/../../tmux/scripts/Switch-LinkSession.sh" "${pane%%:*}:" "${pane#*:}"
+fi
+
 # All three: switch-client alone lands on the session's current window, which is
 # not necessarily the one holding the pane.
 tmux switch-client -t "$pane"

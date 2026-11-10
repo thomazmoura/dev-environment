@@ -98,6 +98,7 @@
     'Start-Frontend',
     'Enable-Bash',
     'Get-ChildItemsSize',
+    'Connect-Tmux',
     'Get-TmuxSession',
     'Get-OctalFilePermissions',
     'Copy-WindowsPrints'

@@ -13,6 +13,9 @@ sampler so they stay in its snapshot, and prints their rows as JSON.
                                that is slow to answer never holds up the local
                                rows or the nudge latency
     op_argv(target, root, ...) f / p / P on a remote row, as an ssh command line
+    link_peers()               the linked machines (tmux_link.py), whose own
+    link_target(address)       sessions are asked for whole: query and the
+                               poller take a link target in place of a host
 
 The ssh and the poller are shared with agent-radar, in
 modules/tmux/scripts/radar_remote.py. Every ssh here is BatchMode with no
@@ -33,6 +36,7 @@ import git_radar as gitr
 sys.path.insert(0, str(gitr.SHARED_SCRIPTS))
 
 import radar_remote  # noqa: E402
+import tmux_link  # noqa: E402
 from radar_remote import remote_argv  # noqa: E402
 
 # The same prefix remote_agent_env in ssh-helpers.sh prints: the host's shared
@@ -49,6 +53,22 @@ REMOTE_AGENT_ENV = (
 # Where the remote's git-radar is. $HOME is left for the remote shell.
 SERVE = '"$HOME/.modules/git-radar/scripts/Get-GitState.py" --serve'
 REMOTE_NUDGE = '"$HOME/.modules/tmux/scripts/Request-RadarSample.sh" git-radar'
+
+# A linked machine is asked a different question than an ssh session's host --
+# "your own sessions' rows", not "these directories" -- and may be the same
+# host as one. So it is asked under a target of its own: the poller keeps a
+# thread and an answer per target, and the two never share either.
+LINK_PREFIX = "link:"
+
+
+def link_target(address: str) -> str:
+    return LINK_PREFIX + address
+
+
+def link_peers() -> list[tuple[str, str]]:
+    """(identity, address) of every linked machine."""
+    return tmux_link.read_peers()
+
 
 # The reply's format. Bumped whenever what --serve prints changes shape, so an
 # older remote says so on its rows instead of being misread.
@@ -69,8 +89,17 @@ def query(target: str, paths: list[str], fresh: bool = False) -> dict | str:
 
     `fresh` asks the remote to sample now rather than answer from its snapshot
     -- for right after a fetch, when the snapshot predates it.
+
+    A link target (link_target) asks a linked machine for its own sessions
+    instead: {session name: Repo}, and `paths` is not looked at.
     """
-    script = SERVE + (" --fresh" if fresh else "")
+    sessions = target.startswith(LINK_PREFIX)
+    if sessions:
+        target = target[len(LINK_PREFIX):]
+        paths = []
+        # Nothing else holds a connection to a linked machine open.
+        tmux_link.ensure_master(target)
+    script = SERVE + (" --sessions" if sessions else "") + (" --fresh" if fresh else "")
     try:
         result = subprocess.run(
             remote_argv(target, script),
@@ -102,7 +131,7 @@ def query(target: str, paths: list[str], fresh: bool = False) -> dict | str:
         rows = {}
         for entry in payload["rows"]:
             repo = gitr.decode(entry)
-            rows[repo.path] = repo
+            rows[repo.session if sessions else repo.path] = repo
         return rows
     except (ValueError, KeyError, TypeError, AttributeError):
         return gitr.OUTDATED

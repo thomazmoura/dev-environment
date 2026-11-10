@@ -26,6 +26,15 @@ set -euo pipefail
 # bin/xray-open-listen (xray.nvim) hands the URLs on to the phone while Termux is
 # in front of its tmux, through the same socket forwarded to the PC.
 #
+# Linked tmux servers: the dev machines each run their own tmux and list each
+# other's sessions (prefix+N there; modules/tmux/scripts/tmux_link.py). Picking
+# a session on another machine moves this terminal to it -- the ssh to the
+# first machine ends and one to the second starts -- which only something
+# running here can do: tmux-link, a copy of modules/tmux/scripts/Connect-Tmux.sh,
+# is what to connect with instead of `ssh -t <host> tmux ...`. A machine is
+# named by its user@hostname there; when the phone reaches it under another
+# name, say so in ~/.config/tmux-link/aliases.
+#
 # Usage: termux-setup.sh [host...]
 #   The hosts are the ones you ssh into, as you type them (aliases from
 #   ~/.ssh/config or names). Without any, every host gets the flag and the
@@ -41,7 +50,8 @@ set -euo pipefail
 #     SetEnv, LocalCommand and PermitLocalCommand that match and ignores every
 #     later one: a block of yours that already sets them keeps its values, and
 #     the check below says where to add ours by hand.
-#   - checks with `ssh -G` that each host really ends up with them.
+#   - checks with `ssh -G` that each host really ends up with them;
+#   - installs tmux-link from this checkout and creates the aliases file.
 
 FLAG="LC_TERMINAL=Termux"
 BEGIN_MARK="# >>> dev-environment: Termux pane backgrounds >>>"
@@ -249,9 +259,33 @@ for host in "${check_hosts[@]}"; do
   fi
 done
 
+# tmux-link, from the checkout this script is in. Rerun after pulling.
+connect="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../modules/tmux/scripts/Connect-Tmux.sh"
+bin="${PREFIX:-$HOME}/bin"
+if [ -f "$connect" ]; then
+  mkdir -p "$bin"
+  install -m 755 "$connect" "$bin/tmux-link"
+  echo "Installed $bin/tmux-link."
+else
+  status=1
+  echo "Warning: $connect not found; tmux-link was not installed." >&2
+fi
+aliases="${XDG_CONFIG_HOME:-$HOME/.config}/tmux-link/aliases"
+if [ ! -f "$aliases" ]; then
+  mkdir -p "$(dirname "$aliases")"
+  cat > "$aliases" <<'ALIASES'
+# How this device reaches each machine, when not by its user@hostname. One per
+# line, separated by a TAB:   <user@hostname>	<ssh destination>
+ALIASES
+  echo "Created $aliases."
+fi
+
 cat <<'EOF'
 
-Connect as usual and attach to tmux, e.g.:
+Connect with tmux-link, naming the machine as ssh would:
+  tmux-link -t <host>
+It attaches to that machine's tmux, and follows you to a linked machine's
+session when you pick one there (prefix+?, the Git pane). Without it, as before:
   ssh -t <host> tmux new -A -s main
 tmux switches to opaque backgrounds as you attach, and back when the PC
 attaches again. If it doesn't, the host's sshd may not accept LC_* -- check

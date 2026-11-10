@@ -139,9 +139,13 @@ def run(interval: float) -> int:
         started = time.monotonic()
         try:
             panes = feed.sample(poller.lookup)
-            feed.publish(panes, state_cli.render_status(panes))
+            # The count in the status bar and the notifications are about this
+            # machine's agents: a linked machine counts and notifies for its
+            # own, and would otherwise be heard twice.
+            own = [pane for pane in panes if not pane.link]
+            feed.publish(panes, state_cli.render_status(own))
             # After the publish, so the status bar never waits on a notifier.
-            notifier.observe(panes)
+            notifier.observe(own)
         except Exception as error:  # noqa: BLE001
             # Fail open, like radar._run does: one bad tick -- tmux restarting
             # mid-capture, a rules file being edited -- must not take the

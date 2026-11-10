@@ -259,6 +259,21 @@ host's, and the hook clears it on the agent's next move.
 **Both machines need this version**, and a pane needs to have been opened with
 it: the tag is set when the pane's ssh starts.
 
+## Linked machines
+
+A machine linked with `prefix + N` (`modules/tmux/scripts/tmux_link.py`) runs its
+own tmux, so its agents' screens are there, not here -- the reverse of an ssh
+session. Its own agent-radar does all the work, and this one lists the result:
+`Get-AgentState.py --serve-panes` over ssh (poller target `link:<address>`)
+returns the rows that machine published for its own panes, already classified
+and debounced. They are listed with `pane_id` `<host>:%N`, `session`
+`<host>:<name>` and `link` set to the machine's identity, the name dimmed.
+
+Such a row is never debounced here, never counted in the status bar and never
+notified about: the peer does all three for itself, and a notification would
+otherwise arrive twice. Enter (and `prefix + t, a`) moves the client to that
+machine's tmux and lands on the pane (`Switch-LinkSession.sh`).
+
 ## One sampler, many readers
 
 Every consumer used to detect for itself, which broke twice over as soon as you

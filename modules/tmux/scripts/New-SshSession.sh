@@ -16,6 +16,12 @@
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
+#   On a host that can be linked -- one with this dev-environment in a version
+#   that has tmux_link.py -- it stops being an ssh session here: the two
+#   machines are linked (link_make in link-helpers.sh), the session is opened in
+#   *that machine's* tmux and the client is moved to it (open_on_peer). The rest
+#   of this list is what happens on every other host, and in a container.
+#
 #   4. creates a session named <host>-<directory> -- user@<host>-<directory>
 #      while another user has a session on that host, the open ones renamed to
 #      match (Rename-SshSessions.sh) -- records the host and the directory on
@@ -55,6 +61,7 @@ set -uo pipefail
 
 scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
+source "$scripts/link-helpers.sh"
 
 history_file="$HOME/.ssh-session-history"
 
@@ -278,11 +285,15 @@ if [ -n "$dir" ]; then
   kind="$(probe_kind)"
   [ "$kind" = devenv ] || kind=plain
 else
+  asked="yes"
   if [ -n "$docker" ]; then
     hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | grep '^docker:' | sort -u)"
     ask=ask_container other="container"
   else
-    hosts="$(tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d;/^docker:/d' | sort -u)"
+    # The linked machines count as hosts too: with one link and no ssh session
+    # elsewhere, prefix+N goes straight to that machine's folders.
+    hosts="$({ tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d;/^docker:/d'
+               "$link_cli" --format=peers 2>/dev/null | cut -f2; } | sort -u)"
     ask=ask_target other="host"
   fi
   target=
@@ -321,6 +332,19 @@ if [ "$kind" = devenv ]; then
   if ! remote_agent_unlock "$target"; then
     printf '\nThe key was not unlocked; the panes will ask for it.\n'
     read -rsn1 -p "Press any key to continue..." _
+  fi
+fi
+
+# A host that can be linked gets no ssh session: the session is opened in its
+# own tmux and the client goes there. Asked only of what the questions above
+# led to -- a worktree or a home session handed over with -t/-d is an ssh
+# session already, and stays one -- and never of a container.
+if [ -n "${asked:-}" ] && [ "$kind" = devenv ] && ! is_docker_target "$target"; then
+  peer="$(link_probe "$target")"
+  if [ -n "$peer" ]; then
+    link_make "$peer" "$target"
+    open_on_peer "$peer" "$target" "$dir"
+    exit 0
   fi
 fi
 

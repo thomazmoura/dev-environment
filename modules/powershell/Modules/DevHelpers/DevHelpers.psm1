@@ -1201,7 +1201,7 @@ function New-VerticalTmuxSession {
 		}
 		tmux new-session -d -s $currentDirectory -c $location -x $size.Width -y $size.Height
 		& "$HOME/.modules/tmux/scripts/Set-NeovimLayout.sh" -n "${currentDirectory}:"
-		tmux attach-session -t $currentDirectory
+		Connect-Tmux $currentDirectory
 		return
 	}
 	Write-Information "Cancelled by user"
@@ -1260,9 +1260,24 @@ function Get-ChildItemsSize() {
 	du -hs * | sort -hr | less
 }
 
+function Connect-Tmux ($Session) {
+  <#
+    .SYNOPSIS
+      Attaches this terminal to a tmux session, through the script that can
+      move it on to a linked machine's tmux and back.
+
+    .DESCRIPTION
+      `tmux attach-session` by another name, for vtmux and tmuxa: a session on
+      a linked machine (prefix+N) is reached by this terminal leaving the local
+      tmux and attaching to that one, which only the process around the tmux
+      client can do. See modules/tmux/scripts/Connect-Tmux.sh.
+  #>
+	& "$HOME/.modules/tmux/scripts/Connect-Tmux.sh" $Session
+}
+
 function Get-TmuxSession ($Session=$null) {
 	if($Session) {
-		tmux attach-session -t $Session
+		Connect-Tmux $Session
 	} else {
 		$tmuxListSessionsResult = tmux list-sessions;
 		if($tmuxListSessionsResult -is [array]) {
@@ -1279,13 +1294,13 @@ function Get-TmuxSession ($Session=$null) {
 					}
 				}
 			if($availableFavoredSession){
-				tmux attach-session -t $availableFavoredSession
+				Connect-Tmux $availableFavoredSession
 			} else {
-				tmux attach-session -t $tmuxSessions[0].Split(':')[0]
+				Connect-Tmux $tmuxSessions[0].Split(':')[0]
 			}
 		} else {
 			if($tmuxListSessionsResult) {
-				tmux attach-session -t $tmuxListSessionsResult.Split(':')[0]
+				Connect-Tmux $tmuxListSessionsResult.Split(':')[0]
 			}
 		}
 	}

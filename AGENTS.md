@@ -7,6 +7,7 @@ Personal dotfiles + dev environment. Each tool is a folder in `modules/`, deploy
 | When asked about | Look in | Details |
 |---|---|---|
 | tmux bindings (`prefix,t,s`, `prefix+N`), layouts, picker/tool panes, popups, ssh/Docker sessions, status bar | `modules/tmux/` (`common.conf` + `scripts/`), `modules/wsl2/tmux.conf` | `.claude/skills/tmux-config/SKILL.md` |
+| Linked machines (`prefix,N` to a dev-environment host, `prefix,t,l`), moving the client between machines' tmux servers, `tmux-link` on Termux | `modules/tmux/scripts/` (`tmux_link.py`, `Connect-Tmux.sh`, `Switch-LinkSession.sh`, `link-helpers.sh`), `Termux/` | `.claude/skills/tmux-config/SKILL.md` |
 | Git pane / git-radar, Agents pane / agent-radar, agent notifications | `modules/git-radar/`, `modules/agent-radar/` | `.claude/skills/radars/SKILL.md` |
 | NeoVim, the Notes pane, Workhorse/Paperboy in NeoVim | `modules/nvim-config/` | `.claude/skills/nvim-config/SKILL.md` |
 | Dockerfiles, CI, `host-setup.sh`, symlinks, new modules/tools/LSP servers | `*Dockerfile`, `LinuxDevEnv/`, `modules/entrypoint-config/` | `.claude/skills/deploy/SKILL.md` |
