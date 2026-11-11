@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Code status line: vim mode, context, prompt cache and usage limits.
+"""Claude Code status line: vim mode, model, context, prompt cache and usage limits.
 
 Claude Code draws its own block cursor in the prompt, not the terminal's, so the
 cursor can't turn into a bar in insert mode; the vim mode icon is the stand-in,
@@ -37,6 +37,7 @@ VIM_ICONS = {
     "VISUAL": "\U000F0489",       # nf-md-selection
     "VISUAL LINE": "\U000F05C8",  # nf-md-format_line_style
 }
+MODEL = "\U000F167A"        # nf-md-robot_outline
 CONTEXT = "\U000F09D1"      # nf-md-brain
 CACHE_WARM = "\U000F0238"   # nf-md-fire
 CACHE_COLD = "\U000F0717"   # nf-md-snowflake
@@ -153,6 +154,14 @@ def cache_segment(cache):
     return paint(f"{CACHE_COLD} Cache {hits} cold", ORANGE)
 
 
+def model_segment(model):
+    """The model's family, e.g. Opus -- the display name ("Opus 5.5 (1M
+    context)") minus its version and context size, to keep the line narrow."""
+    name = (model or {}).get("display_name") or (model or {}).get("id")
+    family = name.split()[0] if name and name.strip() else DASH
+    return f"{MODEL} {family}"
+
+
 def main():
     try:
         session = json.load(sys.stdin)
@@ -164,6 +173,8 @@ def main():
     mode = (session.get("vim") or {}).get("mode")
     if mode:
         segments.append(VIM_ICONS.get(mode, mode))
+
+    segments.append(model_segment(session.get("model")))
 
     context = session.get("context_window") or {}
     segments.append(percentage_segment(CONTEXT, "Context ", context_percentage(context), detail=context_tokens(context)))
