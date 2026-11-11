@@ -5,7 +5,9 @@ Every key acts on the selected row's repository. On a row of an ssh session
 
 A grey row named `host-session` may also be a session on a linked machine. The
 sync and look keys work there too; `Enter` moves you to that machine's tmux, `q`
-kills the session there, and `n` and `H` do nothing.
+kills the session there, `H` makes it home and `n` does nothing. A linked home
+session stays listed while its machine is away, greyed out as `unreachable`:
+`Enter` there connects again and moves you only once it has.
 
 ## Move
 

@@ -33,8 +33,9 @@ shows its row as offline, saying why. See the README's "ssh sessions".
 
 So are the sessions of linked machines (modules/tmux/scripts/tmux_link.py),
 which are in those machines' own tmux: Enter on one moves the client there,
-q kills it there, and n and H leave it alone. See the README's "Linked
-machines".
+q kills it there, H makes it home and n leaves it alone. A linked home session
+keeps its row while its machine is away (home_placeholder), and Enter there
+connects again first. See the README's "Linked machines".
 
 Each entry's first line ends, flush right, with the agents running in that
 session -- agent-radar's status-bar summary filtered to it, plus its idle
@@ -529,8 +530,74 @@ def home_first(repos: list, session: str) -> list:
     Only this pane's order: the session picker and everywhere else keep the
     sampler's. The home session is the one you come back to, so it is the one
     row worth a fixed place.
+
+    A home session on a linked machine (<host>:<name>) keeps its row when that
+    machine has no rows to give -- see home_placeholder.
     """
+    placeholder = home_placeholder(repos, session)
+    if placeholder:
+        repos = [placeholder, *repos]
     return sorted(repos, key=lambda repo: repo.session != session)
+
+
+def home_placeholder(repos: list, session: str):
+    """The row a linked machine's home session is shown with when it has none.
+
+    A linked machine that does not answer has no rows at all (see
+    git_radar.detect), but the home session is the one row that should not
+    disappear with it: it stays, greyed out, with "unreachable" for a branch,
+    and Enter on it connects to that machine again before going there
+    (reconnect). "closed" instead when the machine answers and the session is
+    not among its rows. None when the home session is listed, is one of this
+    tmux's, or is on a machine no longer linked.
+    """
+    if ":" not in session or any(repo.session == session for repo in repos):
+        return None
+    host, _, name = session.partition(":")
+    for identity, address in git_remote.link_peers():
+        if identity.rsplit("@", 1)[-1] != host:
+            continue
+        answered = any(repo.link == identity for repo in repos)
+        return gitr.Repo(
+            session=session, path="", state=gitr.OFFLINE,
+            detail="closed" if answered else gitr.UNREACHABLE,
+            remote=address, label=f"{host}-{name}", link=identity,
+        )
+    return None
+
+
+def is_placeholder(repo) -> bool:
+    """Whether a row is home_placeholder's: a linked row with no directory,
+    which every row a machine does give has."""
+    return bool(repo.link) and not repo.path
+
+
+def reconnect(session: str) -> None:
+    """Enter on home_placeholder's row: connect to the machine again, in a
+    popup, and go to the session only once it is found there
+    (Connect-LinkSession.sh). The client stays put when it is not. On a thread
+    for the reason show_status is: display-popup blocks until it closes.
+    """
+    scripts = str(gitr.SHARED_SCRIPTS)
+
+    def worker() -> None:
+        try:
+            subprocess.run(
+                [
+                    "tmux", "display-popup", "-E",
+                    "-w", "80", "-h", "10", "-x", "C", "-y", "C",
+                    os.path.join(scripts, "Invoke-Popup.sh"),
+                    os.path.join(scripts, "Connect-LinkSession.sh"),
+                    session,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 def toggle_home(session: str) -> None:
@@ -1326,7 +1393,10 @@ def _row_segments(repo, chosen: bool, width: int, palette, use_colour: bool, ban
     branch_attr = body | curses.A_DIM
 
     # A row on another host than this pane's session: see FOREIGN_NAME_COLOUR.
-    if repo.remote != home:
+    # home_placeholder's row is dimmed further: there is nothing behind it.
+    if is_placeholder(repo):
+        name_attr = body | curses.A_DIM
+    elif repo.remote != home:
         if use_colour and FOREIGN_NAME_COLOUR is not None:
             name_attr = coloured(FOREIGN_NAME_COLOUR) | (name_attr & curses.A_BOLD)
         else:
@@ -1660,7 +1730,9 @@ def run(stdscr, interval: float) -> str:
                 homed = homed or listed(repos, current)
                 redraw = True
             elif key in (curses.KEY_ENTER, 10, 13):
-                if repos:
+                if repos and is_placeholder(repos[selected]):
+                    reconnect(repos[selected].session)
+                elif repos:
                     jump(repos[selected].session)
             elif key == curses.KEY_RESIZE:
                 redraw = True
@@ -1704,9 +1776,9 @@ def run(stdscr, interval: float) -> str:
                 if repos:
                     start_merge(repos[selected])
             elif key == ord("H"):
-                # Not on a linked machine's row: the home session is one of
-                # this tmux's.
-                if repos and not repos[selected].link:
+                # A linked machine's row too: its key is the mark, and
+                # home_placeholder keeps it listed while that machine is away.
+                if repos:
                     session = repos[selected].session
                     toggle_home(session)
                     # Shown now rather than on the sample the script asks for.
@@ -1726,7 +1798,8 @@ def run(stdscr, interval: float) -> str:
                 # q reads as "quit" and used to mean it, which is exactly why it
                 # asks before doing anything -- see draw_confirm. d is the same
                 # key under the name it has elsewhere ("delete"), and asks too.
-                if repos:
+                # Not on home_placeholder's row: there is no session to kill.
+                if repos and not is_placeholder(repos[selected]):
                     pending = repos[selected].session
                     redraw = True
 

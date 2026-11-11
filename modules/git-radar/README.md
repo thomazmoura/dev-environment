@@ -440,11 +440,15 @@ What does differ is everything that takes the session as a tmux target:
     Enter   moves the client to that machine's tmux (Switch-LinkSession.sh),
             instead of switching it
     q / d   kills the session there, over ssh, after the same question
-    n, H    do nothing: the name and the home mark belong to the tmux the
-            session is in
+    n       does nothing: the name belongs to the tmux the session is in
+    H       marks it as the home session, by its <host>:<name> key
 
 A peer that does not answer has no rows -- which sessions it has is part of what
-it did not say. `prefix + t, l` shows each link's state. Nothing else holds a
+it did not say -- except the home session's: its row stays, greyed out, with
+`unreachable` where the branch goes (`closed` when the machine answers without
+it). Enter on that row, like `prefix + h`, connects to the machine again in a
+popup (`modules/tmux/scripts/Connect-LinkSession.sh`) and moves the client only
+once the session is found there; `q` does nothing on it. `prefix + t, l` shows each link's state. Nothing else holds a
 connection to a linked machine open, so the query keeps a master up itself
 (`tmux_link.ensure_master`). The status-bar summary counts this machine's
 sessions only.

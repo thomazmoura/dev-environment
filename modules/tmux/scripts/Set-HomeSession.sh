@@ -25,6 +25,13 @@
 #
 # It is there only while the home session is one of those.
 #
+# A session on a linked machine (<host>:<session>, tmux_link.session_key) can
+# be home too, H on its row of the Git pane. Its mark is that key and nothing
+# more: the session lives in the other machine's tmux, which is where it is
+# kept and opened, so there is no directory or ssh target here to save, and
+# vtmux leaves it to that machine. prefix+h and the Git pane's Enter reconnect
+# to that machine first when the radars have lost it (Connect-LinkSession.sh).
+#
 # Pressed on the session that is already home, the mark comes off: one key both
 # ways, from the Git pane's H.
 set -uo pipefail
@@ -50,12 +57,17 @@ else
   tmux set -g @home_session "$session"
   mkdir -p "$(dirname "$file")"
   printf '%s\n' "$session" >"$file"
-  tmux display -p -t "=$session:" '#{session_path}' >"$path_file"
-  ssh="$(tmux display -p -t "=$session:" $'#{@ssh_target}\t#{@ssh_dir}\t#{@ssh_name}')"
-  if [ -n "${ssh%%$'\t'*}" ]; then
-    printf '%s\n' "$ssh" >"$ssh_file"
+  if [[ $session == *:* ]]; then
+    # A linked machine's session: nothing of it in this tmux to ask about.
+    rm -f "$path_file" "$ssh_file"
   else
-    rm -f "$ssh_file"
+    tmux display -p -t "=$session:" '#{session_path}' >"$path_file"
+    ssh="$(tmux display -p -t "=$session:" $'#{@ssh_target}\t#{@ssh_dir}\t#{@ssh_name}')"
+    if [ -n "${ssh%%$'\t'*}" ]; then
+      printf '%s\n' "$ssh" >"$ssh_file"
+    else
+      rm -f "$ssh_file"
+    fi
   fi
 fi
 
