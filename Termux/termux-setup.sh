@@ -35,6 +35,15 @@ set -euo pipefail
 # named by its user@hostname there; when the phone reaches it under another
 # name, say so in ~/.config/tmux-link/aliases.
 #
+# An ssh-agent for as long as Termux is open: each key's passphrase is asked
+# once, the first time ssh needs it in any session, and the keys are dropped
+# once the last Termux session closes, so the phone holds none unlocked while
+# Termux is closed. termux-ssh-agent, a copy of Termux/termux-ssh-agent.sh, has
+# how; ~/.bashrc runs it from every Termux session (not from ssh logins into
+# the phone), and ssh adds the keys it unlocks (AddKeysToAgent). The
+# termux-services ssh-agent service, an agent that outlives the sessions, is
+# left disabled.
+#
 # Usage: termux-setup.sh [host...]
 #   The hosts are the ones you ssh into, as you type them (aliases from
 #   ~/.ssh/config or names). Without any, every host gets the flag and the
@@ -46,18 +55,24 @@ set -euo pipefail
 #     termux-api, the command-line half of the Termux:API app;
 #   - with hosts, writes ~/.ssh/termux-clipboard-serve;
 #   - keeps marked blocks at the END of ~/.ssh/config: the clipboard's (with
-#     hosts) and the SetEnv line, last. At the end, because ssh takes the first
-#     SetEnv, LocalCommand and PermitLocalCommand that match and ignores every
-#     later one: a block of yours that already sets them keeps its values, and
-#     the check below says where to add ours by hand.
+#     hosts), AddKeysToAgent, and the SetEnv line, last. At the end, because
+#     ssh takes the first SetEnv, LocalCommand, PermitLocalCommand and
+#     AddKeysToAgent that match and ignores every later one: a block of yours
+#     that already sets them keeps its values, and the check below says where
+#     to add ours by hand.
 #   - checks with `ssh -G` that each host really ends up with them;
-#   - installs tmux-link from this checkout and creates the aliases file.
+#   - installs tmux-link and termux-ssh-agent from this checkout, creates the
+#     aliases file, and keeps a marked block at the end of ~/.bashrc that
+#     starts the agent.
 
 FLAG="LC_TERMINAL=Termux"
 BEGIN_MARK="# >>> dev-environment: Termux pane backgrounds >>>"
 END_MARK="# <<< dev-environment: Termux pane backgrounds <<<"
 CLIP_BEGIN_MARK="# >>> dev-environment: Termux clipboard >>>"
 CLIP_END_MARK="# <<< dev-environment: Termux clipboard <<<"
+AGENT_BEGIN_MARK="# >>> dev-environment: Termux ssh-agent >>>"
+AGENT_END_MARK="# <<< dev-environment: Termux ssh-agent <<<"
+BASHRC="$HOME/.bashrc"
 SSH_DIR="$HOME/.ssh"
 CONFIG="$SSH_DIR/config"
 SERVE="$SSH_DIR/termux-clipboard-serve"
@@ -183,14 +198,25 @@ block() {
 }
 old_clipboard="$(block "$CLIP_BEGIN_MARK" "$CLIP_END_MARK")"
 
+# Writes file $1 without the marked blocks that begin with $2..., to $tmp. Each
+# block ends with its begin line's >>> turned into <<<.
 tmp="$(mktemp)"
-awk -v b1="$BEGIN_MARK" -v e1="$END_MARK" -v b2="$CLIP_BEGIN_MARK" -v e2="$CLIP_END_MARK" '
-  $0 == b1 || $0 == b2 { skip = 1; next }
-  $0 == e1 || $0 == e2 { skip = 0; next }
-  !skip
-' "$CONFIG" > "$tmp"
-# Trailing blank lines left behind by a removed block would pile up on reruns
-sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
+without_blocks() {
+  local file=$1
+  shift
+  awk -v begins="$(printf '%s\n' "$@")" '
+    BEGIN {
+      n = split(begins, b, "\n")
+      for (i = 1; i <= n; i++) if (b[i] != "") { e = b[i]; gsub(/>>>/, "<<<", e); ends[b[i]] = e }
+    }
+    !skip && ($0 in ends) { skip = 1; end = ends[$0]; next }
+    skip && $0 == end      { skip = 0; next }
+    !skip
+  ' "$file" > "$tmp"
+  # Trailing blank lines left behind by a removed block would pile up on reruns
+  sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
+}
+without_blocks "$CONFIG" "$BEGIN_MARK" "$CLIP_BEGIN_MARK" "$AGENT_BEGIN_MARK"
 {
   if [ -s "$tmp" ]; then echo; fi
   if [ "${#hosts[@]}" -gt 0 ]; then
@@ -208,6 +234,13 @@ sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp"
   elif [ -n "$old_clipboard" ]; then
     printf '%s\n\n' "$old_clipboard"
   fi
+  echo "$AGENT_BEGIN_MARK"
+  echo "# Each key unlocked goes to termux-ssh-agent's agent, held until Termux's last"
+  echo "# session closes: see Termux/termux-setup.sh in the dev-environment repo."
+  echo "Host *"
+  echo "  AddKeysToAgent yes"
+  echo "$AGENT_END_MARK"
+  echo
   echo "$BEGIN_MARK"
   echo "# Tells the dev machine's tmux and NeoVim this is Termux (opaque backgrounds,"
   echo "# the phone's clipboard)."
@@ -244,6 +277,14 @@ for host in "${check_hosts[@]}"; do
     echo "    ${setenv:-SetEnv ...} $FLAG" >&2
   fi
 
+  if grep -qiE '^addkeystoagent (yes|true)' <<<"$resolved"; then
+    echo "OK: $label adds the keys it unlocks to the agent."
+  else
+    status=1
+    echo "Warning: $label doesn't add keys to the agent -- an earlier block in" >&2
+    echo "  $CONFIG sets AddKeysToAgent for it, and ssh only uses the first." >&2
+  fi
+
   [ "${#hosts[@]}" -gt 0 ] || continue
   forwards="$(grep -ic '^remoteforward /tmp/termux-clipboard-' <<<"$resolved" || true)"
   if [ "$forwards" -eq 2 ] \
@@ -270,6 +311,52 @@ else
   status=1
   echo "Warning: $connect not found; tmux-link was not installed." >&2
 fi
+# termux-ssh-agent, the same way, and the ~/.bashrc block that runs it
+here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+if [ -f "$here/termux-ssh-agent.sh" ]; then
+  mkdir -p "$bin"
+  install -m 755 "$here/termux-ssh-agent.sh" "$bin/termux-ssh-agent"
+  echo "Installed $bin/termux-ssh-agent."
+else
+  status=1
+  echo "Warning: $here/termux-ssh-agent.sh not found; termux-ssh-agent was not installed." >&2
+fi
+touch "$BASHRC"
+without_blocks "$BASHRC" "$AGENT_BEGIN_MARK"
+{
+  if [ -s "$tmp" ]; then echo; fi
+  echo "$AGENT_BEGIN_MARK"
+  echo "# One ssh-agent while Termux has a session open, none once the last closes:"
+  echo "# see Termux/termux-setup.sh in the dev-environment repo. Not for ssh logins"
+  echo "# into the phone, which would keep it alive."
+  echo 'case $- in *i*)'
+  echo '  if [ -z "${SSH_CONNECTION:-}" ] && command -v termux-ssh-agent >/dev/null 2>&1; then'
+  echo '    export SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock"'
+  echo '    termux-ssh-agent $$'
+  echo '  fi'
+  echo 'esac'
+  echo "$AGENT_END_MARK"
+} >> "$tmp"
+cat "$tmp" > "$BASHRC"
+rm -f "$tmp"
+echo "Updated $BASHRC."
+
+# The packaged service would keep keys past the last session; its socket from
+# before is only clutter
+services="${PREFIX:-}/var/service"
+if [ -d "$services/ssh-agent" ] && [ ! -e "$services/ssh-agent/down" ]; then
+  status=1
+  echo "Warning: the termux-services ssh-agent is enabled; it keeps keys after Termux" >&2
+  echo "  closes. Turn it off with: sv-disable ssh-agent" >&2
+fi
+old_socket="${PREFIX:-}/var/run/ssh-agent.socket"
+if [ -S "$old_socket" ]; then
+  # 2 is "could not connect": no agent behind it
+  rc=0
+  SSH_AUTH_SOCK="$old_socket" ssh-add -l >/dev/null 2>&1 || rc=$?
+  [ "$rc" -ne 2 ] || rm -f "$old_socket"
+fi
+
 aliases="${XDG_CONFIG_HOME:-$HOME/.config}/tmux-link/aliases"
 if [ ! -f "$aliases" ]; then
   mkdir -p "$(dirname "$aliases")"
@@ -303,6 +390,9 @@ With hosts given, NeoVim's <Leader>y and <Leader>p there use this phone's
 clipboard while you type here, and the links NeoVim opens there open in this
 phone's browser. Run LinuxDevEnv/sshd-setup.sh
 on the host once, or every connection after the first fails to forward.
+ssh asks for each key's passphrase once while Termux is open, and again after
+its last session closes. Close Termux (Exit in its notification) and reopen it
+so every session gets the agent.
 EOF
 
 exit "$status"
