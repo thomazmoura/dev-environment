@@ -6,7 +6,9 @@
 -- The terminal's own paste can't do this: with only an image in the clipboard
 -- it has no text to send, so NeoVim never sees a paste. Reading the clipboard
 -- here needs its owner's display: Wayland (wl-paste), X11 (xclip) or Windows
--- under WSL. Over ssh or in a container there is none, and it pastes text.
+-- under WSL. Over ssh or in a container there is none, and it pastes text, as
+-- it does while another device is the tmux client in front
+-- (config/front_client.lua).
 --
 -- An image is saved beside the file, in images/, linked relatively. A buffer
 -- with no file (paperboy's compose buffers) saves it in
@@ -79,7 +81,12 @@ end
 ---@return table|nil { ext, data }
 local function clipboard_image()
   local list, read
-  if vim.env.WAYLAND_DISPLAY and vim.fn.executable('wl-paste') == 1 then
+  -- This machine's display is only your clipboard while you type on it: with
+  -- the PC or the phone in front of its tmux, it pastes text from theirs
+  -- (config/clipboard.lua)
+  if not vim.env.WSLENV and require('config.front_client').get().kind ~= 'local' then
+    return nil
+  elseif vim.env.WAYLAND_DISPLAY and vim.fn.executable('wl-paste') == 1 then
     list = { 'wl-paste', '--list-types' }
     read = function(type) return { 'wl-paste', '--no-newline', '--type', type } end
   elseif vim.env.DISPLAY and vim.fn.executable('xclip') == 1 then

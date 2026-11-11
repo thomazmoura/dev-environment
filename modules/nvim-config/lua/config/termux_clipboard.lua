@@ -1,9 +1,13 @@
--- The phone's clipboard, while the tmux client in front is Termux -- used by
--- config/clipboard.lua for "+ and "*.
+-- The phone's clipboard, while the tmux client in front is Termux
+-- (config/front_client.lua) -- used by config/clipboard.lua for "+ and "*.
 --
 -- Termux's ssh forwards two Unix sockets back to the phone (RemoteForward, set
 -- up by Termux/termux-setup.sh), where socat hands each connection to
--- termux-clipboard-get or termux-clipboard-set (Termux:API):
+-- termux-clipboard-get or termux-clipboard-set (Termux:API). Only the machine
+-- the phone ssh's into has them: the phone has to run the link loop itself
+-- (tmux-link), not ssh into a machine and start it there, or every machine it
+-- moves on to is a second hop away and without them
+-- (modules/tmux/scripts/Connect-Tmux.sh).
 --
 --   /tmp/termux-clipboard-<user>-get.sock   connect, read the clipboard
 --   /tmp/termux-clipboard-<user>-set.sock   write the text, close the write side
@@ -23,25 +27,6 @@ local user = vim.uv.os_get_passwd().username
 
 local function socket(kind)
   return ('/tmp/termux-clipboard-%s-%s.sock'):format(user, kind)
-end
-
---- Whether the terminal you're typing on is Termux. In tmux that's the
---- session's most recently active client, read on every call: the PC and the
---- phone take turns while NeoVim runs. Termux announces itself with
---- LC_TERMINAL=Termux in the tmux client's environment, as for
---- modules/tmux/scripts/Set-PaneBackground.sh.
-function M.in_front()
-  if not vim.env.TMUX then
-    return vim.env.LC_TERMINAL == 'Termux'
-  end
-  local result = vim.system({ 'tmux', 'display-message', '-p', '#{client_pid}' }, { text = true }):wait()
-  local pid = vim.trim(result.stdout or '')
-  if not pid:match('^%d+$') then return false end
-  local file = io.open('/proc/' .. pid .. '/environ', 'rb')
-  if not file then return false end
-  local environ = file:read('*a')
-  file:close()
-  return ('\0' .. environ):find('\0LC_TERMINAL=Termux\0', 1, true) ~= nil
 end
 
 --- Talks to one of the sockets: sends data (then EOF) if given, and returns
