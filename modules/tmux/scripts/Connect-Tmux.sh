@@ -15,6 +15,10 @@
 # as ~/bin/tmux-link). Switch-LinkSession.sh is what leaves the handoff, for
 # every picker and feed that lands on a linked session.
 #
+# Run it on the device you type on, never in an ssh login on one of the
+# machines: the loop is what makes the ssh, so started over there it makes
+# every other machine a second hop away. It warns when it is about to.
+#
 # Usage: Connect-Tmux.sh [-t <identity>] [-p <pane>] [-g <group>] [<session>]
 #          The loop. Attaches to <session> here, or with -t on the machine
 #          <identity> names (user@hostname, an address, or an alias), over ssh.
@@ -269,6 +273,16 @@ while :; do
     next="$(take "$id")"
   else
     host="$(address "$target")"
+    # This loop should run on the device being typed on. One started in an ssh
+    # login (`ssh -t <host> "pwsh -C vtmux"`) makes every machine it moves on to
+    # a second hop away: the phone's clipboard sockets and the device's own
+    # ssh config stay a hop behind. It still goes, but says so first -- long
+    # enough to read before that tmux takes the screen.
+    if [ -n "${SSH_CONNECTION:-}" ]; then
+      printf '%s is a second ssh hop away, through %s: run tmux-link (or vtmux) on the device you type on instead.\n' \
+        "${target##*@}" "$(hostname | cut -d. -f1)" >&2
+      sleep 2
+    fi
     # SpotlightDimmer's reports from over there, into the daemon here. On the
     # hop's connection once it is up, so it never asks for a password of its
     # own. exec, so that the pid to end it by is the ssh: the receiving end

@@ -289,8 +289,11 @@ session when you pick one there (prefix+?, the Git pane). With no session
 named it lands on the current session of this device's group, and follows the
 group's other devices from then on. The group is `shared` unless
 ~/.config/tmux-link/group names another (or tmux-link -g <name>): give this
-device a name of its own there to keep its sessions to itself. Without
-tmux-link, as before:
+device a name of its own there to keep its sessions to itself. Point your
+shortcuts (~/.bashrc aliases) at tmux-link, not at `ssh -t <host> vtmux`:
+vtmux runs this same loop over there, so every machine it moves on to is a
+second ssh away, out of reach of this phone's clipboard. Without tmux-link,
+as before:
   ssh -t <host> tmux new -A -s main
 tmux switches to opaque backgrounds as you attach, and back when the PC
 attaches again. If it doesn't, the host's sshd may not accept LC_* -- check
