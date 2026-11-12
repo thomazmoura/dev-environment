@@ -23,10 +23,12 @@
 # for Android to kill.
 #
 # How the agent knows when the last session is gone: Termux's sessions are the
-# children of its app process (com.termux). ensure finds that process, and the
-# agent runs with `watch <its pid>` as its command, which polls for its
-# children and stops the agent once there are none -- Exit in the
-# notification, the last tab closed, Android killing the app. ssh-agent also
+# children of its app process (com.termux), which Android may hide from them in
+# /proc: then it is the pid that the shells have as parent and nothing else
+# has. ensure finds that process, and the agent runs with `watch <its pid>` as
+# its command, which polls for its children and stops the agent once there are
+# none -- Exit in the notification, the last tab closed, Android killing the
+# app (its children are then init's). ssh-agent also
 # ends by itself when its command dies, so a killed watcher takes the agent
 # with it. Both ends hold ~/.ssh/agent/start.lock while they start or stop it.
 #
@@ -59,41 +61,73 @@ is_app() {
   [ "$name" = "com.termux" ]
 }
 
+# Whether pid $1 is the Termux app, still running. Where Android lets the
+# sessions see it, it is the process called com.termux; where it doesn't (it
+# has no /proc entry for them, though kill -0 still reaches it), it is a pid
+# that is alive and has none.
+app_alive() {
+  if [ -d "/proc/$1" ]; then
+    is_app "$1"
+  else
+    kill -0 "$1" 2>/dev/null
+  fi
+}
+
+# Whether pid $1 is the parent of a session: alive, but not to be seen in
+# /proc, and not init (what orphans, and the daemons Termux started, have)
+hidden_parent() {
+  [ "$1" -gt 1 ] 2>/dev/null && [ ! -d "/proc/$1" ] && kill -0 "$1" 2>/dev/null
+}
+
 # Field 4 of /proc/<pid>/stat, after the name in parentheses (which may hold
 # spaces and parentheses itself)
 parent_of() {
   local stat rest
-  stat="$(<"/proc/$1/stat")" 2>/dev/null || return 1
+  # 2> first: the shell's own "No such file" for a process that just exited
+  # comes from the redirection, and goes where stderr points by then
+  read -r stat 2>/dev/null <"/proc/$1/stat" || return 1
   rest="${stat##*) }"
   set -- $rest
-  printf '%s' "$2"
+  # Empty for a process on its way out
+  printf '%s' "${2:-}"
 }
 
 # The Termux app's pid: an ancestor of this ssh when it runs in a Termux
-# session, else (inside the phone's own tmux, whose server left the session)
-# any com.termux process of ours.
+# session, else (an ssh login into the phone, or the phone's own tmux, whose
+# server left the session) the parent of a session shell -- one with a
+# terminal, if there is one.
 find_app() {
-  local pid=$$ proc
+  local pid=$$ parent proc stat rest fallback=""
   while [ -n "$pid" ] && [ "$pid" -gt 1 ]; do
-    if is_app "$pid"; then printf '%s' "$pid"; return 0; fi
-    pid="$(parent_of "$pid")" || break
+    if [ -d "/proc/$pid" ] && is_app "$pid"; then printf '%s' "$pid"; return 0; fi
+    parent="$(parent_of "$pid")" || break
+    if hidden_parent "$parent"; then printf '%s' "$parent"; return 0; fi
+    pid=$parent
   done
-  for proc in /proc/[0-9]*; do
-    pid="${proc#/proc/}"
-    if is_app "$pid"; then printf '%s' "$pid"; return 0; fi
+  for proc in /proc/[0-9]*/stat; do
+    read -r stat 2>/dev/null <"$proc" || continue
+    rest="${stat##*) }"
+    set -- $rest
+    parent="${2:-}"
+    if [ -d "/proc/$parent" ] && is_app "$parent"; then printf '%s' "$parent"; return 0; fi
+    hidden_parent "$parent" || continue
+    # 5 is the terminal: 0 for a daemon
+    if [ "${5:-0}" != 0 ]; then printf '%s' "$parent"; return 0; fi
+    fallback=$parent
   done
-  return 1
+  [ -n "$fallback" ] || return 1
+  printf '%s' "$fallback"
 }
 
 # Whether the app still runs and has a session open
 has_sessions() {
   local app=$1 stat rest
-  is_app "$app" || return 1
+  app_alive "$app" || return 1
   for proc in /proc/[0-9]*/stat; do
-    stat="$(<"$proc")" 2>/dev/null || continue
+    read -r stat 2>/dev/null <"$proc" || continue
     rest="${stat##*) }"
     set -- $rest
-    [ "$2" = "$app" ] && return 0
+    [ "${2:-}" = "$app" ] && return 0
   done
   return 1
 }
