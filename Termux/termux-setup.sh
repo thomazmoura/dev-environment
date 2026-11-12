@@ -39,10 +39,11 @@ set -euo pipefail
 # once, the first time ssh needs it in any session, and the keys are dropped
 # once the last Termux session closes, so the phone holds none unlocked while
 # Termux is closed. termux-ssh-agent, a copy of Termux/termux-ssh-agent.sh, has
-# how; ~/.bashrc runs it from every Termux session (not from ssh logins into
-# the phone), and ssh adds the keys it unlocks (AddKeysToAgent). The
-# termux-services ssh-agent service, an agent that outlives the sessions, is
-# left disabled.
+# how: every ssh starts it if it isn't running (a Match exec block in
+# ~/.ssh/config), uses it (IdentityAgent) and adds the keys it unlocks
+# (AddKeysToAgent), so an agent Android killed comes back with the next ssh.
+# ~/.bashrc only points SSH_AUTH_SOCK at it, for ssh-add. The termux-services
+# ssh-agent service, an agent that outlives the sessions, is left disabled.
 #
 # Usage: termux-setup.sh [host...]
 #   The hosts are the ones you ssh into, as you type them (aliases from
@@ -55,15 +56,15 @@ set -euo pipefail
 #     termux-api, the command-line half of the Termux:API app;
 #   - with hosts, writes ~/.ssh/termux-clipboard-serve;
 #   - keeps marked blocks at the END of ~/.ssh/config: the clipboard's (with
-#     hosts), AddKeysToAgent, and the SetEnv line, last. At the end, because
-#     ssh takes the first SetEnv, LocalCommand, PermitLocalCommand and
-#     AddKeysToAgent that match and ignores every later one: a block of yours
-#     that already sets them keeps its values, and the check below says where
-#     to add ours by hand.
+#     hosts), the agent's, and the SetEnv line, last. At the end, because
+#     ssh takes the first SetEnv, LocalCommand, PermitLocalCommand,
+#     IdentityAgent and AddKeysToAgent that match and ignores every later one:
+#     a block of yours that already sets them keeps its values, and the check
+#     below says where to add ours by hand.
+#   - installs termux-ssh-agent and tmux-link from this checkout;
 #   - checks with `ssh -G` that each host really ends up with them;
-#   - installs tmux-link and termux-ssh-agent from this checkout, creates the
-#     aliases file, and keeps a marked block at the end of ~/.bashrc that
-#     starts the agent.
+#   - creates the aliases file, and keeps a marked block at the end of
+#     ~/.bashrc that sets SSH_AUTH_SOCK.
 
 FLAG="LC_TERMINAL=Termux"
 BEGIN_MARK="# >>> dev-environment: Termux pane backgrounds >>>"
@@ -87,6 +88,8 @@ pattern="${hosts[*]:-*}"
 
 packages=()
 command -v ssh >/dev/null 2>&1 || packages+=(openssh)
+# termux-ssh-agent's flock and setsid
+{ command -v flock && command -v setsid; } >/dev/null 2>&1 || packages+=(util-linux)
 if [ "${#hosts[@]}" -gt 0 ]; then
   command -v socat >/dev/null 2>&1 || packages+=(socat)
   command -v termux-clipboard-get >/dev/null 2>&1 || packages+=(termux-api)
@@ -188,6 +191,21 @@ EOF
   echo "Wrote $SERVE."
 fi
 
+# termux-ssh-agent, from the checkout this script is in, before the config
+# that runs it and the check below. Rerun after pulling.
+here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+bin="${PREFIX:-$HOME}/bin"
+agent_cmd="$bin/termux-ssh-agent"
+agent_ok=""
+if [ -f "$here/termux-ssh-agent.sh" ]; then
+  mkdir -p "$bin"
+  install -m 755 "$here/termux-ssh-agent.sh" "$agent_cmd"
+  echo "Installed $agent_cmd."
+  agent_ok=yes
+else
+  echo "Warning: $here/termux-ssh-agent.sh not found; termux-ssh-agent was not installed." >&2
+fi
+
 # The blocks currently in the config, and the config without them
 block() {
   awk -v begin="$1" -v end="$2" '
@@ -235,9 +253,11 @@ without_blocks "$CONFIG" "$BEGIN_MARK" "$CLIP_BEGIN_MARK" "$AGENT_BEGIN_MARK"
     printf '%s\n\n' "$old_clipboard"
   fi
   echo "$AGENT_BEGIN_MARK"
-  echo "# Each key unlocked goes to termux-ssh-agent's agent, held until Termux's last"
-  echo "# session closes: see Termux/termux-setup.sh in the dev-environment repo."
-  echo "Host *"
+  echo "# termux-ssh-agent's agent, started by the first ssh that needs it, holds each"
+  echo "# key unlocked until Termux's last session closes: see Termux/termux-setup.sh"
+  echo "# in the dev-environment repo."
+  echo "Match exec \"$agent_cmd ensure\""
+  echo "  IdentityAgent ~/.ssh/agent/agent.sock"
   echo "  AddKeysToAgent yes"
   echo "$AGENT_END_MARK"
   echo
@@ -258,6 +278,7 @@ echo "Updated $CONFIG (Host $pattern)."
 check_hosts=("${hosts[@]}")
 [ "${#check_hosts[@]}" -gt 0 ] || check_hosts=("termux-setup-check.invalid")
 status=0
+[ -n "$agent_ok" ] || status=1
 for host in "${check_hosts[@]}"; do
   label=$host
   [ "$host" = "termux-setup-check.invalid" ] && label="every host"
@@ -277,12 +298,15 @@ for host in "${check_hosts[@]}"; do
     echo "    ${setenv:-SetEnv ...} $FLAG" >&2
   fi
 
-  if grep -qiE '^addkeystoagent (yes|true)' <<<"$resolved"; then
-    echo "OK: $label adds the keys it unlocks to the agent."
+  # ssh -G runs the Match exec too, so this also starts the agent
+  if grep -qi '^identityagent .*/\.ssh/agent/agent\.sock$' <<<"$resolved" \
+    && grep -qiE '^addkeystoagent (yes|true)' <<<"$resolved"; then
+    echo "OK: $label uses termux-ssh-agent's agent and adds the keys it unlocks."
   else
     status=1
-    echo "Warning: $label doesn't add keys to the agent -- an earlier block in" >&2
-    echo "  $CONFIG sets AddKeysToAgent for it, and ssh only uses the first." >&2
+    echo "Warning: $label doesn't use termux-ssh-agent's agent -- an earlier block" >&2
+    echo "  in $CONFIG sets IdentityAgent or AddKeysToAgent for it (ssh only uses" >&2
+    echo "  the first), or \`$agent_cmd ensure\` failed: run it to see why." >&2
   fi
 
   [ "${#hosts[@]}" -gt 0 ] || continue
@@ -301,8 +325,7 @@ for host in "${check_hosts[@]}"; do
 done
 
 # tmux-link, from the checkout this script is in. Rerun after pulling.
-connect="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../modules/tmux/scripts/Connect-Tmux.sh"
-bin="${PREFIX:-$HOME}/bin"
+connect="$here/../modules/tmux/scripts/Connect-Tmux.sh"
 if [ -f "$connect" ]; then
   mkdir -p "$bin"
   install -m 755 "$connect" "$bin/tmux-link"
@@ -311,30 +334,16 @@ else
   status=1
   echo "Warning: $connect not found; tmux-link was not installed." >&2
 fi
-# termux-ssh-agent, the same way, and the ~/.bashrc block that runs it
-here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-if [ -f "$here/termux-ssh-agent.sh" ]; then
-  mkdir -p "$bin"
-  install -m 755 "$here/termux-ssh-agent.sh" "$bin/termux-ssh-agent"
-  echo "Installed $bin/termux-ssh-agent."
-else
-  status=1
-  echo "Warning: $here/termux-ssh-agent.sh not found; termux-ssh-agent was not installed." >&2
-fi
+# The ~/.bashrc block: SSH_AUTH_SOCK for ssh-add (ssh itself has IdentityAgent).
+# Not in ssh logins into the phone, which may bring an agent of their own.
 touch "$BASHRC"
 without_blocks "$BASHRC" "$AGENT_BEGIN_MARK"
 {
   if [ -s "$tmp" ]; then echo; fi
   echo "$AGENT_BEGIN_MARK"
-  echo "# One ssh-agent while Termux has a session open, none once the last closes:"
-  echo "# see Termux/termux-setup.sh in the dev-environment repo. Not for ssh logins"
-  echo "# into the phone, which would keep it alive."
-  echo 'case $- in *i*)'
-  echo '  if [ -z "${SSH_CONNECTION:-}" ] && command -v termux-ssh-agent >/dev/null 2>&1; then'
-  echo '    export SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock"'
-  echo '    termux-ssh-agent $$'
-  echo '  fi'
-  echo 'esac'
+  echo "# termux-ssh-agent's agent, for ssh-add: see Termux/termux-setup.sh in the"
+  echo "# dev-environment repo."
+  echo '[ -n "${SSH_CONNECTION:-}" ] || export SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock"'
   echo "$AGENT_END_MARK"
 } >> "$tmp"
 cat "$tmp" > "$BASHRC"
@@ -356,6 +365,8 @@ if [ -S "$old_socket" ]; then
   SSH_AUTH_SOCK="$old_socket" ssh-add -l >/dev/null 2>&1 || rc=$?
   [ "$rc" -ne 2 ] || rm -f "$old_socket"
 fi
+# Left by the termux-ssh-agent before this one, which kept a process per session
+rm -f "$HOME/.ssh/agent/lock" "$HOME/.ssh/agent"/holding.*
 
 aliases="${XDG_CONFIG_HOME:-$HOME/.config}/tmux-link/aliases"
 if [ ! -f "$aliases" ]; then
@@ -391,8 +402,10 @@ clipboard while you type here, and the links NeoVim opens there open in this
 phone's browser. Run LinuxDevEnv/sshd-setup.sh
 on the host once, or every connection after the first fails to forward.
 ssh asks for each key's passphrase once while Termux is open, and again after
-its last session closes. Close Termux (Exit in its notification) and reopen it
-so every session gets the agent.
+its last session closes. Should it ask again with Termux still open,
+~/.ssh/agent/log says whether Android killed the agent; if it keeps doing so,
+turn off Android's phantom process killer (Developer options, "Disable child
+process restrictions", or adb on Android 12-13).
 EOF
 
 exit "$status"
