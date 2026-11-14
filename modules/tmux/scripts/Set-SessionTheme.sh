@@ -2,11 +2,13 @@
 # Gives a tmux session the theme colour themes.json picks for it (themes.py,
 # edited with steward.nvim's :Steward themes): a colour of its own by name or
 # directory, and for an ssh session (prefix+N) or one in a Docker container
-# (prefix+D) by name or directory on that host. An ssh or Docker session the
-# file has nothing for still gets a colour of its own -- @ssh_theme_colour
-# (violet by default) or @docker_theme_colour (Docker's blue) -- so a session
-# whose panes are on another machine never looks like a local one. A local
-# session the file has nothing for draws in the global theme (Set-Theme.sh).
+# (prefix+D) by name or directory on that host, then by its connection's
+# default (default (ssh), default (docker)), then by default. With no
+# themes.json (or one with no default), an ssh or Docker session still gets a
+# colour of its own -- @ssh_theme_colour (violet by default) or
+# @docker_theme_colour (Docker's blue) -- so a session whose panes are on
+# another machine never looks like a local one, and a local session draws in
+# the global theme (Set-Theme.sh).
 #
 # Usage: Set-SessionTheme.sh [session...]
 #   Run by New-SshSession.sh as it opens a session (through Set-SshTheme.sh),
