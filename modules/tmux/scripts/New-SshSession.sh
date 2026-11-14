@@ -11,8 +11,10 @@
 #      is on one host, it goes there without asking, from any session; leaving
 #      the directory picker of step 2 then asks after all;
 #   2. fuzzy-finds a directory in the remote's code folder -- ~ when the
-#      remote has none -- the way prefix+/ does locally, the sessions on that
-#      host named with prefix+$ first (Set-SessionLabel.sh -l);
+#      remote has none -- the sessions on that host named with prefix+$ first
+#      (Set-SessionLabel.sh -l). On a remote with this dev-environment, its
+#      project folders as its prefix+/ lists them (Get-ProjectFolders.py, its
+#      own projects.json); elsewhere every folder in it;
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
 #      of in every pane (see ssh-helpers.sh);
@@ -267,12 +269,17 @@ read_probe() {
   [ "$kind" = devenv ] || kind=plain
 }
 
-# The picker's directories, relative to the probe's root, run under sh like the
-# probe. fd -- or Debian's fdfind -- when there is one, so .gitignore is
-# honoured as it is by prefix+/; otherwise find, skipping hidden folders and
-# build output.
+# The picker's directories, run under sh like the probe. On a host with this
+# dev-environment, its own project folders, as prefix+/ lists them there: the
+# first level of its code folder plus what its projects.json adds, as
+# <shown> TAB <path> (Get-ProjectFolders.py). Elsewhere every folder, relative
+# to the probe's root: fd -- or Debian's fdfind -- when there is one, so
+# .gitignore is honoured; otherwise find, skipping hidden folders and build
+# output.
 listing="$cd_code_folder"'
-if command -v fd >/dev/null 2>&1; then fd --type d --follow .
+projects="$HOME/.modules/tmux/scripts/Get-ProjectFolders.py"
+if [ -x "$projects" ] && command -v python3 >/dev/null 2>&1; then python3 "$projects"
+elif command -v fd >/dev/null 2>&1; then fd --type d --follow .
 elif command -v fdfind >/dev/null 2>&1; then fdfind --type d --follow .
 else find . -mindepth 1 \( -name ".*" -o -name node_modules -o -name bin -o -name obj \) -prune -o -type d -print
 fi'
@@ -298,7 +305,8 @@ feed='"$1" -l "$2" "$3"; shift 3; "$@" 2>/dev/null | sed -u "s|^\./||"'
 # The named sessions on this host go in ahead of the listing. Their lines carry
 # the directory and the session name after tabs, which fzf does not show
 # (--with-nth=1); picking one opens the session under that name (-n), so it is
-# the one the label was given to. They are read here, not on the remote.
+# the one the label was given to. They are read here, not on the remote. A
+# project folder's line carries its path the same way, with no name.
 pick() {
   local note="${1:-}" picked feeder
   exec 3< <(exec setsid bash -c "$feed" feed "$scripts/Set-SessionLabel.sh" "$target" "$root" \

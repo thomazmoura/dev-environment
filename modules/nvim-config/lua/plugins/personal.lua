@@ -93,6 +93,17 @@ return {
     },
   },
 
+  -- Steward: the environment's settings as text. :Steward projects edits
+  -- ~/.config/dev-environment/projects.json, the folders tmux's prefix+/ offers
+  -- (Ctrl-E there, or the picker pane's Steward). Not on GitHub yet: loaded only
+  -- where the code folder has its checkout.
+  {
+    'thomazmoura/steward.nvim',
+    cond = vim.fn.isdirectory(vim.fn.expand(vim.env.CODE_FOLDER or '~/code') .. '/steward.nvim') == 1,
+    cmd = 'Steward',
+    opts = {},
+  },
+
   -- SpotlightDimmer: dims every split but the focused one through the desktop
   -- overlay (a no-op outside tmux/ssh).
   -- Over ssh config/ssh_title.lua owns 'titlestring', hence manage_title = false.

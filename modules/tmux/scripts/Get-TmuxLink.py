@@ -15,9 +15,10 @@ a peer is answered with, and how a link is made or removed.
                                            linked machines' sessions (prefix+?
                                            without git-radar)
   Get-TmuxLink.py --format=folders         <host>/<folder> TAB <identity> TAB
-                                           <address> TAB <path>, the first level
-                                           of each linked machine's code folder
-                                           (prefix+/)
+                                           <address> TAB <path>, each linked
+                                           machine's project folders: the first
+                                           level of its code folder plus what its
+                                           projects.json adds (prefix+/)
   Get-TmuxLink.py --format=json            everything, this machine first
 
 The formats read the snapshot Start-TmuxLink.py publishes; --live asks the peers
@@ -84,10 +85,10 @@ def main() -> int:
     elif args.format == "folders":
         for machine in peers:
             for folder in machine.folders:
-                print("\t".join([
-                    f"{DIM}{machine.host}/{RESET}{folder}", machine.identity, machine.address,
-                    os.path.join(machine.root, folder),
-                ]))
+                # [shown, path]; a plain name is a snapshot taken before
+                # protocol 2, gone at the next sample.
+                shown, path = folder if isinstance(folder, list) else (folder, os.path.join(machine.root, folder))
+                print("\t".join([f"{DIM}{machine.host}/{RESET}{shown}", machine.identity, machine.address, path]))
     return 0
 
 

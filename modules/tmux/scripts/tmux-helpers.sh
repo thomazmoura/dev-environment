@@ -293,7 +293,7 @@ replace_pane() {
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
-PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "DadBod (database)" "Scripts")
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "Steward" "DadBod (database)" "Scripts")
 
 # pane_kind <pane> <kind>
 # Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
@@ -356,9 +356,10 @@ pane_kind() {
         kind_command="Use-NodeVersion && copilot --max-ai-credits 500"
       fi
       ;;
-    Workhorse | "Workhorse (builds)" | Paperboy)
+    Workhorse | "Workhorse (builds)" | Paperboy | Steward)
       # NeoVim opened on workhorse.nvim's last query or the pipelines of the
-      # pane's repository (every pipeline outside one), or paperboy.nvim's inbox
+      # pane's repository (every pipeline outside one), paperboy.nvim's inbox,
+      # or steward.nvim's project folders -- the projects.json prefix+/ reads
       # (nvim-config/lua/plugins/personal.lua). Through pwsh like NeoVim, whose
       # profile is what sets $PAPERBOY_EWS_URL and the Azure DevOps settings.
       # g:no_statusline drops the status bar (config/options.lua): the plugin's
@@ -368,6 +369,7 @@ pane_kind() {
       local startup="Workhorse resume"
       [ "$kind" = "Workhorse (builds)" ] && startup="Workhorse builds here"
       [ "$kind" = Paperboy ] && startup="Paperboy inbox"
+      [ "$kind" = Steward ] && startup="Steward projects"
       kind_command="nvim --cmd 'let g:no_statusline = 1' -c '$startup'"
       ;;
     "DadBod (database)")

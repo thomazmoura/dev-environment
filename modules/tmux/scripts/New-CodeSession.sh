@@ -5,11 +5,17 @@
 #
 # Usage: New-CodeSession.sh [directory]
 #        New-CodeSession.sh -d [-x columns -y rows] directory
-#   no argument - fuzzy-find a directory in the code folder (prefix+/). The
-#                 sessions named with prefix+$ come first, as `★ <name>  <dir>`,
-#                 open or not (Set-SessionLabel.sh -l). The first level of
-#                 folders on each linked machine comes last, as <host>/<folder>
-#                 (tmux_link.py, from the snapshot Start-TmuxLink.py keeps)
+#   no argument - fuzzy-find a project folder (prefix+/). The sessions named
+#                 with prefix+$ come first, as `★ <name>  <dir>`, open or not
+#                 (Set-SessionLabel.sh -l). Then this machine's project folders:
+#                 the first level of the code folder plus what
+#                 ~/.config/dev-environment/projects.json adds
+#                 (Get-ProjectFolders.py). Each linked machine's own project
+#                 folders come last, as <host>/<folder> (tmux_link.py, from the
+#                 snapshot Start-TmuxLink.py keeps). In the picker Ctrl-A swaps
+#                 this machine's list for every folder in the code folder, at
+#                 any depth, and back; Ctrl-E edits projects.json in steward.nvim
+#                 (:Steward projects) and comes back to the picker
 #   directory   - use that directory directly (prefix+C-c, for the code folder)
 #   -d          - detached: open the session without switching to it and print
 #                 its name. How a linked machine opens a session here, over
@@ -56,13 +62,32 @@ shift $((OPTIND - 1))
 directory="${1:-}"
 name=""
 if [ -z "$directory" ]; then
-  require_tools tmux fzf fd
+  require_tools tmux fzf
   # A named line carries its directory and session name after tabs, which fzf
-  # does not show (--with-nth=1); fd's lines have no tab and show whole. A
-  # linked machine's folder carries three: identity, address and path.
-  location="$({ "$scripts/Set-SessionLabel.sh" -l "" "$code"; fd --type d . --base-directory "$code";
-      "$scripts/Get-TmuxLink.py" --format=folders 2>/dev/null; } |
-    fzf --ansi --reverse --delimiter=$'\t' --with-nth=1 --prompt='project> ' --header="New session from ${code/#$HOME/\~}")" || exit 0
+  # does not show (--with-nth=1); a project folder carries its path. A linked
+  # machine's folder carries three: identity, address and path.
+  # The lists are commands rather than a pipe so Ctrl-A can reload them: in
+  # the environment, so the reload needs no quoting, and under bash whatever
+  # $SHELL is (--with-shell).
+  named="$(printf '%q ' "$scripts/Set-SessionLabel.sh" -l "" "$code")"
+  linked="$(printf '%q ' "$scripts/Get-TmuxLink.py" --format=folders) 2>/dev/null"
+  projects="$(printf '%q ' "$scripts/Get-ProjectFolders.py")"
+  export PROJECTS_SHORT="$named; $projects; $linked"
+  export PROJECTS_EVERY="$named; $projects --all; $linked"
+  # shellcheck disable=SC2016 # expanded by the bash fzf runs
+  swap='if [ "$FZF_PROMPT" = "all> " ]; then echo "change-prompt(project> )+reload(eval \"\$PROJECTS_SHORT\")";
+    else echo "change-prompt(all> )+reload(eval \"\$PROJECTS_EVERY\")"; fi'
+  while :; do
+    picked="$(eval "$PROJECTS_SHORT" |
+      fzf --ansi --reverse --delimiter=$'\t' --with-nth=1 --prompt='project> ' --with-shell='bash -c' \
+        --expect=ctrl-e --bind="ctrl-a:transform:$swap" \
+        --header="New session from ${code/#$HOME/\~}  (C-a: all folders, C-e: edit the list)")" || exit 0
+    [ "${picked%%$'\n'*}" = ctrl-e ] || break
+    # steward.nvim's screen for projects.json, then the picker again with
+    # what was saved.
+    nvim -c 'Steward projects' </dev/tty >/dev/tty
+  done
+  location="${picked#*$'\n'}"
   [ -n "$location" ] || exit 0
   case "$location" in
     *$'\t'*$'\t'*$'\t'*)
@@ -75,6 +100,7 @@ if [ -z "$directory" ]; then
         open_on_peer "$identity" "$address" "$directory"
       fi
       exit 0 ;;
+    # A named session (directory, name) or a project folder (its path).
     *$'\t'*) IFS=$'\t' read -r _ directory name <<<"$location" ;;
     *) directory="$code/$location" ;;
   esac

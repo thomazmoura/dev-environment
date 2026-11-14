@@ -46,13 +46,17 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import project_folders  # noqa: E402
 import radar_cache  # noqa: E402
 import radar_remote  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 
 # The reply's format. Bumped whenever what serve() returns changes shape.
-PROTOCOL = 1
+# Raised whenever what serve() answers changes shape; a peer answering with a
+# version query() does not know shows as OUTDATED. 2: folders became
+# [shown, path] pairs from project_folders.py (a 1 is still read: bare names).
+PROTOCOL = 2
 
 # Where the peer's copy of the CLI is. $HOME is left for the remote shell.
 SERVE = '"$HOME/.modules/tmux/scripts/Get-TmuxLink.py" --serve'
@@ -178,16 +182,10 @@ def code_folder() -> str:
     return os.path.realpath(os.path.expanduser("~"))
 
 
-def folders(root: str) -> list[str]:
-    """The first level of folders under `root`, hidden ones left out."""
-    try:
-        return sorted(
-            (entry.name for entry in os.scandir(root)
-             if entry.is_dir() and not entry.name.startswith(".")),
-            key=str.lower,
-        )
-    except OSError:
-        return []
+def folders(root: str) -> list[list[str]]:
+    """This machine's project folders, as [shown, path] pairs: the first level
+    of `root` plus what its projects.json adds (project_folders.py)."""
+    return [list(pair) for pair in project_folders.projects(root)]
 
 
 def local_sessions() -> list[dict]:
@@ -297,9 +295,14 @@ def query(address: str, request=None, fresh: bool = False) -> dict | str:
         return OUTDATED
     try:
         payload = json.loads(result.stdout)
-        if payload.get("version") != PROTOCOL or not payload["identity"]:
+        version = payload.get("version")
+        if version not in (1, PROTOCOL) or not payload["identity"]:
             return OUTDATED
         payload["sessions"], payload["folders"], payload["root"]
+        if version == 1:
+            # A peer not yet updated: its folders are bare names in its root.
+            payload["folders"] = [[name, os.path.join(payload["root"], name)]
+                                  for name in payload["folders"]]
         return payload
     except (ValueError, KeyError, TypeError, AttributeError):
         return OUTDATED
