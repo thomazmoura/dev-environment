@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Opens a session for a project under ~/code, with the standard layout: Git,
-# Agents and a picker pane (see Set-NeovimLayout.sh).
+# Opens a session for a project in the code folder (code-folder.sh: ~/code, or
+# /Git on the company's machines), with the standard layout: Git, Agents and a
+# picker pane (see Set-NeovimLayout.sh).
 #
 # Usage: New-CodeSession.sh [directory]
 #        New-CodeSession.sh -d [-x columns -y rows] directory
-#   no argument - fuzzy-find a directory under ~/code (bound to prefix+/). The
+#   no argument - fuzzy-find a directory in the code folder (prefix+/). The
 #                 sessions named with prefix+$ come first, as `★ <name>  <dir>`,
 #                 open or not (Set-SessionLabel.sh -l). The first level of
 #                 folders on each linked machine comes last, as <host>/<folder>
 #                 (tmux_link.py, from the snapshot Start-TmuxLink.py keeps)
-#   directory   - use that directory directly (bound to prefix+C-c for ~/code)
+#   directory   - use that directory directly (prefix+C-c, for the code folder)
 #   -d          - detached: open the session without switching to it and print
 #                 its name. How a linked machine opens a session here, over
 #                 ssh, for a folder picked there -- which then moves its client
@@ -37,8 +38,9 @@ scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 source "$scripts/tmux-helpers.sh"
 source "$scripts/worktree-helpers.sh"
 source "$scripts/link-helpers.sh"
+source "$scripts/code-folder.sh"
 
-code="$HOME/code"
+code="$(code_folder)"
 
 detached="" size=() columns="" rows=""
 while getopts ":dx:y:" option; do
@@ -60,7 +62,7 @@ if [ -z "$directory" ]; then
   # linked machine's folder carries three: identity, address and path.
   location="$({ "$scripts/Set-SessionLabel.sh" -l "" "$code"; fd --type d . --base-directory "$code";
       "$scripts/Get-TmuxLink.py" --format=folders 2>/dev/null; } |
-    fzf --ansi --reverse --delimiter=$'\t' --with-nth=1 --prompt='project> ' --header='New session from ~/code')" || exit 0
+    fzf --ansi --reverse --delimiter=$'\t' --with-nth=1 --prompt='project> ' --header="New session from ${code/#$HOME/\~}")" || exit 0
   [ -n "$location" ] || exit 0
   case "$location" in
     *$'\t'*$'\t'*$'\t'*)

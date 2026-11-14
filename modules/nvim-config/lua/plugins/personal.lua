@@ -1,5 +1,5 @@
--- Plugins of my own. The checkout in ~/code wins when present (`dev` in
--- config/lazy.lua), GitHub otherwise
+-- Plugins of my own. The checkout in the code folder wins when present (`dev`
+-- in config/lazy.lua), GitHub otherwise
 local spotlight_subdir = 'SpotlightDimmer.NeovimPlugin'
 
 -- Workhorse saved queries, by the <Leader> keys that open them

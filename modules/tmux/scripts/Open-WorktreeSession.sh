@@ -9,7 +9,7 @@
 # The one place that knows how a worktree's session is opened, because two
 # callers want it: New-Worktree.sh, which has just made the worktree, and the
 # manager's Enter (Show-Worktrees.py). A worktree on this machine is just a
-# project under ~/code, so it goes to New-CodeSession.sh unchanged. One on
+# project in the code folder, so it goes to New-CodeSession.sh unchanged. One on
 # another machine wants everything an ssh session has -- panes that ssh there,
 # the theme colour, the shared agent -- so it goes to New-SshSession.sh's
 # -t/-d path, with the name worktree-helpers.sh gives it rather than the

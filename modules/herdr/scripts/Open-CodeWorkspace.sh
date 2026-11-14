@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Fuzzy-find a project under ~/code and open it as a herdr workspace.
+# Fuzzy-find a project in the code folder ($CODE_FOLDER, else ~/code) and open
+# it as a herdr workspace.
 #
 # The herdr counterpart of the tmux `prefix + C-n` binding in
 # modules/tmux/tmux.conf. If a workspace is already rooted at the chosen
@@ -35,7 +36,8 @@
 
 set -uo pipefail
 
-CODE_DIR="${CODE_DIR:-$HOME/code}"
+CODE_DIR="${CODE_DIR:-${CODE_FOLDER:-$HOME/code}}"
+CODE_DIR="${CODE_DIR/#\~/$HOME}"
 
 # die, warn, pane_id_of, new_tab, the open_* helpers, pick_agent_kind and
 # start_agent all live here, shared with Select-Action.sh. Sourced before the

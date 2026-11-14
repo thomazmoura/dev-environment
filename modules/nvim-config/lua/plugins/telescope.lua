@@ -19,7 +19,13 @@ return {
     { '<Leader>?', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
     { '<Leader><C-p>', '<cmd>Telescope buffers<cr>', desc = 'Buffers' },
     { '<Leader>h', '<cmd>Telescope help_tags<cr>', desc = 'Help' },
-    { '<Leader>,', '<cmd>Telescope find_files cwd=~/code/dotfiles<cr>', desc = 'Find dotfiles' },
+    {
+      '<Leader>,',
+      function()
+        require('telescope.builtin').find_files({ cwd = vim.fn.expand(vim.env.CODE_FOLDER or '~/code') .. '/dotfiles' })
+      end,
+      desc = 'Find dotfiles',
+    },
   },
   config = function()
     local find_command = { 'fd', '--type', 'file', '-L', '--hidden', '--exclude', '.git' }

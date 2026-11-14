@@ -2,7 +2,7 @@
 # Fuzzy-find one of the open workspaces and focus it.
 #
 # Unlike Open-CodeWorkspace.sh (prefix+ctrl+n), which searches every project
-# under ~/code and can build a new workspace, this only ever lists the
+# in the code folder and can build a new workspace, this only ever lists the
 # workspaces that are already open: the quick hop between live spaces.
 #
 # Bound to prefix+/ as a popup command in modules/herdr/config.toml.

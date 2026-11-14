@@ -84,15 +84,18 @@ if (!$global:LeanProfile) {
   }, $true, $false, 1)
 }
 
-if (! ($env:CODE_FOLDER)) {
-  if ( [IO.Directory]::Exists("$HOME/code") ) {
-    $env:CODE_FOLDER = "~/code"
-  }
-  elseif ( [IO.Directory]::Exists("$HOME/git") ) {
-    $env:CODE_FOLDER = "~/git"
-  }
-  elseif ( [IO.Directory]::Exists("/Git") ) {
-    $env:CODE_FOLDER = "/Git"
+# Where the projects are: $CODE_FOLDER when set (tmux sets it for its panes),
+# else the first of ~/code, ~/git and /Git that exists -- the rule of
+# modules/tmux/scripts/code-folder.sh and tmux_link.py. Stored as the real,
+# absolute path, so bash and Python read it as they find it, and a ~/code linked
+# to /Git (the folder Kaspersky leaves alone on the company's machines) is /Git,
+# as tmux and git see it. [IO.DirectoryInfo] rather than Resolve-Path, which
+# would import a module at startup.
+foreach ($candidate in @(($env:CODE_FOLDER -replace '^~', $HOME), "$HOME/code", "$HOME/git", "/Git")) {
+  if ($candidate -and [IO.Directory]::Exists($candidate)) {
+    $target = [IO.DirectoryInfo]::new($candidate).ResolveLinkTarget($true)
+    $env:CODE_FOLDER = if ($target) { $target.FullName } else { $candidate }
+    break
   }
 }
 
@@ -102,7 +105,7 @@ if (! ($env:CODE_FOLDER)) {
 # passed (~150ms), and Get-Item's wildcard plus a pipeline still cost ~100ms.
 $cicdFolder = $null
 if ($env:CODE_FOLDER -and !$env:PATH.Contains('/CI-CD/Utilitarios')) {
-  $codeFolder = $env:CODE_FOLDER.Replace('~', $HOME)
+  $codeFolder = $env:CODE_FOLDER
   if ([IO.Directory]::Exists($codeFolder)) {
     foreach ($dir in @($codeFolder) + [IO.Directory]::GetDirectories($codeFolder)) {
       if (!$dir.Contains('code-scripts') -and [IO.Directory]::Exists("$dir/CI-CD")) {
@@ -138,14 +141,23 @@ function Set-LocalContextDatabase($DatabaseName = "contexto", $ContextName = "Co
 # Stays in the profile rather than DevHelpers: it is dot-sourced so the scripts'
 # functions land in the global scope, and a module function would keep them in
 # the module's.
+# The code folder is matched as $CODE_FOLDER and as ~/code, which is how $PWD
+# reads after a cd through a ~/code that links to it.
 function Run-CodeFolderScripts() {
-  $CodeFolder = "$HOME/code/"
-  if(!$PWD.Path.StartsWith($CodeFolder)) {
+  if(!$env:CODE_FOLDER) {
+    return
+  }
+  # A plain loop: Select-Object would import its module at startup.
+  $CodeFolder = $null
+  foreach($prefix in @("$env:CODE_FOLDER/", "$HOME/code/")) {
+    if($PWD.Path.StartsWith($prefix)) { $CodeFolder = $prefix; break }
+  }
+  if(!$CodeFolder) {
     return
   }
 
-  $CurrentFolder = $PWD.Path.Replace($CodeFolder, "").Replace("AT/", "").Split("/")[0]
-  $CodeScriptFolder = "$HOME/code/code-scripts/$CurrentFolder"
+  $CurrentFolder = $PWD.Path.Substring($CodeFolder.Length).Replace("AT/", "").Split("/")[0]
+  $CodeScriptFolder = "$env:CODE_FOLDER/code-scripts/$CurrentFolder"
   if(![IO.Directory]::Exists($CodeScriptFolder)) {
     return
   }

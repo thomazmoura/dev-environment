@@ -19,9 +19,11 @@ require('lazy').setup({
     -- surround and the like); everything else is the terminal NeoVim's
     cond = not vim.g.vscode,
   },
-  -- My own plugins load from their checkout in ~/code when there is one
-  -- (~/code/workhorse.nvim...), and from GitHub otherwise (Docker, other hosts)
-  dev = { path = '~/code', patterns = { 'thomazmoura' }, fallback = true },
+  -- My own plugins load from their checkout in the code folder when there is
+  -- one (<code folder>/workhorse.nvim...), and from GitHub otherwise (Docker,
+  -- other hosts). The code folder is $CODE_FOLDER, which tmux and the pwsh
+  -- profile set (/Git on the company's machines), else ~/code
+  dev = { path = vim.fn.expand(vim.env.CODE_FOLDER or '~/code'), patterns = { 'thomazmoura' }, fallback = true },
   install = { colorscheme = { 'tokyonight-storm', 'habamax' } },
   -- Updates are deliberate (:Lazy update, then commit lazy-lock.json)
   checker = { enabled = false },

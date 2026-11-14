@@ -5,7 +5,7 @@
 # the pane's current path (display-popup -d) and told which pane it was fired
 # from (-t "#{pane_id}"). Asks for a name, then:
 #
-#   1. creates ~/code/<repo>.worktrees/<name> (see worktree-helpers.sh for why
+#   1. creates <repo>.worktrees/<name> beside it (see worktree-helpers.sh for why
 #      a sibling folder) on a branch called <name>, branched from whatever the
 #      pane has checked out -- or checks <name> out there if the branch already
 #      exists;

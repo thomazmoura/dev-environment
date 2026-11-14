@@ -10,10 +10,11 @@
 #
 # Worktrees are created as siblings of the repository they came from:
 #
-#   ~/code/foo                  the repository
-#   ~/code/foo.worktrees/bar    worktree "bar", on branch "bar"
+#   <code folder>/foo                  the repository
+#   <code folder>/foo.worktrees/bar    worktree "bar", on branch "bar"
 #
-# which keeps them under ~/code, where prefix+/ already finds them.
+# which keeps them in the code folder (code-folder.sh: ~/code, or /Git), where
+# prefix+/ already finds them.
 #
 # A worktree also has a *host*. Fired from an ssh session (prefix+N), the
 # bindings work on the machine that session's panes are on: the repository, the

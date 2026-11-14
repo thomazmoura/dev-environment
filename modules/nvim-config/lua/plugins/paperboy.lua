@@ -1,6 +1,7 @@
 -- Exchange e-mail in Neovim (:Paperboy inbox), my own plugin: the checkout in
--- ~/code wins when present (`dev` in config/lazy.lua), GitHub otherwise. Only
--- where $PAPERBOY_EWS_URL / $PAPERBOY_EMAIL are set (the plugin reads them itself)
+-- the code folder wins when present (`dev` in config/lazy.lua), GitHub
+-- otherwise. Only where $PAPERBOY_EWS_URL / $PAPERBOY_EMAIL are set (the plugin
+-- reads them itself)
 return {
   {
     'thomazmoura/paperboy.nvim',

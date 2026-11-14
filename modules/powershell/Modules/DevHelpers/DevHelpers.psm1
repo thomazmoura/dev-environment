@@ -1193,7 +1193,7 @@ function New-VerticalTmuxSession {
 
       With none, a project is asked for with prefix+/'s own picker,
       modules/tmux/scripts/New-CodeSession.sh -d: the ★ named sessions, the
-      folders under ~/code and the linked machines'. It opens the session
+      folders in the code folder and the linked machines'. It opens the session
       detached with the standard layout and prints where it is; a linked
       machine's folder is opened on that machine and attached to over ssh.
 

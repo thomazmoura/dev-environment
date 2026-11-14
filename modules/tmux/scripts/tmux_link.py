@@ -148,16 +148,18 @@ def unlink(identity_: str) -> None:
 
 def code_folder() -> str:
     """Where the projects are: $CODE_FOLDER, else the first of the profile's
-    own guesses that exists (kernel-profile.ps1). Guessed again here because a
-    peer asks over ssh, in a shell with none of the profile's variables."""
+    own guesses that exists (kernel-profile.ps1, code-folder.sh). Guessed again
+    here because a peer asks over ssh, in a shell with none of the profile's
+    variables. The real path, as code-folder.sh gives it: a ~/code linked to
+    /Git is /Git to tmux and git."""
     configured = os.environ.get("CODE_FOLDER")
     candidates = [configured] if configured else []
     candidates += ["~/code", "~/git", "/Git"]
     for candidate in candidates:
         path = os.path.expanduser(candidate)
         if os.path.isdir(path):
-            return path
-    return os.path.expanduser("~")
+            return os.path.realpath(path)
+    return os.path.realpath(os.path.expanduser("~"))
 
 
 def folders(root: str) -> list[str]:

@@ -33,9 +33,10 @@ export PAPERBOY_KEYRING=${PAPERBOY_KEYRING:-paperboy}
 
 # On the PATH when linked there, otherwise in the checkout lazy.nvim loads the
 # plugin from (dev.path in nvim-config/lua/config/lazy.lua) or its own clone
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/code-folder.sh"
 daemon=""
 for candidate in "$(command -v paperboy-unread)" \
-  "$HOME/code/paperboy.nvim/bin/paperboy-unread" \
+  "$(code_folder)/paperboy.nvim/bin/paperboy-unread" \
   "${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/paperboy.nvim/bin/paperboy-unread"; do
   if [ -n "$candidate" ] && [ -x "$candidate" ]; then
     daemon=$candidate

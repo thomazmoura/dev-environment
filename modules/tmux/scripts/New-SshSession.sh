@@ -10,8 +10,8 @@
 #      password prompt has a terminal to answer in. When every open ssh session
 #      is on one host, it goes there without asking, from any session; leaving
 #      the directory picker of step 2 then asks after all;
-#   2. fuzzy-finds a directory under ~/code on the remote -- ~ when the remote
-#      has no ~/code -- the way prefix+/ does locally, the sessions on that
+#   2. fuzzy-finds a directory in the remote's code folder -- ~ when the
+#      remote has none -- the way prefix+/ does locally, the sessions on that
 #      host named with prefix+$ first (Set-SessionLabel.sh -l);
 #   3. on a remote with this dev-environment, unlocks the remote's ssh key in
 #      the host's shared agent -- asking for its password here, once, instead
@@ -126,14 +126,25 @@ ask_container() {
 # on later, through @ssh_devenv.
 devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi'
 
+# The remote's code folder, under sh: code-folder.sh's rule written out again,
+# since the remote may not have this dev-environment -- $CODE_FOLDER, else the
+# first of ~/code, ~/git and /Git there, else ~ -- and cd'd into with -P for
+# the real path, symlinks resolved. An ssh command's shell reads no profile, so
+# $CODE_FOLDER is there only when sshd or the shell's rc file sets it.
+cd_code_folder='
+root="${CODE_FOLDER:-}"
+case "$root" in "~"*) root="$HOME${root#"~"}" ;; esac
+for candidate in "$root" "$HOME/code" "$HOME/git" /Git "$HOME"; do
+  [ -n "$candidate" ] && [ -d "$candidate" ] && break
+done
+cd -P "$candidate" || exit 1
+'
+
 # What connecting asks the remote, run under sh because the login shell may be
-# anything: the root the picker lists -- ~/code, or ~ when the remote has none
-# -- and whether the remote has this dev-environment. Two lines.
-probe='
-root="$HOME/code"
-[ -d "$root" ] || root="$HOME"
-cd "$root" || exit 1
-pwd
+# anything: the root the picker lists -- the code folder, or ~ when the remote
+# has none -- and whether the remote has this dev-environment. Two lines.
+probe="$cd_code_folder"'
+pwd -P
 '"$devenv_test"
 
 # connect
@@ -253,10 +264,7 @@ read_probe() {
 # probe. fd -- or Debian's fdfind -- when there is one, so .gitignore is
 # honoured as it is by prefix+/; otherwise find, skipping hidden folders and
 # build output.
-listing='
-root="$HOME/code"
-[ -d "$root" ] || root="$HOME"
-cd "$root" || exit 1
+listing="$cd_code_folder"'
 if command -v fd >/dev/null 2>&1; then fd --type d --follow .
 elif command -v fdfind >/dev/null 2>&1; then fdfind --type d --follow .
 else find . -mindepth 1 \( -name ".*" -o -name node_modules -o -name bin -o -name obj \) -prune -o -type d -print

@@ -1,6 +1,7 @@
 -- Images in the terminal, Markdown copied as rich text and files opened on the device
--- I type on over SSH (xray.nvim), my own plugin: the checkout in ~/code wins when
--- present (`dev` in config/lazy.lua), GitHub otherwise. Paperboy depends on it too
+-- I type on over SSH (xray.nvim), my own plugin: the checkout in the code folder
+-- wins when present (`dev` in config/lazy.lua), GitHub otherwise. Paperboy
+-- depends on it too
 return {
   {
     'thomazmoura/xray.nvim',
