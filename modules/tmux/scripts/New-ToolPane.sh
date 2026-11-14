@@ -5,6 +5,8 @@
 # terminals (prefix+% and prefix+"), plus their below-the-pane twins behind a
 # - (prefix+- then t then c, prefix+- then a). In an ssh session (prefix+N) the
 # pane runs the same command on the remote, in the session's working directory.
+# A plain local terminal (no command, no ssh) starts pwsh directly, with no
+# bash in front of it.
 #
 # Usage: New-ToolPane.sh [options] <label> <pwsh-command>
 #   -t <target>   pane the split is relative to; bindings pass "#{pane_id}"
@@ -133,7 +135,14 @@ if [ -n "$first_of_role" ] && [ "$role" = terminal ] && [ "$direction" = -v ] &&
   size+=("${content_row_args[@]}")
 fi
 
-pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
+# A plain local terminal (prefix+% and prefix+" outside an ssh session) is
+# pwsh with nothing to run: it starts as the pane's own process, without an
+# interactive bash first to type it in (new_direct_pane).
+if [ "$line" = pwsh ]; then
+  pane="$(new_direct_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
+else
+  pane="$(new_pane "$origin" "$label" "$line" "$direction" "${size[@]}")"
+fi
 
 [ -z "$first_of_role" ] || tmux set -p -t "$pane" @layout_role "$role"
 

@@ -29,7 +29,7 @@ The host's `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.con
 
 ## Building blocks (`scripts/tmux-helpers.sh`, sourced, never run)
 
-- `new_pane` / `new_window`: every pane the bindings open goes through these.
+- `new_pane` / `new_window`: every pane the bindings open goes through these. They type the command into the pane's interactive bash, for the `~/.bashrc` environment. The exception is `new_direct_pane`, used for the plain local terminals (`prefix,%`/`prefix,"`): it starts `pwsh` as the pane's own process, and `linux-profile.ps1` sets what pwsh used to get from the bashrc (the nvs default node, `SSL_CERT_DIR`).
 - `pane_command <pane> <cmd>`: the command a new pane split off `<pane>` runs. It's `pwsh_invocation` locally (`PWSH_LEAN=1 pwsh -Command`, so the profile's environment is there) and `ssh_command` when `<pane>` belongs to an ssh session. Always build commands through it, so a binding works in ssh sessions with no extra code.
 - `PANE_KINDS` / `pane_kind`: the kinds the picker pane offers (NeoVim, Terminal, Claude Code, Copilot, Codex, Open Code, Workhorse, Workhorse (builds), Paperboy, Steward, DadBod (database), Scripts) and what each runs.
 - `label_pane`: sets `@pane_label`, which layouts, zoom and pane jumping key on.

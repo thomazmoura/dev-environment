@@ -251,6 +251,28 @@ new_pane() {
   printf '%s' "$pane"
 }
 
+# new_direct_pane <target> <label> <command> [split-window args...]
+# new_pane, but <command> is the pane's own process, handed to split-window,
+# instead of a line typed into an interactive shell -- no bash prompt, no
+# ~/.bashrc to load first. For a plain local pwsh (prefix+% and prefix+"),
+# whose profile sets what it would have taken from the bashrc
+# (powershell-config/linux-profile.ps1). The pane closes when <command> ends.
+new_direct_pane() {
+  local target=$1 label=$2 command=$3
+  shift 3
+  local pane arg
+  local -a split=() rest=()
+  # The args may carry more commands after the split's own (content_row's
+  # "; move-pane ..."): the shell-command goes before the first ";", or it
+  # would land on the last of them instead.
+  for arg in "$@"; do
+    if [ "${#rest[@]}" -gt 0 ] || [ "$arg" = ";" ]; then rest+=("$arg"); else split+=("$arg"); fi
+  done
+  pane="$(tmux split-window -t "$target" -c '#{pane_current_path}' -P -F '#{pane_id}' "${split[@]}" "exec $command" "${rest[@]}")"
+  label_pane "$pane" "$label"
+  printf '%s' "$pane"
+}
+
 # new_window <target> <label> <command>
 # new_pane, but in a new window of <target>'s session -- at the next free index,
 # like tmux's own new-window -- instead of a split. Prints the new pane id.

@@ -5,6 +5,17 @@ $env:DOTNET_ENVIRONMENT="Development"
 $env:NVS_HOME="$env:HOME/.nvs"
 $env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 
+# What a pwsh started from bash used to get from the ~/.bashrc instead, now that
+# the plain terminals (prefix+% and prefix+") start pwsh directly: the default
+# node from ~/.nvs/default (modules/node/Setup-NVS.ps1) and trust for the
+# ASP.NET dev certificate. Guarded, so a pwsh started from another keeps one copy.
+if ([IO.Directory]::Exists("$env:NVS_HOME/default/bin") -and !$env:PATH.Contains("$env:NVS_HOME/default/bin")) {
+  $env:PATH = "$env:NVS_HOME/default/bin:$($env:PATH)"
+}
+if (!$env:SSL_CERT_DIR -and [IO.Directory]::Exists("$HOME/.aspnet/dev-certs/trust")) {
+  $env:SSL_CERT_DIR = "$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
+}
+
 # Over ssh there is no Wayland display: wl-copy -- and the clip alias built on
 # it in kernel-profile.ps1 -- goes through OSC 52 to the clipboard of the
 # machine you are ssh'ing from instead (see modules/clipboard/wl-copy). In front
