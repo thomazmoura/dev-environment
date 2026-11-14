@@ -5,9 +5,10 @@
 # Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
 # counterpart of prefix+/ (New-CodeSession.sh). It:
 #
-#   1. asks for user@host (up-arrow recalls the ones used before, kept in
-#      ~/.ssh-session-history) and connects, in the popup, so a host key or
-#      password prompt has a terminal to answer in. When every open ssh session
+#   1. asks for user@host, or user@host:port (up-arrow recalls the ones used
+#      before, kept in ~/.ssh-session-history; a port makes the target
+#      ssh://user@host:port, see ask_target) and connects, in the popup, so a
+#      host key or password prompt has a terminal to answer in. When every open ssh session
 #      is on one host, it goes there without asking, from any session; leaving
 #      the directory picker of step 2 then asks after all;
 #   2. fuzzy-finds a directory in the remote's code folder -- ~ when the
@@ -38,8 +39,8 @@
 #
 # Usage: New-SshSession.sh [-D] [-a | -t user@host -d /remote/dir [-n session name]]
 #   no options  ask both questions, as prefix+N does
-#   -a          ask for user@host even when every open ssh session is on one
-#               host, as prefix+C-n does: a session on another machine
+#   -a          ask for user@host[:port] even when every open ssh session is on
+#               one host, as prefix+C-n does: a session on another machine
 #   -D          the same, into a local Docker container instead of a host, as
 #               prefix+D does: the first question picks one of the containers
 #               (`docker ps -a`), starting it when it is stopped, and the
@@ -107,10 +108,18 @@ ask_target() {
   [ -f "$history_file" ] && history -r "$history_file"
 
   printf 'New ssh session\n\n'
-  read -rep 'user@host: ' target || return 1
+  read -rep 'user@host[:port]: ' target || return 1
   # Trim surrounding whitespace; an empty answer is a change of mind.
   target="$(printf '%s' "$target" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
-  [ -n "$target" ]
+  [ -n "$target" ] || return 1
+  # A port, which ssh does not take after the host, becomes ssh's URI form,
+  # which it does take wherever a destination goes -- so @ssh_target, the
+  # linked machines' peers file and every ssh made from them carry the port
+  # with nothing else knowing about it. An IPv6 address goes in brackets
+  # ([::1]:2222); one without them, all colons, is left alone.
+  if [[ $target =~ ^([^@/]+@)?([^:@/[]+|\[[^]]+\]):([0-9]+)$ ]]; then
+    target="ssh://$target"
+  fi
 }
 
 # ask_container
@@ -215,7 +224,7 @@ connect() {
     return 0
   fi
 
-  printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "$target"
+  printf '\nConnecting to %s... (Esc or Ctrl+C to cancel)\n' "${target#ssh://}"
   # Twice when ssh failed for a reason of its own (255) that is neither of the
   # two it names: a master that died under the first try -- its network was
   # already gone -- leaves the second to connect anew, still without the
@@ -255,8 +264,10 @@ connect() {
 
   # Only a host that connected goes into the history: a typo should not be the
   # first thing up-arrow offers next time. Moved to the end if it was already
-  # there, so the history stays one line per host, most recent last.
-  { grep -vxF -- "$target" "$history_file" 2>/dev/null; printf '%s\n' "$target"; } > "$history_file.tmp" &&
+  # there, so the history stays one line per host, most recent last. As it was
+  # typed: user@host:port, not the ssh:// form ask_target makes of it.
+  local typed="${target#ssh://}"
+  { grep -vxF -- "$typed" "$history_file" 2>/dev/null; printf '%s\n' "$typed"; } > "$history_file.tmp" &&
     mv "$history_file.tmp" "$history_file"
 }
 
@@ -313,7 +324,7 @@ pick() {
     "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes "$target" "sh -c $(sq "$listing")" </dev/null)
   feeder=$!
   picked="$(fzf --reverse --delimiter=$'\t' --with-nth=1 --prompt='remote> ' \
-    --header="New session on $target:$root$note" <&3)"
+    --header="New session on ${target#ssh://}:$root$note" <&3)"
   end_group "$feeder"
   exec 3<&-
   [ -n "$picked" ] || return 1
@@ -350,7 +361,7 @@ else
   target=
   [ -z "$always_ask" ] && [ -n "$hosts" ] && [ "$(wc -l <<<"$hosts")" -eq 1 ] && target="$hosts"
   if [ -n "$target" ]; then
-    printf 'New session on %s\n' "$target"
+    printf 'New session on %s\n' "${target#ssh://}"
     connect && pick " (Esc for another $other)" || { clear; target=; }
   fi
   if [ -z "$target" ]; then
@@ -362,9 +373,10 @@ fi
 # while it is the same on every session open on the host, and put in front once
 # another user has one there (ssh_session_name in ssh-helpers.sh). Dots and
 # colons are the separators in tmux targets (session:window.pane), so a host
-# like dev.example.com becomes dev_example_com. A caller with a name of its own
-# (-n) has already spelled it that way.
-host="${target##*@}"
+# like dev.example.com becomes dev_example_com. A port is left out of it
+# (ssh_host). A caller with a name of its own (-n) has already spelled it that
+# way.
+host="$(ssh_host "$target")"
 host="${host#docker:}"
 base="${name_override:-$(printf '%s-%s' "$host" "$(basename "$dir")" | tr '.:' '__')}"
 user="$(ssh_user "$target")"

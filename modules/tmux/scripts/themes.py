@@ -28,7 +28,8 @@ same way):
     SessionName@Host   an ssh/Docker session of that name (@ssh_name, its
                        prefix+$ label, or the session's own name)
 
-Host is the session's @ssh_target, whole (user@host, docker:name) or its host.
+Host is the session's @ssh_target, whole (user@host, docker:name) or its host,
+with or without the port it was opened with (user@host:port, host:port, host).
 
 Most specific first: a local session takes SessionName, then Directory, then
 default; an ssh/Docker session takes SessionName@Host, then Directory@Host, and
@@ -121,8 +122,17 @@ def _depth_under(path: str, folder: str) -> int | None:
     return None
 
 
+def _bare_host(target: str) -> str:
+    """The host alone: no ssh:// (a target given a port, ssh://user@host:port),
+    no user and no :port -- as ssh_host in ssh-helpers.sh."""
+    host = target.removeprefix("ssh://").rpartition("@")[2]
+    match = re.match(r"^(\[[^]]+\]|[^:]+):[0-9]+$", host)
+    return match.group(1) if match else host
+
+
 def _host_matches(host: str, target: str) -> bool:
-    return host == target or host == target.rpartition("@")[2]
+    return host in (target, target.removeprefix("ssh://"),
+                    target.rpartition("@")[2], _bare_host(target))
 
 
 def colour_for(assignments: list[tuple[str, str]], name: str, path: str = "",

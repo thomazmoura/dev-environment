@@ -6,7 +6,9 @@
 # that host. The session remembers both as session options, which live in the
 # tmux server for as long as the session does:
 #
-#   @ssh_target   user@host
+#   @ssh_target   user@host, or ssh://user@host:port when prefix+N was given a
+#                 port -- ssh's own URI form, which every ssh takes as it is
+#                 (ssh_host and ssh_user take it apart)
 #   @ssh_dir      the working directory on the remote, absolute
 #   @ssh_devenv   "yes" when the remote has this dev-environment (pwsh and
 #                 ~/.modules), so the panes can run the same pwsh commands they
@@ -118,10 +120,23 @@ ssh_is_devenv() {
 # for a container, which has no user to tell sessions apart by.
 ssh_user() {
   is_docker_target "$1" && return 0
-  case "$1" in
-    *@*) printf '%s\n' "${1%@*}" ;;
+  local bare="${1#ssh://}"
+  case "$bare" in
+    *@*) printf '%s\n' "${bare%@*}" ;;
     *) ssh -G "$1" 2>/dev/null | awk '$1 == "user" { print $2; exit }' ;;
   esac
+}
+
+# ssh_host <target>
+# The host alone: <target> without ssh://, the user or a :port -- what session
+# names and messages show, and what sessions on one host are grouped by. A
+# container's target is returned whole.
+ssh_host() {
+  is_docker_target "$1" && { printf '%s\n' "$1"; return 0; }
+  local host="${1#ssh://}"
+  host="${host##*@}"
+  [[ $host =~ ^(\[[^]]+\]|[^:]+):[0-9]+$ ]] && host="${BASH_REMATCH[1]}"
+  printf '%s\n' "$host"
 }
 
 # ssh_session_name <name> <target> <user>
@@ -138,10 +153,11 @@ ssh_user() {
 #
 # Dots are tmux's separators, so a user like first.last is first_last here.
 ssh_session_name() {
-  local name=$1 host="${2##*@}" user=$3 other other_user
+  local name=$1 host user=$3 other other_user
+  host="$(ssh_host "$2")"
   if [ -n "$user" ]; then
     while IFS=$'\t' read -r other other_user; do
-      [ -n "$other" ] && ! is_docker_target "$other" && [ "${other##*@}" = "$host" ] || continue
+      [ -n "$other" ] && ! is_docker_target "$other" && [ "$(ssh_host "$other")" = "$host" ] || continue
       [ -n "$other_user" ] || other_user="$(ssh_user "$other")"
       if [ "$other_user" != "$user" ]; then
         printf '%s@%s\n' "$(printf '%s' "$user" | tr '.:' '__')" "$name"

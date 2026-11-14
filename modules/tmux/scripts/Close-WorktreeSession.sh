@@ -64,7 +64,7 @@ while IFS= read -r path; do
       tmux display-message "worktree $(basename "$path") has changes -- kept" 2>/dev/null
       continue ;;
     unreachable)
-      tmux display-message "worktree $(basename "$path") on ${target##*@} could not be reached -- kept" 2>/dev/null
+      tmux display-message "worktree $(basename "$path") on $(ssh_host "$target") could not be reached -- kept" 2>/dev/null
       continue ;;
     unknown)
       tmux display-message "worktree $(basename "$path") could not be read -- kept" 2>/dev/null

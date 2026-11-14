@@ -52,7 +52,7 @@ printf 'The session for worktree %s has closed.\n' "$(basename "$path")"
 printf 'It has no uncommitted changes.\n\n'
 printf '  %s\n' "$path"
 # Which machine's worktree is about to go, when it is not this one.
-[ -n "$target" ] && printf '  on %s\n' "${target##*@}"
+[ -n "$target" ] && printf '  on %s\n' "$(ssh_host "$target")"
 [ -n "$branch" ] && printf '  branch %s (deleted only if merged)\n' "$branch"
 printf '\n'
 read -rsn1 -p 'Remove it? [y/N] ' answer

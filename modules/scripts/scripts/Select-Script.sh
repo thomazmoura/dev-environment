@@ -128,7 +128,7 @@ rows_for() {
     "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$target" \
       '~/.modules/scripts/scripts/Select-Script.sh --list' </dev/null
   else
-    printf '%s has no dev-environment, so no script library\n' "${target##*@}" >&2
+    printf '%s has no dev-environment, so no script library\n' "$(ssh_host "$target")" >&2
     return 1
   fi
 }
@@ -174,8 +174,9 @@ else
 fi
 
 remote="$(ssh_option "$origin" @ssh_target)"
-rows="$(rows_for "$origin")" || die "Could not list the scripts${remote:+ on ${remote##*@}}"
-[ -n "$rows" ] || die "No scripts in the library${remote:+ on ${remote##*@}}"
+[ -n "$remote" ] && remote="$(ssh_host "$remote")"
+rows="$(rows_for "$origin")" || die "Could not list the scripts${remote:+ on $remote}"
+[ -n "$rows" ] || die "No scripts in the library${remote:+ on $remote}"
 
 self="$(readlink -f "${BASH_SOURCE[0]}")"
 selection="$(

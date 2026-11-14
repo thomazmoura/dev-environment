@@ -59,13 +59,13 @@ if [ -n "$target" ]; then
   origin="$(ssh_option "$origin_pane" @ssh_dir)"
   [ -n "$origin" ] || die "The ssh session has no directory recorded"
   repo="$(repo_root "$origin" "$target")" ||
-    die "Not inside a git repository on ${target##*@}: $origin"
+    die "Not inside a git repository on $(ssh_host "$target"): $origin"
 else
   origin="$PWD"
   repo="$(repo_root "$origin")" || die "Not inside a git repository: $origin"
 fi
 
-printf 'New worktree for %s%s\n\n' "$(basename "$repo")" "${target:+ on ${target##*@}}"
+printf 'New worktree for %s%s\n\n' "$(basename "$repo")" "${target:+ on $(ssh_host "$target")}"
 read -rep 'name: ' name || exit 0
 # Trim surrounding whitespace; an empty answer is a change of mind.
 name="$(printf '%s' "$name" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"

@@ -150,7 +150,7 @@ session_name_for() {
   [ -n "${2:-}" ] && name="$(basename "$2")_$name"
   name="$(printf '%s' "$name" | tr '.' '_')"
   if [ -n "${3:-}" ]; then
-    host="$(printf '%s' "${3##*@}" | tr '.:' '__')"
+    host="$(printf '%s' "$(ssh_host "$3")" | tr '.:' '__')"
     name="$host-$name"
   fi
   printf '%s\n' "$name"
@@ -304,7 +304,7 @@ remove_worktree() {
 
   state="$(worktree_state "$path" "$target")"
   if [ "$state" = unreachable ]; then
-    echo "could not reach ${target##*@}; nothing was removed"
+    echo "could not reach $(ssh_host "$target"); nothing was removed"
     return 1
   fi
 
