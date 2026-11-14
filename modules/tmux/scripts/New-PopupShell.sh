@@ -17,10 +17,10 @@
 # The popup's border is drawn in the theme colour of the machine the shell runs
 # on: the global theme colour for a local shell, the session's own for a remote
 # one -- violet unless @ssh_theme_colour says otherwise, Docker's blue for a
-# container session (see Set-SshTheme.sh). That is why this is a run-shell and
+# container session (see Set-SessionTheme.sh). That is why this is a run-shell and
 # not a `popup` binding: display-popup takes -S as it is, with no formats, so
 # the colour has to be worked out before the popup opens. clock-mode-colour is
-# the theme colour on its own, and Set-SshTheme.sh swaps it on an ssh
+# the theme colour on its own, and Set-SessionTheme.sh swaps it on an ssh
 # session's windows along with the rest of the theme.
 #
 # The popup closes when the shell exits, however it exits: the line is exec'd,

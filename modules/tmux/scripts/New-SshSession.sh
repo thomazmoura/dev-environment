@@ -28,7 +28,7 @@
 #      while another user has a session on that host, the open ones renamed to
 #      match (Rename-SshSessions.sh) -- records the host and the directory on
 #      it (see ssh-helpers.sh), gives it the ssh theme colour
-#      (Set-SshTheme.sh), switches to it and applies the standard layout, every
+#      (Set-SessionTheme.sh), switches to it and applies the standard layout, every
 #      pane of which runs over ssh -- all but the feeds and the picker, which
 #      run here and hand what is picked to the remote.
 #
@@ -46,7 +46,7 @@
 #               session's target is docker:<container>. Invoke-Remote.sh (see
 #               REMOTE_SSH in ssh-helpers.sh) makes that the only difference:
 #               the panes, feeds and theme work as they do over ssh, the theme
-#               in its own colour (Set-SshTheme.sh)
+#               in its own colour (Set-SessionTheme.sh)
 #   -t and -d   skip both and build the session for that host and directory.
 #               How a worktree made on a remote opens its session
 #               (Open-WorktreeSession.sh): the host and the directory are
@@ -432,7 +432,7 @@ tmux set-option -t "=$name:" @ssh_name "$base"
 
 # Themed before the switch rather than left to the client-session-changed hook,
 # which runs in the background and would show the local colours first.
-"$scripts/Set-SshTheme.sh" "$name"
+"$scripts/Set-SessionTheme.sh" "$name"
 
 # The remote learns this client's terminal before the layout starts its panes,
 # whose image previews read it (Sync-SshClientTerminal.sh). Outside tmux there

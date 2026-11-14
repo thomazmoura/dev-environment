@@ -4,13 +4,17 @@
 # greys. (This used to be the tmux-power plugin; its look is kept.)
 #
 # Usage:
-#   Set-Theme.sh                         the global theme, in @theme's colour
+#   Set-Theme.sh                         the global theme, in the colour of
+#                                        themes.json's default, else @theme's
 #   Set-Theme.sh -t <session> <colour>   that session and its windows in
 #                                        <colour>, over the global theme
+#   Set-Theme.sh -u -t <session>         that session back to the global theme
 #
 #   The global form runs at every config load, from the end of
-#   modules/tmux/common.conf. The -t form is Set-SshTheme.sh's, which gives ssh
-#   and Docker sessions a colour of their own.
+#   modules/tmux/common.conf. The -t and -u forms are Set-SessionTheme.sh's,
+#   which gives each session the colour themes.json picks for it (themes.py,
+#   edited with steward.nvim's :Steward themes) and ssh and Docker sessions a
+#   colour of their own.
 #
 # What the bar draws, left to right:
 #   [colour] @status_left_host ▶ [grey] session:window ▶   (the window list is
@@ -19,9 +23,9 @@
 #   @status_right_outer
 # Each of those is a user option, expanded with E: when the bar is drawn, so
 # they can be set anywhere in the config, in any order, and changed later
-# without running this again. Only @theme is read here: a theme name from the
-# table below or a #rrggbb colour. It has to be set before common.conf is
-# sourced (see the entry points).
+# without running this again. Only @theme is read here, and only when
+# themes.json has no default: a theme name from the table below or a #rrggbb
+# colour. It has to be set before common.conf is sourced (see the entry points).
 #
 # The session is drawn as its prefix+$ label when it has one (@session_label,
 # see Set-SessionLabel.sh), with the active window's index after it.
@@ -55,18 +59,22 @@ theme_colour() {
 }
 
 target=""
-while getopts "t:" opt; do
+unset_session=""
+while getopts "t:u" opt; do
   case "$opt" in
     t) target=$OPTARG ;;
+    u) unset_session=yes ;;
     *) exit 1 ;;
   esac
 done
 shift $((OPTIND - 1))
 
+scripts="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 if [ -n "$target" ]; then
   tc="$(theme_colour "${1:-}")"
 else
-  tc="$(theme_colour "$(tmux show-options -gqv @theme 2>/dev/null)")"
+  tc="$(python3 "$scripts/themes.py" default 2>/dev/null)"
+  [ -n "$tc" ] || tc="$(theme_colour "$(tmux show-options -gqv @theme 2>/dev/null)")"
 fi
 
 session='#{?@session_label,#{@session_label},#S}:#I'
@@ -125,6 +133,18 @@ if [ -z "$target" ]; then
     set-option -gw pane-border-style "fg=$g3,bg=default" \;
     set-option -gw clock-mode-style 24 \;
   )
+elif [ -n "$unset_session" ]; then
+  # The session's own options go, so it draws from the globals again.
+  target="=$target:"
+  for ((i = 0; i < ${#session_values[@]}; i += 2)); do
+    write+=(set-option -u -t "$target" "${session_values[i]}" \;)
+  done
+  while IFS='|' read -r window stash_for; do
+    [ -z "$stash_for" ] || continue
+    for ((i = 0; i < ${#window_values[@]}; i += 2)); do
+      write+=(set-option -u -w -t "$window" "${window_values[i]}" \;)
+    done
+  done < <(tmux list-windows -t "$target" -F '#{window_id}|#{@zoom_origin}' 2>/dev/null)
 else
   target="=$target:"
   for ((i = 0; i < ${#session_values[@]}; i += 2)); do

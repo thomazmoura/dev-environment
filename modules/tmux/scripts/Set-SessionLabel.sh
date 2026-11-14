@@ -32,7 +32,8 @@
 # offer a named session that is not open, and open it under its key again.
 #
 # tmux reads the label from the session option @session_label, which -s copies
-# out of the file. Formats (the status bar) and the radar samplers, which list
+# out of the file. A session whose label changes is themed again, as
+# themes.json may name it by its label (Set-SessionTheme.sh). Formats (the status bar) and the radar samplers, which list
 # sessions and panes anyway, get it from there at no extra cost.
 set -uo pipefail
 
@@ -64,6 +65,8 @@ sync_labels() {
     else
       tmux set-option -u -t "$id" @session_label 2>/dev/null
     fi
+    # themes.json may name the session by its label (Set-SessionTheme.sh)
+    "$scripts/Set-SessionTheme.sh" "$name"
   done < <(tmux list-sessions -F $'#{session_id}\t#{session_name}\t#{@session_label}' 2>/dev/null)
   return 0
 }
