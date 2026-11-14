@@ -146,13 +146,29 @@ def unlink(identity_: str) -> None:
 # --- What this machine holds ---------------------------------------------------
 
 
+def _tmux_code_folder() -> str:
+    """The tmux server's global $CODE_FOLDER (common.conf sets it); empty when
+    there is no server or it has none."""
+    try:
+        result = subprocess.run(
+            ["tmux", "show-environment", "-g", "CODE_FOLDER"],
+            capture_output=True, text=True, check=False, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    line = result.stdout.strip()
+    return line.removeprefix("CODE_FOLDER=") if line.startswith("CODE_FOLDER=") else ""
+
+
 def code_folder() -> str:
-    """Where the projects are: $CODE_FOLDER, else the first of the profile's
-    own guesses that exists (kernel-profile.ps1, code-folder.sh). Guessed again
-    here because a peer asks over ssh, in a shell with none of the profile's
-    variables. The real path, as code-folder.sh gives it: a ~/code linked to
+    """Where the projects are: $CODE_FOLDER, else this machine's tmux server's,
+    else the first of the profile's own guesses that exists (kernel-profile.ps1,
+    code-folder.sh). Worked out again here because a peer asks over ssh, in a
+    shell with none of the profile's variables; tmux is asked before guessing
+    so that a stray ~/code left on a machine whose projects moved to /Git does
+    not win. The real path, as code-folder.sh gives it: a ~/code linked to
     /Git is /Git to tmux and git."""
-    configured = os.environ.get("CODE_FOLDER")
+    configured = os.environ.get("CODE_FOLDER") or _tmux_code_folder()
     candidates = [configured] if configured else []
     candidates += ["~/code", "~/git", "/Git"]
     for candidate in candidates:

@@ -130,9 +130,16 @@ devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then
 # since the remote may not have this dev-environment -- $CODE_FOLDER, else the
 # first of ~/code, ~/git and /Git there, else ~ -- and cd'd into with -P for
 # the real path, symlinks resolved. An ssh command's shell reads no profile, so
-# $CODE_FOLDER is there only when sshd or the shell's rc file sets it.
+# $CODE_FOLDER is there only when sshd or the shell's rc file sets it; when it
+# is not, the remote's tmux server is asked for its own (common.conf sets it
+# from the profile it was started with) before guessing, since a stray ~/code
+# left on a machine whose projects moved to /Git would otherwise win.
 cd_code_folder='
 root="${CODE_FOLDER:-}"
+if [ -z "$root" ]; then
+  root="$(tmux show-environment -g CODE_FOLDER 2>/dev/null)"
+  case "$root" in CODE_FOLDER=*) root="${root#CODE_FOLDER=}" ;; *) root= ;; esac
+fi
 case "$root" in "~"*) root="$HOME${root#"~"}" ;; esac
 for candidate in "$root" "$HOME/code" "$HOME/git" /Git "$HOME"; do
   [ -n "$candidate" ] && [ -d "$candidate" ] && break
