@@ -161,9 +161,29 @@ return {
         vimls = node_server('vim-language-server', '--stdio'),
         emmet_ls = node_server('emmet-ls', '--stdio'),
         cucumber_language_server = node_server('cucumber-language-server', '--stdio'),
+        vue_ls = node_server('vue-language-server', '--stdio'),
       }) do
         vim.lsp.config(name, { cmd = cmd })
       end
+
+      -- Vue 3: vue_ls handles the template and styles, and hands the script
+      -- part to ts_ls, which reads .vue files through @vue/typescript-plugin
+      -- (nvim-lspconfig's vue_ls forwards its tsserver requests to ts_ls)
+      vim.lsp.config('ts_ls', {
+        filetypes = {
+          'javascript', 'javascriptreact', 'javascript.jsx',
+          'typescript', 'typescriptreact', 'typescript.tsx', 'vue',
+        },
+        init_options = {
+          plugins = {
+            {
+              name = '@vue/typescript-plugin',
+              location = node_lsp .. '/node_modules/@vue/typescript-plugin',
+              languages = { 'vue' },
+            },
+          },
+        },
+      })
 
       -- angularls claims every typescript and html buffer: only start it when
       -- there is an Angular workspace (not calling on_dir means "don't attach").
@@ -341,7 +361,7 @@ return {
       -- roslyn is enabled by roslyn.nvim itself
       vim.lsp.enable({
         'powershell_es', 'lua_ls', 'jsonls', 'ts_ls', 'angularls', 'yamlls',
-        'vimls', 'emmet_ls', 'cssls', 'html', 'cucumber_language_server',
+        'vimls', 'emmet_ls', 'cssls', 'html', 'cucumber_language_server', 'vue_ls',
       })
     end,
   },
@@ -467,6 +487,88 @@ return {
           },
         },
       })
+    end,
+  },
+
+  -- Java through jdtls (Eclipse JDT), from modules/neovim-lsp/Setup-NeoVimLSP.ps1,
+  -- run on Java 25, which it needs; projects build and debug on the JDK 21
+  -- (JavaSE-21). Both are apt packages of the host and the image. nvim-jdtls
+  -- starts it, one per project, with the debug and test bundles of
+  -- modules/debugging/Install-JavaDebug.ps1 that config/java_debug uses, and
+  -- opens jdt:// URIs, so gd reaches the JDK's and the dependencies' classes.
+  {
+    'mfussenegger/nvim-jdtls',
+    ft = 'java',
+    config = function()
+      local servers = home .. '/.language-servers'
+      local jdk = vim.fn.glob('/usr/lib/jvm/java-21-openjdk-*', false, true)[1] or vim.env.JAVA_HOME
+      local server_java = vim.fn.glob('/usr/lib/jvm/java-25-openjdk-*', false, true)[1] or jdk
+
+      local bundles = {}
+      vim.list_extend(bundles, vim.fn.glob(servers .. '/java-debug/com.microsoft.java.debug.plugin-*.jar', false, true))
+      -- java-test's jars, minus the ones jdtls already has or that clash with it
+      for _, jar in ipairs(vim.fn.glob(servers .. '/java-test/*.jar', false, true)) do
+        local name = vim.fs.basename(jar)
+        if not name:match('^com%.microsoft%.java%.debug%.plugin') and not name:match('^jacocoagent')
+          and not name:match('^com%.microsoft%.java%.test%.runner%-jar%-with%-dependencies') then
+          table.insert(bundles, jar)
+        end
+      end
+
+      local function start(bufnr)
+        -- A wrapper first (the root of a multi-module build), else the nearest build file
+        local root = vim.fs.root(bufnr, { { 'mvnw', 'gradlew' }, { 'pom.xml', 'build.gradle', 'build.gradle.kts' }, '.git' })
+        if not root then return end
+        local extended = require('jdtls').extendedClientCapabilities
+        extended.resolveAdditionalTextEditsSupport = true
+        require('jdtls').start_or_attach({
+          name = 'jdtls',
+          cmd = {
+            servers .. '/jdtls/bin/jdtls',
+            -- jdtls's own index of the project, one per root, outside it
+            '-data', vim.fn.stdpath('cache') .. '/jdtls/' .. vim.fn.sha256(root):sub(1, 16),
+          },
+          cmd_env = server_java and { JAVA_HOME = server_java } or nil,
+          root_dir = root,
+          -- NeoVim watches the files for jdtls (off by default on Linux), so a
+          -- change made outside it -- a git checkout, an agent's edit -- is
+          -- rebuilt into target/classes, which the debug sessions run
+          capabilities = { workspace = { didChangeWatchedFiles = { dynamicRegistration = true } } },
+          init_options = { bundles = bundles, extendedClientCapabilities = extended },
+          settings = {
+            java = {
+              configuration = {
+                runtimes = jdk and { { name = 'JavaSE-21', path = jdk, default = true } } or nil,
+                updateBuildConfiguration = 'interactive',
+              },
+              -- gd into a dependency shows its source, not a decompiled class
+              maven = { downloadSources = true },
+              eclipse = { downloadSources = true },
+              references = { includeDecompiledSources = true },
+              referencesCodeLens = { enabled = true },
+              implementationsCodeLens = { enabled = true },
+              inlayHints = { parameterNames = { enabled = 'literals' } },
+              signatureHelp = { enabled = true },
+              contentProvider = { preferred = 'fernflower' },
+              sources = { organizeImports = { starThreshold = 99, staticStarThreshold = 99 } },
+            },
+          },
+          on_attach = function()
+            -- The java debug adapter and its main-class configurations (config/java_debug)
+            require('jdtls').setup_dap({ hotcodereplace = 'auto' })
+          end,
+        })
+      end
+
+      vim.api.nvim_create_autocmd('FileType', {
+        group = vim.api.nvim_create_augroup('Jdtls', { clear = true }),
+        pattern = 'java',
+        callback = function(args) start(args.buf) end,
+      })
+      -- The buffer whose filetype loaded this plugin
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.bo[buf].filetype == 'java' then start(buf) end
+      end
     end,
   },
 

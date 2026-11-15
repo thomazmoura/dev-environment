@@ -27,8 +27,12 @@ RUN set -eux; \
     lsb-release \
     make \
     man-db \
+    maven \
     net-tools \
+    openjdk-21-jdk-headless \
+    openjdk-25-jre-headless \
     pkg-config \
+    postgresql-client \
     procps \
     pipx \
     python3 \
@@ -85,3 +89,4 @@ RUN pwsh -NoProfile -File /home/developer/.modules/neovim-install/Install-Neovim
 # Debugger installation
 COPY --chown=developer:developer modules/debugging /home/developer/.modules/debugging
 RUN pwsh -NoProfile -File /home/developer/.modules/debugging/Install-NetCoreDbg.ps1
+RUN pwsh -NoProfile -File /home/developer/.modules/debugging/Install-JavaDebug.ps1

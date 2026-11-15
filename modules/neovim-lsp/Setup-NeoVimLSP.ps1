@@ -38,6 +38,25 @@ Invoke-WebRequest "https://github.com/supabase-community/postgres-language-serve
 & chmod +x "$HOME/.language-servers/postgres/postgres-language-server"
 
 
+Write-Output "`n->> Installing the Eclipse JDT Language Server (Java LSP)"
+# jdtls, the server behind VS Code's Java extension, started by nvim-jdtls
+# (lua/plugins/lsp.lua) on the Java 25 runtime it needs (projects build on the
+# JDK 21, as JavaSE-21). Its debug and test
+# bundles come from modules/debugging/Install-JavaDebug.ps1. Emptied first, so an
+# update leaves none of the previous version's plugins behind.
+$JdtlsVersion = "1.63.0"
+$JdtlsBuild = "202610191322"
+$JdtlsMarker = "$HOME/.language-servers/jdtls/.version"
+if( !(Test-Path $JdtlsMarker) -or ([string](Get-Content $JdtlsMarker -Raw)).Trim() -ne "$JdtlsVersion-$JdtlsBuild" ) {
+  Invoke-WebRequest "https://download.eclipse.org/jdtls/milestones/$JdtlsVersion/jdt-language-server-$JdtlsVersion-$JdtlsBuild.tar.gz" -OutFile "jdtls.tar.gz"
+  Remove-Item -Recurse -Force -Path $HOME/.language-servers/jdtls -ErrorAction SilentlyContinue
+  New-Item -Force -Type Directory -Path $HOME/.language-servers/jdtls | Out-Null
+  & tar -xzf "./jdtls.tar.gz" -C "$HOME/.language-servers/jdtls"
+  & Remove-Item "./jdtls.tar.gz"
+  Set-Content -Path $JdtlsMarker -Value "$JdtlsVersion-$JdtlsBuild"
+}
+
+
 Write-Output "`n->> Installing SQL Tools Service (SQL Server LSP)"
 # The server behind VS Code's mssql extension, self-contained (no dotnet needed).
 # Emptied first so an update leaves none of the previous version's DLLs behind.

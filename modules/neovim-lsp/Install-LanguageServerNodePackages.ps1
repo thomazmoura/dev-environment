@@ -14,7 +14,24 @@ $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 $Prefix = "$HOME/.language-servers/node"
 $Marker = "$Prefix/.installed"
 
-if( !($ForcarAtualizacao) -and (Test-Path $Marker) ) {
+# The packages, also written to the marker: a list that changed since the last
+# install (a server added here) installs again
+$Packages = @(
+  'typescript@<7',
+  'vscode-langservers-extracted',
+  'typescript-language-server',
+  '@angular/language-server',
+  'yaml-language-server',
+  'vim-language-server',
+  'emmet-ls',
+  '@cucumber/language-server',
+  '@vue/language-server',
+  '@vue/typescript-plugin'
+)
+$PackageList = $Packages -join "`n"
+
+$Installed = if( Test-Path $Marker ) { ([string](Get-Content $Marker -Raw) -replace "`r", '').Trim() } else { '' }
+if( !($ForcarAtualizacao) -and $Installed -eq $PackageList ) {
   Write-Verbose "`n-->> Language server packages already installed"
   return;
 }
@@ -40,20 +57,13 @@ $env:PATH = "$(Split-Path $NodeExe):$env:PATH"
 
 # A local install (not --global): the servers land in node_modules/.bin and
 # typescript at the top of node_modules, where ngserver probes for it (7 is
-# the Go port, without the tsserverlibrary both servers load)
-npm install --prefix $Prefix `
-  'typescript@<7' `
-  'vscode-langservers-extracted' `
-  'typescript-language-server' `
-  '@angular/language-server' `
-  'yaml-language-server' `
-  'vim-language-server' `
-  'emmet-ls' `
-  '@cucumber/language-server'
+# the Go port, without the tsserverlibrary both servers load).
+# @vue/typescript-plugin is loaded by ts_ls for .vue files, which vue_ls needs
+npm install --prefix $Prefix @Packages
 
 # The marker is a receipt for a successful install, so a failed one is retried
 if( $LASTEXITCODE -eq 0 ) {
-  New-Item -ItemType File -Path $Marker -Force | Out-Null
+  Set-Content -Path $Marker -Value $PackageList
 } else {
   Write-Warning "npm install failed with exit code $LASTEXITCODE. Not marking the language servers as installed."
 }

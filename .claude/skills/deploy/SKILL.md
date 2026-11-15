@@ -22,7 +22,7 @@ docker build --build-arg DockerBase=thomazmoura/dev-environment:base -f Dockerfi
 
 | File | Role |
 |---|---|
-| `base.Dockerfile` | Stage 1: apt packages, PowerShell, .NET, NeoVim, debugger |
+| `base.Dockerfile` | Stage 1: apt packages (incl. JDK 21, the Java 25 runtime jdtls needs, Maven, psql), PowerShell, .NET, NeoVim, debuggers (netcoredbg, Java's debug/test bundles) |
 | `Dockerfile` | Stage 2: Node, Azure CLI, tmux, LSP, dotfile symlinks, `modules/skills` → `~/.claude/skills` |
 | `qmk-base.Dockerfile` | Stage 3 (optional): QMK + Rust on top of base |
 | `LinuxDevEnv/host-setup.sh` | Master setup for a bare Ubuntu 24.04 host |
@@ -82,6 +82,7 @@ On the host, `~/.tmux.conf` is a local file that sources `~/.modules/wsl2/tmux.c
 - **Moving or renaming a module:** update `base.Dockerfile`, `Dockerfile`, `qmk-base.Dockerfile`, `LinuxDevEnv/host-setup.sh` and `LinuxHost/Setup-PowerShell.ps1`.
 - **New LSP server:**
   1. Download the binary into `~/.language-servers/` from `modules/neovim-lsp/Setup-NeoVimLSP.ps1`. npm servers go in the package list of `Install-LanguageServerNodePackages.ps1` instead: they install into `~/.language-servers/node` with their own node, and `lsp.lua` starts them through `node_server(...)`, so they never run on a project's `.node-version`.
+     Java's jdtls is a tarball there too; its debug and test bundles (jars from the vscjava VS Code extensions on Open VSX) come from `modules/debugging/Install-JavaDebug.ps1`, run by `base.Dockerfile` and `host-setup.sh`.
      Servers of our own are built from source instead: `modules/sql-assist/Build-SqlAssist.ps1`, called from `Setup-NeoVimLSP.ps1`, runs `dotnet publish` into `~/.language-servers/sqlserver-assist` and `~/.language-servers/postgres-assist`, with its intermediate files in `~/.cache/sql-assist` (no `bin/`/`obj/` in the repo). Its module is COPYed in the `Dockerfile` before the `Setup-NeoVimLSP.ps1` RUN.
   2. Configure the server in `modules/nvim-config/lua/plugins/lsp.lua` and add its name to `vim.lsp.enable`.
   3. Angular 11–14 is a special case. `lsp.lua` reads the `@angular/core` major and runs that major's ngserver from `~/.language-servers/angular/<major>` on node 14. `Install-AngularLanguageServer.ps1` installs it in the background the first time such a project opens. Angular < 11 gets only `ts_ls`.

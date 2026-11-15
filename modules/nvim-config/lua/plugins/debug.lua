@@ -1,12 +1,23 @@
--- nvim-dap with netcoredbg (modules/debugging) for .NET. Starting a session is
--- config/dotnet_debug: <Leader>dr the buffer's project, <Leader>dR a picked
+-- nvim-dap with netcoredbg (modules/debugging) for .NET, and java-debug inside
+-- jdtls for Java. Starting a session is config/dotnet_debug, or config/java_debug
+-- in java buffers: <Leader>dr the buffer's project, <Leader>dR a picked
 -- one, <Leader>dt the test or test class under the cursor. While a session
 -- runs, each <Leader>d{key} is also <M-{key}> and gH (or <CR>) opens the value
 -- under the cursor as an expandable tree in a popup (config/dap_session_keys).
 -- Values of types like Guid and DateTime show formatted (config/dotnet_debug/display).
 -- The Watches pane and the REPL complete from Roslyn (config/dotnet_debug/completion).
-local function dotnet(action)
-  return function() require('config.dotnet_debug')[action]() end
+-- The language of the buffer, or of the last session for repeat/stop, which
+-- may run from another buffer (the dap-ui panes, a terminal)
+local last_language = 'dotnet'
+local function language(action)
+  return function()
+    local lang = last_language
+    if action ~= 'repeat_last' and action ~= 'stop' then
+      lang = vim.bo.filetype == 'java' and 'java' or 'dotnet'
+      last_language = lang
+    end
+    require('config.' .. lang .. '_debug')[action]()
+  end
 end
 
 local function dap(method)
@@ -15,11 +26,11 @@ end
 
 -- { key, action, desc }: <Leader>d{key} always, <M-{key}> during a session
 local actions = {
-  { 'r', dotnet('debug_current'), 'project of the buffer (or continue)' },
-  { 'R', dotnet('debug_pick'), 'pick a project' },
-  { 't', dotnet('debug_test'), 'test/test class under the cursor' },
-  { '.', dotnet('repeat_last'), 'repeat the last' },
-  { 's', dotnet('stop'), 'stop (detach when attached)' },
+  { 'r', language('debug_current'), 'project of the buffer (or continue)' },
+  { 'R', language('debug_pick'), 'pick a project' },
+  { 't', language('debug_test'), 'test/test class under the cursor' },
+  { '.', language('repeat_last'), 'repeat the last' },
+  { 's', language('stop'), 'stop (detach when attached)' },
   { 'h', dap('continue'), 'continue' },
   { 'j', dap('step_over'), 'step over' },
   { 'k', dap('step_out'), 'step out' },

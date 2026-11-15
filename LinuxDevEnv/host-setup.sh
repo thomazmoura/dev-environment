@@ -22,8 +22,12 @@ sudo apt update \
     lsb-release \
     make \
     man-db \
+    maven \
     net-tools \
+    openjdk-21-jdk-headless \
+    openjdk-25-jre-headless \
     pkg-config \
+    postgresql-client \
     powershell \
     procps \
     pipx \
@@ -108,6 +112,7 @@ pwsh -NoProfile -File "$HOME/.modules/neovim-install/Install-Neovim.ps1"
 
 # Debugger installation
 pwsh -NoProfile -File "$HOME/.modules/debugging/Install-NetCoreDbg.ps1"
+pwsh -NoProfile -File "$HOME/.modules/debugging/Install-JavaDebug.ps1"
 
 # Node installation
 pwsh -NoProfile -File $HOME/.modules/node/Setup-NVS.ps1 &&

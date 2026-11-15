@@ -18,8 +18,8 @@ return {
       })
       -- Asynchronous, and a no-op for parsers that are already installed
       treesitter.install({
-        'c', 'c_sharp', 'css', 'dockerfile', 'html', 'json', 'lua', 'python',
-        'regex', 'rust', 'sql', 'typescript', 'vim', 'vimdoc', 'yaml',
+        'c', 'c_sharp', 'css', 'dockerfile', 'html', 'java', 'javascript', 'json', 'lua', 'python',
+        'regex', 'rust', 'sql', 'typescript', 'vim', 'vimdoc', 'vue', 'yaml',
       })
 
       -- Highlighting is NeoVim's own now; pcall keeps parser-less filetypes quiet

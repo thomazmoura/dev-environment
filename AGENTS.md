@@ -15,6 +15,7 @@ Personal dotfiles + dev environment. Each tool is a folder in `modules/`, deploy
 | Script library (`prefix,s`) | `modules/scripts/` | its `README.md` |
 | sql-assist, our SQL Server and Postgres language servers (Expand * and Toggle ; code actions, join/INSERT completion, `<Leader>r`'s statements) | `modules/sql-assist/` (C#: `sqlserver/`, `postgres/`, shared `common/`) | its `README.md` |
 | .NET debugging in NeoVim (`<Leader>dr`/`dR` projects, `<Leader>dt` tests, attaching to `dotnet watch`), netcoredbg | `modules/nvim-config/lua/config/dotnet_debug/`, `modules/debugging/` | its `README.md` |
+| Java (jdtls) and Vue LSP, Java debugging in NeoVim (`<Leader>dr`/`dR`/`dt` in java buffers, attaching to JDWP on 5005) | `modules/nvim-config/lua/plugins/lsp.lua`, `modules/nvim-config/lua/config/java_debug/`, `modules/debugging/Install-JavaDebug.ps1` | `.claude/skills/nvim-config/SKILL.md` |
 | Project folders file (`~/.config/dev-environment/projects.json`) and steward.nvim (`:Steward projects`, `~/code/steward.nvim`) | `modules/tmux/scripts/project_folders.py`, `Get-ProjectFolders.py` | `.claude/skills/tmux-config/SKILL.md` |
 | Global Claude Code skills (linked into `~/.claude/skills`) | `modules/skills/` | |
 
