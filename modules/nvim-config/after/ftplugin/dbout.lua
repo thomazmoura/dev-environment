@@ -10,20 +10,25 @@ vim.keymap.set('o', 'ic', function()
     local dbout = require('config.dbout_compact')
     -- The cursor's display column from the text: virtcol() counts showbreak's cells on a wrap
     local vcol = vim.api.nvim_strwidth(vim.api.nvim_get_current_line():sub(1, vim.fn.col('.') - 1))
-    local value = dbout.value_at(0, vim.fn.line('.'), vcol)
+    local value, _, max = dbout.value_at(0, vim.fn.line('.'), vcol)
     if value then
       value = value:gsub('\r\n', '\n')
       vim.fn.setreg(vim.v.register, value, 'c')
       if vim.v.register == '"' then vim.fn.setreg('0', value, 'c') end
-      if vim.fn.strchars(value) >= dbout.SQLCMD_MAX then
-        vim.notify(('dadbod: the value may be cut at sqlcmd\'s %d characters'):format(dbout.SQLCMD_MAX),
-          vim.log.levels.WARN)
+      if max and vim.fn.strchars(value) >= max then
+        vim.notify(('dadbod: the value may be cut at sqlcmd\'s %d characters'):format(max), vim.log.levels.WARN)
       end
       return '<Esc>'
     end
   end
   return ':call db_ui#dbout#get_cell_value()<CR>'
 end, { buffer = true, expr = true, silent = true, desc = 'Cell value' })
+
+-- dadbod-ui's ic, header yank and foreign key jump find a Postgres result's dash line by psql's
+-- ---+---, but config/dbout_compact.lua lays it out as sqlcmd's, runs split by spaces: SQL
+-- Server's pattern finds both. Its schemes are one dictionary per dialect, changed in place
+vim.cmd([[silent! call extend(db_ui#schemas#get('postgresql'),
+  \ { 'cell_line_pattern': db_ui#schemas#get('sqlserver').cell_line_pattern })]])
 
 -- The header stays at the top while the rows scroll under it (config/dbout_pin.lua)
 vim.schedule(require('config.dbout_pin').sync)

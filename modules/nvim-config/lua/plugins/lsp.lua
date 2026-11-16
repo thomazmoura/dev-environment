@@ -246,7 +246,8 @@ return {
       local function sql_root(bufnr, on_dir)
         on_dir(vim.fs.root(bufnr, { 'postgres-language-server.jsonc', '.git' }) or vim.fn.getcwd())
       end
-      -- sql buffers complete from dadbod and sqlserver_assist only (blink's sql_assist source)
+      -- sql buffers complete from dadbod and sqlserver_assist or postgres_assist only (blink's
+      -- sql_assist source)
       local function no_completion(client) client.server_capabilities.completionProvider = nil end
 
       -- Postgres: a project's own postgres-language-server.jsonc, or else
@@ -324,6 +325,16 @@ return {
             end,
           })
         end,
+      })
+      -- Postgres: our own server (modules/sql-assist), as sqlserver_assist is for SQL
+      -- Server: "Expand *" in the code actions, join conditions and INSERT column lists
+      -- in the completion. No "Toggle ;" (Postgres requires it) and no statements (<Leader>r
+      -- cuts them in Lua, config/sql_split_postgres.lua). Without the .NET diagnostics server
+      vim.lsp.config('postgres_assist', {
+        cmd = { home .. '/.language-servers/postgres-assist/PostgresAssist' },
+        cmd_env = { DOTNET_EnableDiagnostics = '0' },
+        filetypes = { 'sql' },
+        root_dir = sql_root,
       })
       require('config.sql_dialect').setup()
 

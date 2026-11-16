@@ -13,6 +13,8 @@ return {
         -- (config/dadbod_locksmith.lua)
         vim.g.db_adapter_sqlserver = 'sqlserver_locksmith#'
         vim.g.db_adapter_postgresql = 'postgresql_locksmith#'
+        -- postgres: URLs too, which dadbod-ui would otherwise give dadbod's own adapter
+        vim.g.db_adapter_postgres = 'postgresql_locksmith#'
       end,
     },
     { 'kristijanhusak/vim-dadbod-completion', ft = { 'sql', 'mysql', 'plsql' }, lazy = true },
@@ -54,7 +56,8 @@ return {
       end,
     })
 
-    -- SQL Server results narrowed to their values, not sqlcmd's 256-character max columns
+    -- Results laid out as framed columns narrowed to their values (config/dbout_compact.lua):
+    -- SQL Server's, not sqlcmd's 256-character max columns, and Postgres's, not psql's table
     vim.api.nvim_create_autocmd('BufReadPost', {
       group = vim.api.nvim_create_augroup('DboutCompact', { clear = true }),
       pattern = '*.dbout',

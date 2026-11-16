@@ -1,7 +1,8 @@
 -- Where a space or a '(' opens blink's menu in a sql buffer (lua/plugins/completion.lua):
--- after a join's ON, for sqlserver-assist's join conditions, and after INSERT [INTO] <table> (,
--- for its column list (modules/sql-assist). Blink blocks both characters everywhere else, so
--- typing a space doesn't list the buffer's words. The server makes the same checks itself.
+-- after a join's ON, for sqlserver-assist's and postgres-assist's join conditions, and after
+-- INSERT [INTO] <table> (, for their column lists (modules/sql-assist). Blink blocks both
+-- characters everywhere else, so typing a space doesn't list the buffer's words. The servers
+-- make the same checks themselves.
 -- M.attach opens the menu after a '(' that nvim-autopairs paired (see there).
 local M = {}
 

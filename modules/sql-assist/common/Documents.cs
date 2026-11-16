@@ -1,6 +1,6 @@
 // The open documents' text (full sync), with the version the client gave it, and the
 // conversions between LSP positions and string offsets
-namespace SqlServerAssist;
+namespace SqlAssist;
 
 public sealed class Document
 {

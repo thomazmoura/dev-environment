@@ -27,12 +27,20 @@ function! postgresql_locksmith#interactive(url, ...) abort
   return call('db#adapter#postgresql#interactive', [s:with_password(a:url)] + a:000)
 endfunction
 
+" Query results for lua/config/dbout_compact.lua to lay out as SQL Server's are: unaligned
+" (-A), fields split by the unit separator and records (header, rows, footer) by the record
+" separator, which no value holds, so a value with line breaks can be joined back. NULL shows
+" as NULL, and the (N rows) footer, which tells where a result ends, is kept on. dadbod runs
+" a range or a selection (<Leader>r) through filter, the query on stdin, and a whole buffer
+" through input, so both get them
+let s:results = ['-A', '-F', "\x1f", '-P', "recordsep=\x1e", '-P', 'null=NULL', '-P', 'footer=on']
+
 function! postgresql_locksmith#filter(url) abort
-  return db#adapter#postgresql#filter(s:with_password(a:url))
+  return db#adapter#postgresql#filter(s:with_password(a:url)) + s:results
 endfunction
 
 function! postgresql_locksmith#input(url, in) abort
-  return db#adapter#postgresql#input(s:with_password(a:url), a:in)
+  return db#adapter#postgresql#input(s:with_password(a:url), a:in) + s:results
 endfunction
 
 function! postgresql_locksmith#complete_database(url) abort

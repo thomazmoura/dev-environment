@@ -1,22 +1,28 @@
-// sqlserver-assist's entry point: LSP over stdin/stdout (Server.cs).
-//
-// The clients send database passwords (sqlserver/connection), so before reading any message
-// the process is closed to other processes running as the same user (Hardening.cs).
+// sqlserver-assist's entry point (../common/Host.cs), with its own methods: sqlserver/connection,
+// a SqlClient connection string, and sqlserver/statements, ScriptDom's statements around a
+// position (the protocol is in ../README.md).
 using StreamJsonRpc;
-using SqlServerAssist;
+using SqlAssist;
+using SqlAssist.SqlServer;
+using SqlAssist.SqlServer.TSql;
 
-Hardening.Apply(args);
+var dialect = new Dialect("sqlserver-assist", new SqlServerConnections(),
+    SqlAssist.SqlServer.CodeActions.CodeActions.All, SqlAssist.SqlServer.Completions.Completions.All);
+return await Host.Run(dialect, server => new SqlServerMethods(server));
 
-var formatter = new SystemTextJsonFormatter { JsonSerializerOptions = Lsp.JsonOptions };
-var handler = new HeaderDelimitedMessageHandler(Console.OpenStandardOutput(), Console.OpenStandardInput(), formatter);
-var rpc = new JsonRpc(handler)
+sealed class SqlServerMethods(Server server)
 {
-    // One message at a time, in order, so a didChange is in before the requests after it.
-    // A request awaiting the database lets the next ones through meanwhile
-    SynchronizationContext = new Microsoft.VisualStudio.Threading.NonConcurrentSynchronizationContext(sticky: false),
-};
-var server = new Server(rpc);
-rpc.AddLocalRpcTarget(server, new JsonRpcTargetOptions { UseSingleObjectParameterDeserialization = true });
-rpc.StartListening();
-await rpc.Completion;
-return server.ExitCode;
+    [JsonRpcMethod("sqlserver/connection")]
+    public void SetConnection(ConnectionParams p) => server.SetConnection(p);
+
+    [JsonRpcMethod("sqlserver/statements")]
+    public SqlAssist.Range[] FindStatements(StatementsParams p)
+    {
+        var document = server.Open(p.TextDocument.Uri);
+        return Parsing.Statements(document.Text, document.Offset(p.Position))
+            .Select(s => document.Range(s.Start, s.End)).ToArray();
+    }
+}
+
+// sqlserver/statements
+sealed record StatementsParams(TextDocumentIdentifier TextDocument, Position Position);

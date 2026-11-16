@@ -1,21 +1,19 @@
-// The LSP methods sqlserver-assist answers (the protocol is in ../README.md): the lifecycle,
-// the documents' text, code actions (CodeActions.All) offered then resolved, completion
-// (Completions.All), and the sqlserver/* methods of its own.
+// The LSP methods every sql-assist server answers (the protocol is in ../README.md): the
+// lifecycle, the documents' text, code actions (the dialect's CodeActions) offered then
+// resolved, and completion (its Completions). Each dialect adds its own methods (Host.Run):
+// its <dialect>/connection calls SetConnection.
 using System.Text.Json;
 using StreamJsonRpc;
-using SqlServerAssist.CodeActions;
-using SqlServerAssist.Completions;
-using SqlServerAssist.TSql;
 
-namespace SqlServerAssist;
+namespace SqlAssist;
 
-public sealed class Server(JsonRpc rpc)
+public sealed class Server(JsonRpc rpc, Dialect dialect)
 {
     // LSP's RequestFailed
     const int RequestFailed = -32803;
 
     readonly Documents documents = new();
-    readonly Connections connections = new();
+    readonly Connections connections = dialect.Connections;
     bool shutdown;
 
     public int ExitCode { get; private set; }
@@ -30,15 +28,15 @@ public sealed class Server(JsonRpc rpc)
             textDocumentSync = new { openClose = true, change = 1 },
             codeActionProvider = new
             {
-                codeActionKinds = CodeActions.CodeActions.All.Select(a => a.Kind).Distinct(),
+                codeActionKinds = dialect.CodeActions.Select(a => a.Kind).Distinct(),
                 resolveProvider = true,
             },
             completionProvider = new
             {
-                triggerCharacters = Completions.Completions.All.SelectMany(c => c.TriggerCharacters).Distinct(),
+                triggerCharacters = dialect.Completions.SelectMany(c => c.TriggerCharacters).Distinct(),
             },
         },
-        serverInfo = new { name = "sqlserver-assist" },
+        serverInfo = new { name = dialect.Name },
     };
 
     [JsonRpcMethod("initialized")]
@@ -76,7 +74,7 @@ public sealed class Server(JsonRpc rpc)
         connections.Close(p.TextDocument.Uri);
     }
 
-    [JsonRpcMethod("sqlserver/connection")]
+    // The dialect's <dialect>/connection
     public void SetConnection(ConnectionParams p)
     {
         try
@@ -85,18 +83,10 @@ public sealed class Server(JsonRpc rpc)
         }
         catch (Exception e) when (e is ArgumentException or FormatException)
         {
-            // SqlConnectionStringBuilder's messages name the keyword or the index, not a value
+            // The connection string builders' messages name the keyword or the index, not a value
             connections.Close(p.TextDocument.Uri);
-            Show(MessageType.Error, "sqlserver-assist: the connection string was refused: " + e.Message);
+            Show(MessageType.Error, dialect.Name + ": the connection string was refused: " + e.Message);
         }
-    }
-
-    [JsonRpcMethod("sqlserver/statements")]
-    public Range[] FindStatements(StatementsParams p)
-    {
-        var document = Open(p.TextDocument.Uri);
-        return Parsing.Statements(document.Text, document.Offset(p.Position))
-            .Select(s => document.Range(s.Start, s.End)).ToArray();
     }
 
     [JsonRpcMethod("textDocument/codeAction")]
@@ -104,7 +94,7 @@ public sealed class Server(JsonRpc rpc)
     {
         if (documents.Get(p.TextDocument.Uri) is not { } document) return Array.Empty<CodeAction>();
         var context = new FeatureContext(document, document.Offset(p.Range.Start), connections);
-        return CodeActions.CodeActions.All
+        return dialect.CodeActions
             .Where(action =>
             {
                 try { return action.Offers(context); }
@@ -118,8 +108,8 @@ public sealed class Server(JsonRpc rpc)
     [JsonRpcMethod("codeAction/resolve")]
     public async Task<CodeAction> ResolveCodeAction(CodeAction p, CancellationToken cancellation)
     {
-        var action = CodeActions.CodeActions.All.FirstOrDefault(a => a.Id == p.Data.Id)
-            ?? throw Failed($"sqlserver-assist: no code action {p.Data.Id}");
+        var action = dialect.CodeActions.FirstOrDefault(a => a.Id == p.Data.Id)
+            ?? throw Failed($"{dialect.Name}: no code action {p.Data.Id}");
         var document = Open(p.Data.Uri);
         if (document.Version != p.Data.Version) throw Failed($"{action.Title}: the document changed since");
         try
@@ -140,7 +130,7 @@ public sealed class Server(JsonRpc rpc)
         var items = new List<CompletionItem>();
         if (documents.Get(p.TextDocument.Uri) is not { } document) return new CompletionList(false, items.ToArray());
         var context = new FeatureContext(document, document.Offset(p.Position), connections);
-        foreach (var completion in Completions.Completions.All)
+        foreach (var completion in dialect.Completions)
         {
             try
             {
@@ -154,9 +144,10 @@ public sealed class Server(JsonRpc rpc)
         return new CompletionList(false, items.ToArray());
     }
 
-    Document Open(string uri) => documents.Get(uri) ?? throw Failed("sqlserver-assist: the document is not open");
+    // The open document, for the dialect's own methods too
+    public Document Open(string uri) => documents.Get(uri) ?? throw Failed(dialect.Name + ": the document is not open");
 
-    static LocalRpcException Failed(string message) => new(message) { ErrorCode = RequestFailed };
+    public static LocalRpcException Failed(string message) => new(message) { ErrorCode = RequestFailed };
 
     void Show(int type, string message) =>
         _ = rpc.NotifyWithParameterObjectAsync("window/showMessage", new ShowMessageParams(type, message));

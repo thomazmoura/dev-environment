@@ -1,7 +1,8 @@
-// What a code action or a completion is (CodeActions/, Completions/), and what it gets to
-// work with. Adding one: a class implementing ICodeAction or ICompletion, and a line in
-// CodeActions.All or Completions.All. Server.cs builds the capabilities from those lists.
-namespace SqlServerAssist;
+// What a code action or a completion is (each dialect's CodeActions/ and Completions/), and what
+// it gets to work with. Adding one: a class implementing ICodeAction or ICompletion, and a line
+// in its dialect's CodeActions.All or Completions.All. Server.cs builds the capabilities from
+// those lists.
+namespace SqlAssist;
 
 // The document, the cursor's offset in its text, and the document's connection string (null
 // when it has none)
@@ -40,3 +41,6 @@ public interface ICompletion
     // Called on every completion request: nothing (quickly) where it doesn't apply
     Task<IEnumerable<CompletionItem>> Complete(FeatureContext context, CancellationToken cancellation);
 }
+
+// A server of sql-assist: its name, its connections (SqlClient, Npgsql...), and its features
+public sealed record Dialect(string Name, Connections Connections, ICodeAction[] CodeActions, ICompletion[] Completions);

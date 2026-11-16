@@ -1,11 +1,11 @@
-// The parts of the LSP types the server uses (https://microsoft.github.io/language-server-protocol/).
+// The parts of the LSP types the servers use (https://microsoft.github.io/language-server-protocol/).
 // Positions are LSP's default UTF-16 code units, which are C# string indices.
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SqlServerAssist;
+namespace SqlAssist;
 
-static class Lsp
+public static class Lsp
 {
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -45,19 +45,17 @@ public record CompletionList(bool IsIncomplete, CompletionItem[] Items);
 // window/showMessage
 public record ShowMessageParams(int Type, string Message);
 
-static class CompletionItemKind
+public static class CompletionItemKind
 {
     public const int Field = 5;
     public const int Reference = 18;
 }
 
-static class MessageType
+public static class MessageType
 {
     public const int Error = 1;
     public const int Warning = 2;
 }
 
-// sqlserver/connection: the document's connection string, null for none
+// <dialect>/connection (sqlserver/connection...): the document's connection string, null for none
 public record ConnectionParams(TextDocumentIdentifier TextDocument, string? ConnectionString);
-// sqlserver/statements
-public record StatementsParams(TextDocumentIdentifier TextDocument, Position Position);

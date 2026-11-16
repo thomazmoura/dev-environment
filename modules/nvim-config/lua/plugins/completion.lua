@@ -53,10 +53,10 @@ return {
         path = { module = 'config.bare_path' },
         -- Tables and columns filtered fuzzily, not only by their start
         dadbod = { name = 'Dadbod', module = 'config.dadbod_fuzzy' },
-        -- sqlserver-assist (modules/sql-assist), the only language server completing in sql
-        -- buffers (plugins/lsp.lua): a join's ON from the foreign keys and an INSERT's column
-        -- list with all the table's columns, ahead of everything else. Its own provider, so
-        -- the offset leaves other filetypes' LSP items alone
+        -- sqlserver-assist or postgres-assist (modules/sql-assist), the only language servers
+        -- completing in sql buffers (plugins/lsp.lua): a join's ON from the foreign keys and an
+        -- INSERT's column list with all the table's columns, ahead of everything else. Its own
+        -- provider, so the offset leaves other filetypes' LSP items alone
         sql_assist = { name = 'SQL', module = 'blink.cmp.sources.lsp', score_offset = 100 },
         fd_files = { name = 'Files', module = 'config.fd_files', score_offset = 100 },
         lazydev = { name = 'LazyDev', module = 'lazydev.integrations.blink', score_offset = 100 },

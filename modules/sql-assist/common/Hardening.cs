@@ -1,4 +1,4 @@
-// Keeps the passwords the server holds (sqlserver/connection) away from other processes
+// Keeps the passwords a server holds (<dialect>/connection) away from other processes
 // running as the same user, as locksmith.nvim does for NeoVim. On Linux:
 // - non-dumpable (prctl PR_SET_DUMPABLE 0): /proc/<pid>/fd (the stdin pipe), mem and environ
 //   refuse them, ptrace too, and no core dump is written;
@@ -9,9 +9,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SqlServerAssist;
+namespace SqlAssist;
 
-static class Hardening
+public static class Hardening
 {
     const int PR_SET_DUMPABLE = 4;
     const string Diagnostics = "DOTNET_EnableDiagnostics";
@@ -22,13 +22,14 @@ static class Hardening
     [DllImport("libc", SetLastError = true)]
     static extern int execve(string path, string?[] argv, string?[] envp);
 
-    public static void Apply(string[] args)
+    // name: the server's, for its messages (sqlserver-assist...)
+    public static void Apply(string name)
     {
         if (!OperatingSystem.IsLinux()) return;
-        if (Environment.GetEnvironmentVariable(Diagnostics) != "0") Reexecute();
+        if (Environment.GetEnvironmentVariable(Diagnostics) != "0") Reexecute(name);
         else RemoveStaleSocket();
         if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0)
-            Console.Error.WriteLine($"sqlserver-assist: could not make the process non-dumpable (errno {Marshal.GetLastWin32Error()})");
+            Console.Error.WriteLine($"{name}: could not make the process non-dumpable (errno {Marshal.GetLastWin32Error()})");
     }
 
     // The socket the runtime opened before Reexecute stays as a file, closed (the PID is the
@@ -45,9 +46,9 @@ static class Hardening
     }
 
     // The same program and arguments (from /proc/self, which holds them whether it runs as
-    // the apphost or as `dotnet SqlServerAssist.dll`), its environment plus the variable.
+    // the apphost or as `dotnet <Server>.dll`), its environment plus the variable.
     // On failure it carries on with diagnostics on, and says so
-    static void Reexecute()
+    static void Reexecute(string name)
     {
         try
         {
@@ -57,11 +58,11 @@ static class Hardening
                 .Select(k => k + "=" + Environment.GetEnvironmentVariable(k))
                 .Append(Diagnostics + "=0");
             execve("/proc/self/exe", argv.Cast<string?>().Append(null).ToArray(), env.Cast<string?>().Append(null).ToArray());
-            Console.Error.WriteLine($"sqlserver-assist: could not restart without the diagnostics server (errno {Marshal.GetLastWin32Error()})");
+            Console.Error.WriteLine($"{name}: could not restart without the diagnostics server (errno {Marshal.GetLastWin32Error()})");
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine("sqlserver-assist: could not restart without the diagnostics server: " + e.Message);
+            Console.Error.WriteLine(name + ": could not restart without the diagnostics server: " + e.Message);
         }
     }
 }

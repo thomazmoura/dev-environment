@@ -5,8 +5,8 @@
 -- <Esc> clears the search highlight, or closes it back on the cell when there is none, and z
 -- zooms it to a tab (where <Esc> does the same).
 --
--- The value comes from config/dbout_compact.lua (SQL Server, line breaks and all), or, for
--- results it did not lay out, from dadbod-ui's cell (as shown).
+-- The value comes from config/dbout_compact.lua (SQL Server's and Postgres's results, line
+-- breaks and all), or, for results it did not lay out, from dadbod-ui's cell (as shown).
 local M = {}
 
 -- Policy of the page HTML opens as (paperboy's message.BROWSER_CSP): a value from a database
@@ -105,13 +105,14 @@ local function open_in_browser(html)
   if err then vim.notify('dadbod: failed to open the browser: ' .. err, vim.log.levels.ERROR) end
 end
 
---- The value under the cursor and its column, from dadbod-ui's cell when dbout_compact has none
+--- The value under the cursor, its column and the length it may have been cut at, from
+--- dadbod-ui's cell when dbout_compact has none
 local function cell()
   local dbout = require('config.dbout_compact')
   -- The cursor's display column from the text: virtcol() counts showbreak's cells on a wrap
   local vcol = vim.api.nvim_strwidth(vim.api.nvim_get_current_line():sub(1, vim.fn.col('.') - 1))
-  local value, column = dbout.value_at(0, vim.fn.line('.'), vcol)
-  if value then return value, column end
+  local value, column, max = dbout.value_at(0, vim.fn.line('.'), vcol)
+  if value then return value, column, max end
 
   local view = vim.fn.winsaveview()
   vim.fn['db_ui#dbout#get_cell_value']()
@@ -123,14 +124,12 @@ local function cell()
 end
 
 function M.open()
-  local value, column = cell()
+  local value, column, max = cell()
   if not value then return end
   local origin, cursor = vim.api.nvim_get_current_win(), vim.api.nvim_win_get_cursor(0)
   value = vim.trim((value:gsub('\r\n?', '\n')))
-  local dbout = require('config.dbout_compact')
-  if vim.fn.strchars(value) >= dbout.SQLCMD_MAX then
-    vim.notify(('dadbod: the value may be cut at sqlcmd\'s %d characters'):format(dbout.SQLCMD_MAX),
-      vim.log.levels.WARN)
+  if max and vim.fn.strchars(value) >= max then
+    vim.notify(('dadbod: the value may be cut at sqlcmd\'s %d characters'):format(max), vim.log.levels.WARN)
   end
 
   local filetype = 'text'

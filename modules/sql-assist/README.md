@@ -6,8 +6,13 @@ to SSMS. Each one runs next to its dialect's server, not instead of it:
 | Folder | Server | Runs next to | Client today |
 |---|---|---|---|
 | `sqlserver/` | `sqlserver-assist` (C#, ScriptDom + SqlClient) | SqlToolsService (`sqlserver_ls`) | NeoVim (`sqlserver_assist`) |
+| `postgres/` | `postgres-assist` (C#, its own tokenizer + Npgsql) | postgres-language-server (`postgres_lsp`) | NeoVim (`postgres_assist`) |
 
-A Postgres one would go in `postgres/`, and a VS Code extension in `vscode/` (see below).
+`common/` holds what both share, compiled into each (`<Compile Include="../common/**/*.cs">`):
+the LSP plumbing (`Host.cs`, `Server.cs`, `Lsp.cs`, `Documents.cs`), `Hardening.cs`, the
+connections' cache (`Connections.cs`), and the features' logic (`Features/`), which each
+dialect fills with its parser, its catalog's queries and its quoting. A VS Code extension would
+go in `vscode/` (see below).
 
 ## What sqlserver-assist does
 
@@ -27,23 +32,45 @@ A Postgres one would go in `postgres/`, and a VS Code extension in `vscode/` (se
   needs no `;` between statements, so only a parser can tell. NeoVim's `<Leader>r` runs the
   one under the cursor.
 
+## What postgres-assist does
+
+The same, for Postgres:
+
+- **Expand \*** (`<Leader>.`): the columns from the server's own description of the probe
+  (Npgsql's `SchemaOnly`: parsed and planned, never run, in a read-only transaction), so
+  views, subqueries, CTEs and `LATERAL` functions expand as Postgres sees them. Names are
+  quoted as `quote_ident()` would, from the server's `pg_get_keywords()`.
+- **Completion:** after a join's `ON`, the foreign keys' conditions (`pg_constraint`; a table
+  without its schema is found along the search path), and after `INSERT [INTO] <table> (`,
+  the columns an INSERT sets (`pg_attribute`, without identity, generated and serial columns).
+
+No "Toggle ;" (Postgres requires every `;`) and no statements request: `<Leader>r` cuts Postgres
+statements in Lua (`config/sql_split_postgres.lua`). Postgres has no parser to call from C#
+(libpg_query is native), so `postgres/Pg/Parsing.cs` reads tokens with psql's rules for
+strings, quoted names, comments and `$$` bodies, and a SELECT's clauses by their keywords at its
+parentheses' depth: enough to find the `*`, its FROM and a join's tables. The server checks the
+probe built from them.
+
 ## Building
 
 ```powershell
 pwsh -File ~/.modules/sql-assist/Build-SqlAssist.ps1
 ```
 
-This publishes to `~/.language-servers/sqlserver-assist/SqlServerAssist` (framework-dependent,
-`net8.0`, rolling forward to newer runtimes). Intermediate files go to `~/.cache/sql-assist`,
+This publishes to `~/.language-servers/sqlserver-assist/SqlServerAssist` and
+`~/.language-servers/postgres-assist/PostgresAssist` (framework-dependent, `net8.0`, rolling
+forward to newer runtimes). Intermediate files go to `~/.cache/sql-assist`,
 so the repo never gets `bin/` or `obj/`. `modules/neovim-lsp/Setup-NeoVimLSP.ps1` runs it on
 setup and in the Docker image. After changing the C#, run it again and `:lsp restart` in NeoVim.
 
 ## Adding a feature
 
-Code actions live in `sqlserver/CodeActions/` and completions in `sqlserver/Completions/`. To add one:
+Code actions live in each dialect's `CodeActions/` and completions in its `Completions/`. To add one:
 
-1. Write a class implementing `ICodeAction` or `ICompletion` (`sqlserver/Features.cs`).
-2. Add it to `CodeActions.All` or `Completions.All`.
+1. Write a class implementing `ICodeAction` or `ICompletion` (`common/Features.cs`). One both
+   dialects have goes in `common/Features/` as a base class, each dialect's class filling in
+   its parser and queries.
+2. Add it to the dialect's `CodeActions.All` or `Completions.All`.
 
 The server builds its capabilities (code action kinds, trigger characters) from those lists.
 
@@ -51,8 +78,9 @@ The server builds its capabilities (code action kinds, trigger characters) from 
   `Resolve` runs once the action is picked: queries go there.
 - A completion's `Complete` runs on every completion request. It returns nothing, and quickly,
   where it doesn't apply.
-- Database access goes through `Connections.Query` (SqlClient) on `context.ConnectionString`.
-  Use `Connections.Cached` for anything read once per connection.
+- Database access goes through `SqlServerConnections.Query` (SqlClient) or
+  `PostgresConnections.Query` (Npgsql, `$1` parameters) on `context.ConnectionString`. Use
+  `context.Connections.Cached` for anything read once per connection.
 - Throw `FeatureException` with a message for the user. It is shown prefixed by the
   feature's name.
 
@@ -68,19 +96,20 @@ Standard LSP over stdio, with positions in UTF-16 (LSP's default):
 | `codeAction/resolve` | → | Does the work and returns `edit.documentChanges`, versioned so a stale edit is refused. Failures come back as an LSP error with a message |
 | `textDocument/completion` | → | Items with a `textEdit` over the word typed |
 | `window/showMessage` | ← | A completion's failure (unreachable server...) |
-| `sqlserver/connection` | → | Notification `{ textDocument: { uri }, connectionString: string \| null }`: the document's SqlClient connection string, or none |
-| `sqlserver/statements` | → | Request `{ textDocument, position }` → `Range[]`: the statements of the position's GO batch, up to the first one ending past it. A statement that doesn't parse is still one: what lies between the ones around it |
+| `sqlserver/connection` | → | sqlserver-assist. Notification `{ textDocument: { uri }, connectionString: string \| null }`: the document's SqlClient connection string, or none |
+| `postgres/connection` | → | postgres-assist. The same, with an Npgsql connection string |
+| `sqlserver/statements` | → | sqlserver-assist. Request `{ textDocument, position }` → `Range[]`: the statements of the position's GO batch, up to the first one ending past it. A statement that doesn't parse is still one: what lies between the ones around it |
 
-Without a `sqlserver/connection`, the parse-only parts still work (`sqlserver/statements`, "Toggle ;",
+Without a connection, the parse-only parts still work (`sqlserver/statements`, "Toggle ;",
 offering "Expand *"). The ones that need the database do nothing, or say why.
 
 ## Secrets
 
-The connection string holds the password. The server is built so it doesn't leak:
+The connection string holds the password. Both servers are built so it doesn't leak:
 
 - **It travels over the server's stdin only.** Never argv or environment variables (unlike
   `env SQLCMDPASSWORD=… sqlcmd`, whose argv every user can read in `/proc`).
-- **On Linux, other processes can't read it** (`Hardening.cs`), even when they run as the
+- **On Linux, other processes can't read it** (`common/Hardening.cs`), even when they run as the
   same user:
   - The process makes itself non-dumpable before it reads anything, so `/proc/<pid>/fd`, `mem`
     and `environ`, ptrace and core dumps are refused.
@@ -93,7 +122,7 @@ The connection string holds the password. The server is built so it doesn't leak
 
 ## A VS Code client
 
-The server needs nothing VS Code-specific. An extension would need:
+The servers need nothing VS Code-specific. An extension would need, for sqlserver-assist:
 
 - `vscode-languageclient`, launching the published binary for `sql` documents, with
   `DOTNET_EnableDiagnostics=0` in its environment;

@@ -6,9 +6,9 @@
 // T-SQL needs no ; between statements, but a MERGE must end with one, and so must the
 // statement before a WITH (a CTE, XMLNAMESPACES) or a THROW: those stay.
 using System.Text.RegularExpressions;
-using SqlServerAssist.TSql;
+using SqlAssist.SqlServer.TSql;
 
-namespace SqlServerAssist.CodeActions;
+namespace SqlAssist.SqlServer.CodeActions;
 
 public sealed class ToggleSemicolon : ICodeAction
 {

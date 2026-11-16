@@ -1,17 +1,23 @@
--- Connects the SQL Server language servers to a sql buffer's dadbod database:
+-- Connects the SQL language servers to a sql buffer's dadbod database. A sqlserver: URL:
 -- - SqlToolsService (sqlserver_ls) with connection/connect, as VS Code's mssql extension
 --   does. Without it the server only parses the text: with it, hover (gh, K) shows a column's
 --   type and nullability, and gd on a table or view opens its CREATE script, which the server
 --   writes to a temporary file;
 -- - sqlserver-assist (sqlserver_assist, modules/sql-assist) with sqlserver/connection, a
 --   SqlClient connection string, for "Expand *" and the join/INSERT completions.
+-- A postgres: or postgresql: URL: postgres-assist (postgres_assist, modules/sql-assist) with
+-- postgres/connection, an Npgsql connection string, for the same features. postgres_lsp gets
+-- none (plugins/lsp.lua turns its connection off).
 -- config/sql_dialect.lua calls M.sync when it attaches the servers to a buffer, and LspAttach
 -- does when one starts. The password comes from config/dadbod_locksmith.lua, as it does
 -- for dadbod's queries. It goes over each server's stdin only, and never while the LSP log
 -- level is DEBUG or below, where NeoVim writes every message to lsp.log in plain text
 local M = {}
 
-local SERVERS = { 'sqlserver_ls', 'sqlserver_assist' }
+-- Each server, in the order they are connected, and the dialect of the URLs it gets
+local SERVERS = { 'sqlserver_ls', 'sqlserver_assist', 'postgres_assist' }
+local DIALECT = { sqlserver_ls = 'sqlserver', sqlserver_assist = 'sqlserver', postgres_assist = 'postgres' }
+local SCHEMES = { sqlserver = 'sqlserver', postgres = 'postgres', postgresql = 'postgres' }
 
 -- dadbod's authentication= → SqlToolsService's authenticationType. The others (Azure AD
 -- interactive...) take a token the server asks its client for: those buffers stay unconnected
@@ -28,7 +34,7 @@ local connected = {}
 local warned_log = false
 
 --- SqlToolsService's connection options for a sqlserver: URL, nil when it can't connect to it
-local function options(url)
+local function sqlserver_options(url)
   local parsed = vim.fn['db#url#parse'](url)
   local params = type(parsed.params) == 'table' and parsed.params or {}
   local auth = params.authentication and METHODS[params.authentication]
@@ -52,9 +58,19 @@ local function options(url)
   }
 end
 
---- A SqlClient connection string from SqlToolsService's options, every value quoted
-local function connection_string(opts)
+--- A connection string of the parts ({ keyword, value }... with nil values left out), every
+--- value quoted, as SqlClient and Npgsql both read them
+local function join(parts)
   local function quote(value) return '"' .. (tostring(value):gsub('"', '""')) .. '"' end
+  local written = {}
+  for _, part in ipairs(parts) do
+    if part[2] ~= nil then table.insert(written, part[1] .. '=' .. quote(part[2])) end
+  end
+  return table.concat(written, ';')
+end
+
+--- A SqlClient connection string from SqlToolsService's options
+local function connection_string(opts)
   local parts = {
     { 'Server', opts.server },
     { 'Database', opts.database },
@@ -71,12 +87,43 @@ local function connection_string(opts)
     table.insert(parts, { 'User ID', opts.user })
     table.insert(parts, { 'Password', opts.password })
   end
-  local written = {}
-  for _, part in ipairs(parts) do
-    if part[2] ~= nil then table.insert(written, part[1] .. '=' .. quote(part[2])) end
-  end
-  return table.concat(written, ';')
+  return join(parts)
 end
+
+-- libpq's sslmode= → Npgsql's SSL Mode
+local SSL_MODES = {
+  disable = 'Disable', allow = 'Allow', prefer = 'Prefer', require = 'Require',
+  ['verify-ca'] = 'VerifyCA', ['verify-full'] = 'VerifyFull',
+}
+
+--- postgres-assist's options for a postgres[ql]: URL: its Npgsql connection string, and the
+--- password in it (nil when the server needs none: trust, ~/.pgpass and $PGPASSWORD, which
+--- Npgsql reads as psql does). nil when no password was typed
+local function postgres_options(url)
+  url = require('config.dadbod_locksmith').with_password(url)
+  if not url then return end
+  local parsed = vim.fn['db#url#parse'](url)
+  local params = type(parsed.params) == 'table' and parsed.params or {}
+  local database = (parsed.path or ''):gsub('^/', '')
+  -- psql's default without a host: the local server's socket
+  local host = parsed.host or (vim.uv.fs_stat('/var/run/postgresql') and '/var/run/postgresql') or 'localhost'
+  return {
+    connection_string = join({
+      { 'Host', host },
+      { 'Port', parsed.port },
+      { 'Database', database ~= '' and database or nil },
+      { 'Username', parsed.user },
+      { 'Password', parsed.password },
+      { 'SSL Mode', params.sslmode and SSL_MODES[params.sslmode:lower()] },
+      { 'Application Name', 'nvim' },
+    }),
+    password = parsed.password,
+  }
+end
+
+-- The options each dialect's servers are connected with, asked once for all of them (it may
+-- ask for the password); nil when they can't be connected
+local OPTIONS = { sqlserver = sqlserver_options, postgres = postgres_options }
 
 -- How each server is connected to a buffer's database, and disconnected from it
 local CONNECT = {
@@ -92,11 +139,17 @@ local CONNECT = {
   sqlserver_assist = function(client, _, uri, opts)
     client:notify('sqlserver/connection', { textDocument = { uri = uri }, connectionString = connection_string(opts) })
   end,
+  postgres_assist = function(client, _, uri, opts)
+    client:notify('postgres/connection', { textDocument = { uri = uri }, connectionString = opts.connection_string })
+  end,
 }
 local DISCONNECT = {
   sqlserver_ls = function(client, uri) client:notify('connection/disconnect', { ownerUri = uri }) end,
   sqlserver_assist = function(client, uri)
     client:notify('sqlserver/connection', { textDocument = { uri = uri }, connectionString = vim.NIL })
+  end,
+  postgres_assist = function(client, uri)
+    client:notify('postgres/connection', { textDocument = { uri = uri }, connectionString = vim.NIL })
   end,
 }
 
@@ -105,35 +158,40 @@ local function logging_messages()
   return vim.lsp.log.get_level() <= vim.log.levels.DEBUG
 end
 
---- Connects the buffer's servers to its dadbod connection, unless they already are
+--- Connects the buffer's servers to its dadbod connection, unless they already are: the
+--- servers of its URL's dialect, the others to none
 function M.sync(buf)
   local url = require('config.sql_dialect').dadbod_url(buf)
+  local dialect
   if url then
     require('lazy').load({ plugins = { 'vim-dadbod' } })
     url = vim.fn['db#resolve'](url)
-    if not url:match('^sqlserver:') then url = nil end
+    dialect = SCHEMES[url:match('^(%w+):') or '']
   end
   local uri = vim.uri_from_bufnr(buf)
-  -- Asked once for both servers (it may ask for the password)
+  -- Asked once for all the dialect's servers (it may ask for the password)
   local opts
   for _, name in ipairs(SERVERS) do
     local client = vim.lsp.get_clients({ bufnr = buf, name = name })[1]
+    local target = dialect == DIALECT[name] and url or nil
     local buffers = client and (connected[client.id] or {})
-    if client and buffers[buf] ~= url then
+    if client and buffers[buf] ~= target then
       connected[client.id] = buffers
       if buffers[buf] then DISCONNECT[name](client, uri) end
-      buffers[buf] = url
-      if url and opts == nil then opts = options(url) or false end
-      if opts and opts.password and logging_messages() then
-        -- Asked again on the next sync, once the level is back up
-        buffers[buf] = nil
-        if not warned_log then
-          warned_log = true
-          vim.notify('SQL: not connecting the language servers while the LSP log level is DEBUG:'
-            .. ' lsp.log would get the password', vim.log.levels.WARN)
+      buffers[buf] = target
+      if target then
+        if opts == nil then opts = OPTIONS[dialect](target) or false end
+        if opts and opts.password and logging_messages() then
+          -- Asked again on the next sync, once the level is back up
+          buffers[buf] = nil
+          if not warned_log then
+            warned_log = true
+            vim.notify('SQL: not connecting the language servers while the LSP log level is DEBUG:'
+              .. ' lsp.log would get the password', vim.log.levels.WARN)
+          end
+        elseif opts then
+          CONNECT[name](client, buf, uri, opts, buffers)
         end
-      elseif opts then
-        CONNECT[name](client, buf, uri, opts, buffers)
       end
     end
   end
@@ -159,7 +217,7 @@ function M.setup()
     group = group,
     callback = function(args)
       local client = vim.lsp.get_client_by_id(args.data.client_id)
-      if client and vim.list_contains(SERVERS, client.name) then M.sync(args.buf) end
+      if client and DIALECT[client.name] then M.sync(args.buf) end
     end,
   })
   -- gd on a table or view opens the CREATE script the server wrote to a temporary file:
@@ -178,7 +236,7 @@ function M.setup()
   vim.api.nvim_create_autocmd('LspDetach', {
     group = group,
     callback = function(args)
-      -- The Postgres server took the buffer over, or it was closed
+      -- The other dialect's servers took the buffer over, or it was closed
       local buffers = connected[args.data.client_id]
       if not buffers or not buffers[args.buf] then return end
       buffers[args.buf] = nil

@@ -1,0 +1,30 @@
+<!-- postgres-assist: the Postgres language server of sql-assist (see ../README.md).
+     Built by ../Build-SqlAssist.ps1 into ~/.language-servers/postgres-assist -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- The Docker image has only the .NET 8 SDK; a newer runtime runs it too -->
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PostgresAssist</AssemblyName>
+    <RootNamespace>SqlAssist.Postgres</RootNamespace>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- No .pdb next to the published binary -->
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- What every sql-assist server shares: LSP, documents, hardening, the features' logic -->
+    <Compile Include="../common/**/*.cs" LinkBase="common" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="9.0.4" />
+    <!-- JSON-RPC with LSP's Content-Length framing, as Roslyn's server uses -->
+    <PackageReference Include="StreamJsonRpc" Version="2.26.150" />
+  </ItemGroup>
+
+</Project>

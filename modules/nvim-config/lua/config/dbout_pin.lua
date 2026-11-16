@@ -1,6 +1,6 @@
--- Keeps the header of SQL Server results (and the line under it) at the top of the window
--- while its rows scroll under it, as workhorse.nvim does with a build log's header. Loaded by
--- after/ftplugin/dbout.lua.
+-- Keeps the header of SQL Server and Postgres results (and the line under it) at the top of
+-- the window while its rows scroll under it, as workhorse.nvim does with a build log's header.
+-- Loaded by after/ftplugin/dbout.lua.
 --
 -- Once a result's header is scrolled away, a float over the window's first rows shows the
 -- same buffer at that header: its │, ┼ and frame (config/dbout_compact.lua) come along, and it

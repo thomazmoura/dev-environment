@@ -1,5 +1,5 @@
-// The completions the server offers, every one asked on each request (see Features.cs)
-namespace SqlServerAssist.Completions;
+// The completions the server offers, every one asked on each request (see ../../common/Features.cs)
+namespace SqlAssist.SqlServer.Completions;
 
 public static class Completions
 {
@@ -8,7 +8,4 @@ public static class Completions
         new JoinConditions(),
         new InsertColumns(),
     };
-
-    // Word characters, as the T-SQL names typed after ON or ( are matched
-    public const string Word = "[A-Za-z0-9_]";
 }

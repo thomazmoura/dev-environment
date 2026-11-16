@@ -1,8 +1,9 @@
 -- SQL Server and Postgres passwords for vim-dadbod, kept in locksmith.nvim (namespace
 -- "dadbod", one secret per server and login). Called by autoload/sqlserver_locksmith.vim and
--- autoload/postgresql_locksmith.vim, dadbod's adapters for sqlserver: and postgresql: URLs:
--- one with a login and no password gets the saved password when the server takes it, or else
--- the one typed, saved as soon as the server takes it. A Postgres server that lets the login
+-- autoload/postgresql_locksmith.vim, dadbod's adapters for sqlserver: and postgres[ql]: URLs,
+-- and by config/sql_connection.lua for the language servers: one with a login and no password
+-- gets the saved password when the server takes it, or else the one typed, saved as soon as
+-- the server takes it. A Postgres server that lets the login
 -- in without one (trust, ~/.pgpass, $PGPASSWORD) is asked for none. locksmith is unlocked
 -- first, asking again after a wrong password; with its prompt cancelled, the password typed is
 -- used but not saved. Once per login and NeoVim: then it is kept in memory, so an existing
@@ -42,6 +43,9 @@ local SCHEMES = {
     optional = true,
   },
 }
+
+-- postgres: URLs too (plugins/database.lua points them at the same adapter)
+SCHEMES.postgres = SCHEMES.postgresql
 
 -- Secret name → the password the server took this session, or false when it needs none
 local session = {}

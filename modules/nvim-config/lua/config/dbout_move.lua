@@ -2,8 +2,8 @@
 -- the row, onto its value's first character (a count moves that many cells).
 --
 -- The cells are the runs of the dash line under the result's header, as dadbod-ui's ic reads
--- them: sqlcmd's (laid out by config/dbout_compact.lua, runs split by spaces) and psql's (by
--- +). They are display columns, matched to the row's text by width, so a ↵, an … or a wide
+-- them: those config/dbout_compact.lua laid out (sqlcmd's and psql's, runs split by spaces)
+-- and psql's own aligned table's (by +). They are display columns, matched to the row's text by width, so a ↵, an … or a wide
 -- character before the cursor doesn't shift them. Off a result, H and L are NeoVim's.
 local M = {}
 

@@ -1,22 +1,10 @@
 // What ScriptDom, the parser of SSMS and VS Code's mssql, reads from a T-SQL document: where its
 // statements start and end, the select list's * under the cursor, the tables of the join
-// whose ON is being written, and how names are quoted. Offsets are string indices (UTF-16),
-// the end excluded.
+// whose ON is being written (as ../../common/Shapes.cs has them), and how names are quoted.
+// Offsets are string indices (UTF-16), the end excluded.
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace SqlServerAssist.TSql;
-
-// The * (or o.*) of a select list: the names its FROM's tables and views go by there (alias,
-// else name), whether that name is an alias, and the text of its FROM and of its statement's
-// CTEs. Qualifier and With are null when it has none
-public record Star(int Start, int End, string? Qualifier, List<string> Sources, List<bool> Aliased, string? With, string From);
-
-// A table of a join, schema and table unquoted (schema null when not written), and what it
-// goes by there (alias, else name)
-public record JoinTable(string? Schema, string Table, string Name);
-
-// The tables a join joins (several for a parenthesized join), and the ones before it, nearest last
-public record Join(List<JoinTable> Joined, List<JoinTable> Earlier);
+namespace SqlAssist.SqlServer.TSql;
 
 public static class Parsing
 {

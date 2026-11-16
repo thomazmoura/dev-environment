@@ -1,7 +1,7 @@
 -- Which SQL language servers a sql buffer gets: SQL Server's (SqlToolsService and
--- our sqlserver-assist) or Postgres's (postgres-language-server). All claim the sql
--- filetype, so they are configured in plugins/lsp.lua but left out of vim.lsp.enable,
--- and started here.
+-- our sqlserver-assist) or Postgres's (postgres-language-server and our postgres-assist).
+-- All claim the sql filetype, so they are configured in plugins/lsp.lua but left out of
+-- vim.lsp.enable, and started here.
 --
 -- A buffer's dialect comes from, in order:
 --   1. a pin: :SqlDialect sqlserver|postgres, <Leader>dm / <Leader>dp
@@ -14,7 +14,7 @@ local M = {}
 
 local DEFAULT = 'sqlserver'
 
-local SERVERS = { sqlserver = { 'sqlserver_ls', 'sqlserver_assist' }, postgres = { 'postgres_lsp' } }
+local SERVERS = { sqlserver = { 'sqlserver_ls', 'sqlserver_assist' }, postgres = { 'postgres_lsp', 'postgres_assist' } }
 local NAMES = { sqlserver = 'SQL Server', postgres = 'Postgres' }
 local SCHEMES = { sqlserver = 'sqlserver', postgres = 'postgres', postgresql = 'postgres' }
 
@@ -147,7 +147,7 @@ function M.refresh(buf)
   vim.b[buf].sql_dialect, vim.b[buf].sql_dialect_source = dialect, source
   attach(buf, dialect)
   -- An attached server gets a connection set since; a starting one gets it on LspAttach
-  if dialect == 'sqlserver' then require('config.sql_connection').sync(buf) end
+  require('config.sql_connection').sync(buf)
   if before and before ~= dialect then
     vim.notify('SQL: ' .. NAMES[dialect] .. ' (' .. source .. ')', vim.log.levels.INFO)
   end

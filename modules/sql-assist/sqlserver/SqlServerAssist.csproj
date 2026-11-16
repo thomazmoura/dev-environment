@@ -10,11 +10,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SqlServerAssist</AssemblyName>
-    <RootNamespace>SqlServerAssist</RootNamespace>
+    <RootNamespace>SqlAssist.SqlServer</RootNamespace>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- No .pdb next to the published binary -->
     <DebugType>none</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- What every sql-assist server shares: LSP, documents, hardening, the features' logic -->
+    <Compile Include="../common/**/*.cs" LinkBase="common" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- The parser of SSMS and VS Code's mssql -->

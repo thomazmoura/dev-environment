@@ -1,29 +1,42 @@
--- Lays out SQL Server results (sqlcmd's output in dadbod's .dbout buffers) as columns as wide
--- as their widest shown value, and keeps every value whole for yic (after/ftplugin/dbout.lua).
--- Called on BufReadPost *.dbout from lua/plugins/database.lua, so each query and each reload.
+-- Lays out query results in dadbod's .dbout buffers, SQL Server's (sqlcmd) and Postgres's
+-- (psql), as columns as wide as their widest shown value, and keeps every value whole for yic
+-- (after/ftplugin/dbout.lua). Called on BufReadPost *.dbout from lua/plugins/database.lua, so
+-- each query and each reload. On screen only, line breaks show as ↵ and values past MAX_WIDTH
+-- are cut with ….
 --
 -- autoload/sqlserver_locksmith.vim runs queries with sqlcmd -W -y 8000 -s <unit separator>:
 -- values unpadded, up to sqlcmd's 8000-character maximum (its default cuts max types at 256),
--- split by a character no value holds. A value with a line break spans lines, joined back
--- here by counting separators: a row holds one less than its columns. On screen only, line
--- breaks show as ↵ and values past MAX_WIDTH are cut with ….
+-- split by a character no value holds. A result is a header over a line of dashes (one run
+-- per column), then rows up to a blank line. A value with a line break spans lines, joined back
+-- here by counting separators: a row holds one less than its columns. Lines with no separator
+-- after a whole row are the rest of its last value, so only the line breaks of a first column
+-- are misread (of a single column, always). A result whose rows do not add up is kept as
+-- sqlcmd printed it, separators shown as spaces.
 --
--- A result is a header over a line of dashes (one run per column, what dadbod-ui's cell yank
--- and folds read too), then rows up to a blank line; messages and row counts are kept as they
--- are. Lines with no separator after a whole row are the rest of its last value, so only the
--- line breaks of a first column are misread (of a single column, always). A result whose rows
--- do not add up is kept as sqlcmd printed it, separators shown as spaces.
+-- autoload/postgresql_locksmith.vim runs queries with psql -A -F <unit separator> -P
+-- recordsep=<record separator>: a result is its header, rows and (N rows) footer, split by the
+-- record separator and ending at the line that ends with its footer, so line breaks are never
+-- misread. Values are whole (psql cuts none), NULL shown as NULL. The footer is kept under the
+-- result after a blank line, where sqlcmd prints its (N rows affected). A result whose rows do
+-- not add up is kept as psql printed it, separators shown as spaces. Messages (UPDATE 3...) are
+-- kept as they are, as sqlcmd's. In expanded display (\x, dadbod-ui's layout toggle), each
+-- record is a table of its own, a row per column: it has no footer, so it ends at the first
+-- line without a record separator, and a line break in its last value ends it there.
 --
--- The space between columns shows a │, and the dash line ─ and ┼: extmarks over the text,
--- which stays as it is for dadbod-ui and yic. Only the last column's padding is trimmed, so
--- the empty cells at the end of a row keep their │. The table's frame is extmarks too: a │
--- before each line and after its last column (├ and ┤ on the dash line), inline so the text
--- keeps its columns, and a ┌─┬─┐ line above the header and └─┴─┘ below the last row. A result
--- at the top of the file gets a blank line above it to hold its ┌─┬─┐: NeoVim shows no virtual
--- line above the first one (gg scrolls past it).
+-- Both are laid out the same way: a header over a line of dashes (one run per column, what
+-- dadbod-ui's cell yank and folds read too), then the rows. The space between columns shows
+-- a │, and the dash line ─ and ┼: extmarks over the text, which stays as it is for dadbod-ui
+-- and yic. Only the last column's padding is trimmed, so the empty cells at the end of a row
+-- keep their │. The table's frame is extmarks too: a │ before each line and after its last
+-- column (├ and ┤ on the dash line), inline so the text keeps its columns, and a ┌─┬─┐ line
+-- above the header and └─┴─┘ below the last row. A result at the top of the file gets a blank
+-- line above it to hold its ┌─┬─┐: NeoVim shows no virtual line above the first one (gg
+-- scrolls past it).
 local M = {}
 
 local SEP = '\31'
+-- psql's record separator
+local RSEP = '\30'
 
 -- Widest a value is shown, in display cells
 local MAX_WIDTH = 80
@@ -35,7 +48,7 @@ local ns = vim.api.nvim_create_namespace('dbout_compact')
 vim.api.nvim_set_hl(0, 'DboutSeparator', { default = true, link = 'WinSeparator' })
 
 -- buf → lnum → { cols = { { from, to }... } (0-based display columns), values = { whole... },
--- header = { column names... } }
+-- header = { column names... }, max = the length a value may have been cut at, or nil }
 local cells = {}
 -- buf → { { header = lnum, last = lnum }... }: where each result laid out starts and ends
 local results = {}
@@ -104,10 +117,54 @@ local function parse(lines, first, ncols)
   return rows, i
 end
 
+--- The header, rows and footer of the psql result starting at lines[first], and the line after
+--- it; nil when it is not one or its rows do not add up
+local function parse_psql(lines, first)
+  if not lines[first]:find(RSEP, 1, true) then return nil end
+  local last = first
+  while not lines[last]:match(RSEP .. '%(%d+ rows?%)$') do
+    last = last + 1
+    if not lines[last] then return nil end
+  end
+  local records = vim.split(table.concat(lines, '\n', first, last), RSEP, { plain = true })
+  local footer = table.remove(records)
+  local header = split(table.remove(records, 1))
+  if #records ~= tonumber(footer:match('%d+')) then return nil end
+  local rows = {}
+  for r, record in ipairs(records) do
+    rows[r] = split(record)
+    if #rows[r] ~= #header then return nil end
+  end
+  return header, rows, footer, last + 1
+end
+
+--- The records of the psql result in expanded display (\x) starting at lines[first], each as
+--- rows of { column, value }, and the line after it; nil when it is not one. It has no footer:
+--- it ends at the first line holding no record separator, so a line break in its last value
+--- ends it there
+local function parse_psql_expanded(lines, first)
+  if not lines[first]:find(SEP, 1, true) then return nil end
+  local last = first
+  while lines[last + 1] and lines[last + 1]:find(RSEP, 1, true) do last = last + 1 end
+  local records, rows = {}, {}
+  for _, field in ipairs(vim.split(table.concat(lines, '\n', first, last), RSEP, { plain = true })) do
+    if field == '' then
+      if #rows > 0 then table.insert(records, rows) end
+      rows = {}
+    else
+      local name, value = field:match('^(.-)' .. SEP .. '(.*)$')
+      if not name then return nil end
+      table.insert(rows, { name, value })
+    end
+  end
+  if #rows > 0 then table.insert(records, rows) end
+  return records, last + 1
+end
+
 --- Appends the result to out, the whole values of its lines to found, and the separators to
 --- draw over it to marks ({ line, byte, text }, 0-based) and its frame to frames
 --- ({ line, side = 'left'|'right'|'above'|'below', text })
-local function render(header, rows, out, found, marks, frames)
+local function render(header, rows, out, found, marks, frames, max)
   local widths, right, texts = {}, {}, {}
   for c, name in ipairs(header) do
     widths[c] = math.max(width(name), 1)
@@ -153,7 +210,7 @@ local function render(header, rows, out, found, marks, frames)
     end
     parts[#parts] = parts[#parts]:gsub('%s+$', '')
     table.insert(out, table.concat(parts, ' '))
-    if values then found[#out] = { cols = cols, values = values, header = header } end
+    if values then found[#out] = { cols = cols, values = values, header = header, max = max } end
     frame()
     local at = 0
     for c = 1, #parts - 1 do
@@ -185,20 +242,39 @@ end
 function M.compact(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local out, found, marks, frames, ranges, i = {}, {}, {}, {}, {}, 1
+  -- Whether psql's expanded display (\x) is on, from its messages
+  local expanded = false
+  local function add(header, rows, max)
+    if #out == 0 then table.insert(out, '') end
+    local first = #out + 1
+    render(header, rows, out, found, marks, frames, max)
+    table.insert(ranges, { header = first, last = #out })
+  end
   while i <= #lines do
     local header, dashes = lines[i], lines[i + 1]
-    local rows, after
+    local rows, footer, after, records
     if header ~= '' and is_dashes(dashes) and separators(header) == separators(dashes) then
       rows, after = parse(lines, i, separators(dashes) + 1)
+      if rows then add(split(header), rows, M.SQLCMD_MAX) end
+    elseif expanded then
+      -- Each record a table of its own, a row per column
+      records, after = parse_psql_expanded(lines, i)
+      for n, record in ipairs(records or {}) do
+        add({ 'Column', 'Record ' .. n }, record)
+      end
+      rows = records
+    else
+      header, rows, footer, after = parse_psql(lines, i)
+      if rows then
+        add(header, rows)
+        vim.list_extend(out, { '', footer })
+      end
     end
     if rows then
-      if #out == 0 then table.insert(out, '') end
-      local first = #out + 1
-      render(split(header), rows, out, found, marks, frames)
-      table.insert(ranges, { header = first, last = #out })
       i = after
     else
-      table.insert(out, (lines[i]:gsub(SEP, ' ')))
+      if lines[i]:match('^Expanded display is ') then expanded = lines[i]:match(' on%.$') ~= nil end
+      table.insert(out, (lines[i]:gsub('[' .. SEP .. RSEP .. ']', ' ')))
       i = i + 1
     end
   end
@@ -250,8 +326,9 @@ function M.compact(buf)
   end
 end
 
---- The whole value at line lnum, display column vcol (0-based), of buf, and its column's name;
---- nil off a result laid out
+--- The whole value at line lnum, display column vcol (0-based), of buf, its column's name, and
+--- the length it may have been cut at (sqlcmd's maximum; nil for psql, which cuts none); nil
+--- off a result laid out
 function M.value_at(buf, lnum, vcol)
   if buf == 0 then buf = vim.api.nvim_get_current_buf() end
   local row = (cells[buf] or {})[lnum]
@@ -260,7 +337,7 @@ function M.value_at(buf, lnum, vcol)
   for n, col in ipairs(row.cols) do
     if col[1] <= vcol then c = n end
   end
-  return row.values[c], row.header[c]
+  return row.values[c], row.header[c], row.max
 end
 
 --- The header's line and the last row's of the result laid out that holds line lnum of buf;
