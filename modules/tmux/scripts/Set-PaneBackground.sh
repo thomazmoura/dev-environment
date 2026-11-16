@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Paints the panes with opaque backgrounds when the client arriving is Termux,
+# Paints the panes with opaque backgrounds when the active client is Termux,
 # and gives them back to the terminal when it is anything else.
 #
 # Usage: Set-PaneBackground.sh <client_pid>
-#   Run from the client-attached and client-session-changed hooks (see
-#   modules/tmux/common.conf) with the pid of the tmux client that arrived.
+#   Run by Set-ActiveClient.sh (from the client hooks in
+#   modules/tmux/common.conf) with the pid of the active tmux client.
 #
 # Why: on the PC, Ghostty and WezTerm draw a background image and
 # SpotlightDimmer dims the panes that are not focused, so tmux and NeoVim stay
@@ -23,7 +23,7 @@
 # from the session's: that one is only refreshed for update-environment's list,
 # and would still say Termux after coming back to the PC.
 #
-# The styles are global, so every session follows the client that arrived last:
+# The styles are global, so every session follows the active client:
 # PC -> phone -> PC goes transparent -> opaque -> transparent. The two looks are
 # @pane_style_<mode> and @pane_active_style_<mode>, set in common.conf (and
 # overridden in the Docker tmux.conf). @pane_background holds the mode for

@@ -1,5 +1,5 @@
--- Opaque backgrounds when tmux was last attached from Termux, transparent
--- otherwise -- the NeoVim half of modules/tmux/scripts/Set-PaneBackground.sh.
+-- Opaque backgrounds when tmux's active client (Set-ActiveClient.sh) is Termux,
+-- transparent otherwise -- the NeoVim half of modules/tmux/scripts/Set-PaneBackground.sh.
 --
 -- Transparent, the terminal's background shows through and SpotlightDimmer
 -- dims the unfocused splits. Termux has neither, so there the focused split
