@@ -1,3 +1,10 @@
+# PowerShell comes from the powershell-lts package (7.6, .NET 10, supported until
+# Nov 2028), not powershell (7.7+, .NET 11): PSWSMan's Enable-PSWSMan doesn't run
+# on .NET 11 yet. Both packages own /usr/bin/pwsh, so drop the latter first.
+if dpkg -s powershell >/dev/null 2>&1; then
+  sudo apt remove -y powershell
+fi
+
 sudo apt update \
   && sudo apt install -y \
     apt-transport-https \
@@ -24,7 +31,7 @@ sudo apt update \
     man-db \
     net-tools \
     pkg-config \
-    powershell \
+    powershell-lts \
     procps \
     pipx \
     python3 \
