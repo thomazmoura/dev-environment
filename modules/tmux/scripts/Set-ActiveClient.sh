@@ -57,7 +57,7 @@ current=$(tmux show-options -gqv @active_client 2>/dev/null)
 now=$(date +%s)
 
 # Every attached client but control-mode ones (they size nothing), by name.
-declare -A pid activity flags
+declare -A pid=() activity=() flags=()
 while read -r name client_pid client_activity client_flags; do
   [ -n "$name" ] || continue
   pid[$name]=$client_pid activity[$name]=$client_activity flags[$name]=$client_flags
