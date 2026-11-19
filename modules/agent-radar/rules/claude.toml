@@ -167,7 +167,48 @@ detail = "shell running"
 # shell long after it ended. Indented, so the prompt line (`❯ ...`) and your
 # draft cannot take this shape. A dev server left running reads as background
 # for as long as it runs, which is true, and background is quiet.
-line_regex = ['^\s+\S.*\s·\s+\d+\s+shells?\s*$']
+#
+# The counter splits Bash tasks by kind and joins them, so a shell next to a
+# monitor reads `· 1 shell, 2 monitors` (Claude Code 2.1.328, the footer's
+# counter function); the optional tail keeps that one a shell.
+line_regex = ['^\s+\S.*\s·\s+\d+\s+shells?(,\s+\d+\s+monitors?)?\s*$']
+not = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["waiting for permission"] },
+  { contains = ["do you want to allow this connection?"] },
+]
+
+[[rules]]
+id = "background_monitors"
+state = "background"
+priority = 175
+region = "bottom(12)"
+detail = "monitor running"
+# A Monitor tool watch (Bash, MCP or WebSocket), counted at the same place:
+#   ⏵⏵ auto mode on · 1 monitor
+# Each event it emits wakes the agent, so it is parked on it just like on a
+# shell. Below background_shells, which owns `· 1 shell, 1 monitor`.
+# The Artifact comment watcher prints `· 1 Artifact comment monitor` and does NOT
+# match (the word after the number is not `monitor`): it is a passive watch that
+# can sit there all day, which is idle, not background.
+line_regex = ['^\s+\S.*\s·\s+\d+\s+monitors?\s*$']
+not = [
+  { contains = ["do you want to proceed?"] },
+  { contains = ["waiting for permission"] },
+  { contains = ["do you want to allow this connection?"] },
+]
+
+[[rules]]
+id = "background_tasks"
+state = "background"
+priority = 170
+region = "bottom(12)"
+detail = "tasks running"
+# When the running tasks are of MIXED kinds (a monitor and an MCP task, a shell
+# and a subagent...), the counter stops naming them:
+#   ⏵⏵ auto mode on · 2 background tasks
+# Subagent rows still win through background_agents above.
+line_regex = ['^\s+\S.*\s·\s+\d+\s+background\s+tasks?\s*$']
 not = [
   { contains = ["do you want to proceed?"] },
   { contains = ["waiting for permission"] },

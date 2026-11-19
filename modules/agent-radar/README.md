@@ -442,8 +442,9 @@ approval and waiting for a prompt is already carried by `blocked` vs `idle`.
 
 `background` is the one that had to be added, because neither neighbour could
 say it. Claude Code ends its turn and shows its ready prompt, but it is parked
-on work of its own -- a backgrounded shell (`· 1 shell` at the end of the mode
-footer) or backgrounded subagents (the `◯` rows under the footer) -- and will
+on work of its own -- a backgrounded shell or Monitor watch (`· 1 shell`,
+`· 1 monitor`, `· 1 shell, 1 monitor` or `· 2 background tasks` at the end of
+the mode footer) or backgrounded subagents (the `◯` rows under the footer) -- and will
 pick up again when that work finishes, with no keystroke from you. `idle` would
 say "your turn", which it is not; `working` would say "busy right now", when it
 is mostly waiting, often for hours. So it gets a word of its own and working's
