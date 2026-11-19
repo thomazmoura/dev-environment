@@ -19,10 +19,17 @@ Copy-Item "$HOME/.modules/neovim-lsp/editorconfig" "$HOME/.editorconfig"
 
 
 Write-Output "`n->> Installing PowerShell Editor Services (PowerShell LSP)"
-Invoke-WebRequest "https://github.com/PowerShell/PowerShellEditorServices/releases/download/v3.5.4/PowerShellEditorServices.zip" -OutFile "PowerShellEditorServices.zip"
+# nvim-lspconfig starts it with 4.x's -LogLevel names (Information...), which 3.x
+# rejects at startup. Emptied first so an update leaves none of the previous version's DLLs behind.
+Invoke-WebRequest "https://github.com/PowerShell/PowerShellEditorServices/releases/download/v4.7.0/PowerShellEditorServices.zip" -OutFile "PowerShellEditorServices.zip"
+Remove-Item -Recurse -Force -Path $HOME/.language-servers/powershell -ErrorAction SilentlyContinue
 New-Item -Force -Type Directory -Path $HOME/.language-servers/powershell
 & Expand-Archive -Force -Path "PowerShellEditorServices.zip" -DestinationPath "$HOME/.language-servers/powershell"
 & Remove-Item "PowerShellEditorServices.zip"
+# 4.x takes -LogPath (~/.cache/nvim/powershell_es.log, from nvim-lspconfig) as a folder
+# and won't start while 3.x's log file of the same name is there.
+$OldPsesLog = "$HOME/.cache/nvim/powershell_es.log"
+if (Test-Path -PathType Leaf $OldPsesLog) { Remove-Item -Force $OldPsesLog }
 
 
 Write-Output "`n->> Installing Lua Language Server"
