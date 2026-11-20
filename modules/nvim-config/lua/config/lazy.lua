@@ -12,6 +12,23 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Where this machine keeps its projects: the first of $CODE_FOLDER, ~/code,
+-- ~/git and /Git that exists, as modules/tmux/scripts/code-folder.sh decides.
+-- $CODE_FOLDER alone is not enough: a shell can hand down one that does not
+-- exist here (~/code on the company's machines, whose projects are in /Git),
+-- and every plugin would then come from its old GitHub clone.
+local function code_folder()
+  for _, candidate in ipairs({ vim.env.CODE_FOLDER or '', '~/code', '~/git', '/Git' }) do
+    if candidate ~= '' then
+      local path = vim.fn.expand(candidate)
+      if vim.fn.isdirectory(path) == 1 then
+        return vim.fn.resolve(path)
+      end
+    end
+  end
+  return vim.fn.expand('~/code')
+end
+
 require('lazy').setup({
   spec = { { import = 'plugins' } },
   defaults = {
@@ -21,9 +38,8 @@ require('lazy').setup({
   },
   -- My own plugins load from their checkout in the code folder when there is
   -- one (<code folder>/workhorse.nvim...), and from GitHub otherwise (Docker,
-  -- other hosts). The code folder is $CODE_FOLDER, which tmux and the pwsh
-  -- profile set (/Git on the company's machines), else ~/code
-  dev = { path = vim.fn.expand(vim.env.CODE_FOLDER or '~/code'), patterns = { 'thomazmoura' }, fallback = true },
+  -- other hosts), in code_folder() above (/Git on the company's machines)
+  dev = { path = code_folder(), patterns = { 'thomazmoura' }, fallback = true },
   install = { colorscheme = { 'tokyonight-storm', 'habamax' } },
   -- Updates are deliberate (:Lazy update, then commit lazy-lock.json)
   checker = { enabled = false },
