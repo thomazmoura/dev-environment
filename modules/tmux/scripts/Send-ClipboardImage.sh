@@ -65,7 +65,10 @@ source_host="$(linked_peer "$client_pid")"
 # wl-paste on the machine the clipboard is on, under sh as the login shell may
 # be anything. The tmux server, and an ssh login, may have been started
 # without the session's variables: wl-paste needs both to find the compositor.
-paste_env='export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"; command -v wl-paste >/dev/null || exit 1; exec wl-paste "$@"'
+# Under timeout: GNOME has no clipboard protocol for wl-paste and lets it read
+# only while the session can focus it, so on a locked screen it would wait
+# forever, holding the ssh (and, over there, outliving it).
+paste_env='export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"; command -v wl-paste >/dev/null || exit 1; exec timeout 5 wl-paste "$@"'
 clipboard() {
   if [ -n "$source_host" ]; then
     "$REMOTE_SSH" "${SSH_OPTS[@]}" -o BatchMode=yes -o ConnectTimeout=5 "$source_host" \

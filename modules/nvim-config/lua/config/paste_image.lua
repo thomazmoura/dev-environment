@@ -6,9 +6,10 @@
 -- The terminal's own paste can't do this: with only an image in the clipboard
 -- it has no text to send, so NeoVim never sees a paste. Reading the clipboard
 -- here needs its owner's display: Wayland (wl-paste), X11 (xclip) or Windows
--- under WSL. Over ssh or in a container there is none, and it pastes text, as
--- it does while another device is the tmux client in front
--- (config/front_client.lua).
+-- under WSL. With a linked machine's terminal in front of tmux
+-- (config/front_client.lua), the clipboard is that machine's: wl-paste runs
+-- there, over the link's ssh master. Over a plain ssh, in a container, or
+-- with the phone in front there is none to read, and it pastes text.
 --
 -- An image is saved beside the file, in images/, linked relatively. A buffer
 -- with no file (paperboy's compose buffers) saves it in
@@ -22,9 +23,13 @@ local PREFERRED = { 'image/png', 'image/jpeg' }
 -- Keeps a clipboard owner that stopped answering from freezing NeoVim
 local TIMEOUT_MS = 1000
 
-local function run(cmd)
+-- Over ssh to a linked machine: a round trip on the link's master, more on
+-- the rare call that has to connect
+local REMOTE_TIMEOUT_MS = 3000
+
+local function run(cmd, timeout)
   local ok, result = pcall(function()
-    return vim.system(cmd):wait(TIMEOUT_MS)
+    return vim.system(cmd):wait(timeout or TIMEOUT_MS)
   end)
   if ok and result.code == 0 then
     return result.stdout
@@ -80,11 +85,31 @@ end
 --- The clipboard's image, if it holds one
 ---@return table|nil { ext, data }
 local function clipboard_image()
-  local list, read
+  local list, read, timeout
   -- This machine's display is only your clipboard while you type on it: with
-  -- the PC or the phone in front of its tmux, it pastes text from theirs
+  -- a linked machine in front of its tmux, that one's is read; with the PC
+  -- over a plain ssh or the phone, it pastes text from theirs
   -- (config/clipboard.lua)
-  if not vim.env.WSLENV and require('config.front_client').get().kind ~= 'local' then
+  local front = not vim.env.WSLENV and require('config.front_client').get() or { kind = 'local' }
+  if front.peer then
+    -- Under sh, as the login shell may be anything; an ssh login, and a tmux
+    -- server started over ssh, lack the desktop's variables wl-paste needs.
+    -- timeout over there: GNOME has no clipboard protocol for wl-paste and
+    -- lets it read only while the session can focus it, so on a locked
+    -- screen it waits forever, and killing the ssh here would leave it be
+    local function remote(...)
+      return {
+        'ssh', '-n', '-o', 'ControlMaster=no', '-o', 'ControlPath=' .. vim.fn.expand('~/.ssh') .. '/tmux-%C',
+        '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=3', front.peer,
+        "sh -c 'export XDG_RUNTIME_DIR=\"${XDG_RUNTIME_DIR:-/run/user/$(id -u)}\""
+          .. " WAYLAND_DISPLAY=\"${WAYLAND_DISPLAY:-wayland-0}\"; exec timeout 2 wl-paste \"$@\"' _ "
+          .. table.concat(vim.tbl_map(vim.fn.shellescape, { ... }), ' '),
+      }
+    end
+    list = remote('--list-types')
+    read = function(type) return remote('--no-newline', '--type', type) end
+    timeout = REMOTE_TIMEOUT_MS
+  elseif front.kind ~= 'local' then
     return nil
   elseif vim.env.WAYLAND_DISPLAY and vim.fn.executable('wl-paste') == 1 then
     list = { 'wl-paste', '--list-types' }
@@ -98,8 +123,8 @@ local function clipboard_image()
     return nil
   end
 
-  local type = image_type(run(list))
-  local data = type and run(read(type))
+  local type = image_type(run(list, timeout))
+  local data = type and run(read(type), timeout)
   if not data or data == '' then
     return nil
   end
