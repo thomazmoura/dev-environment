@@ -52,6 +52,9 @@ return {
         -- A : from visual mode, not <cmd>: the '<,'> marks are only set on leaving it, so
         -- <cmd> would run the previous selection
         vim.keymap.set('v', '<Leader>r', ':DB<cr>', { buffer = args.buf, desc = 'Run selection' })
+        -- One of the buffer's earlier results, in the results window (config/dbout_history.lua)
+        vim.keymap.set('n', '<Leader>d?', function() require('config.dbout_history').pick() end,
+          { buffer = args.buf, desc = 'Results history' })
         require('config.sql_completion_triggers').attach(args.buf)
       end,
     })
@@ -63,5 +66,9 @@ return {
       pattern = '*.dbout',
       callback = function(args) require('config.dbout_compact').compact(args.buf) end,
     })
+
+    -- Each query buffer keeps its results, and the results window follows the buffer entered
+    -- (config/dbout_history.lua). Here, not in config: :DB runs before dadbod-ui loads
+    require('config.dbout_history').setup()
   end,
 }

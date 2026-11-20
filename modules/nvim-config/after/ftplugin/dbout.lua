@@ -50,3 +50,7 @@ vim.keymap.set('n', 'K', 'k', { buffer = true, desc = 'Cell above' })
 -- too (config/dbout_cell.lua)
 vim.keymap.set('n', '<Leader><CR>', function() require('config.dbout_cell').open() end,
   { buffer = true, desc = 'Show the cell in a popup' })
+
+-- One of the earlier results of the query buffer these came from (config/dbout_history.lua)
+vim.keymap.set('n', '<Leader>d?', function() require('config.dbout_history').pick() end,
+  { buffer = true, desc = 'Results history' })
