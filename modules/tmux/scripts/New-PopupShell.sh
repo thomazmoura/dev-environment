@@ -4,7 +4,7 @@
 #
 #   prefix+p  a shell on the current session's connection, in its working
 #             directory: a local pwsh in the pane's directory in a local
-#             session; in an ssh session (prefix+N) or a Docker one (prefix+D),
+#             session; in an ssh session (prefix+n) or a Docker one (prefix+D),
 #             the shell a terminal split there would get, in the session's
 #             working directory (pane_command, as for New-ToolPane.sh).
 #   prefix+P  a local pwsh in the home folder, whichever session the binding

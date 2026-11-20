@@ -195,7 +195,7 @@ history without changing what it reports.
 ## ssh sessions
 
 An ssh session is a local tmux session whose panes are all ssh'd into one host
-(`prefix + N`, `modules/tmux/scripts/New-SshSession.sh`). An agent started in
+(`prefix + n`, `modules/tmux/scripts/New-SshSession.sh`). An agent started in
 one of its panes -- by `prefix + t` then `c`, or typed by hand -- is listed in
 every consumer beside the local ones: the status bar, the picker, both feed
 panes, the notifications. The feed panes are local ones even in an ssh session
@@ -261,7 +261,7 @@ it: the tag is set when the pane's ssh starts.
 
 ## Linked machines
 
-A machine linked with `prefix + N` (`modules/tmux/scripts/tmux_link.py`) runs its
+A machine linked with `prefix + n` (`modules/tmux/scripts/tmux_link.py`) runs its
 own tmux, so its agents' screens are there, not here -- the reverse of an ssh
 session. Its own agent-radar does all the work, and this one lists the result:
 `Get-AgentState.py --serve-panes` over ssh (poller target `link:<address>`)

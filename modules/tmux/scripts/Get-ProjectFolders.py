@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The project folders of this machine, one per line as <shown> TAB <path>: what
-prefix+/ (New-CodeSession.sh) lists, and what prefix+N (New-SshSession.sh) runs
+prefix+/ (New-CodeSession.sh) lists, and what prefix+n (New-SshSession.sh) runs
 on a host with this dev-environment. The first level of the code folder plus
 what ~/.config/dev-environment/projects.json adds (project_folders.py; edited
 with steward.nvim's :Steward projects).

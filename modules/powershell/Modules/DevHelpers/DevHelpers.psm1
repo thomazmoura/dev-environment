@@ -1337,7 +1337,7 @@ function Connect-Tmux ($Session, $Target) {
 
     .DESCRIPTION
       `tmux attach-session` by another name, for vtmux and tmuxa: a session on
-      a linked machine (prefix+N) is reached by this terminal leaving the local
+      a linked machine (prefix+n) is reached by this terminal leaving the local
       tmux and attaching to that one, which only the process around the tmux
       client can do. See modules/tmux/scripts/Connect-Tmux.sh.
 

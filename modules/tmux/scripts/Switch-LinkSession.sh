@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Takes the client to a session, on this machine or on a linked one. What every
 # picker and feed calls once something is chosen: prefix+? (Select-Session.sh),
-# prefix+/ and prefix+N for a folder on a linked machine, Enter in the Git and
+# prefix+/ and prefix+n for a folder on a linked machine, Enter in the Git and
 # Agents panes.
 #
 # Usage: Switch-LinkSession.sh [-c <client>] <key> [<pane>]

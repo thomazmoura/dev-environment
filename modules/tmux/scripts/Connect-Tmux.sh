@@ -2,7 +2,7 @@
 # Attaches a terminal to a tmux session on this machine or on a linked one, and
 # moves it between them: the client side of linked tmux servers.
 #
-# Linked machines (prefix+N, see tmux_link.py) each keep their own tmux server.
+# Linked machines (prefix+n, see tmux_link.py) each keep their own tmux server.
 # A session on another machine is not reached from inside this one -- the
 # terminal leaves this tmux and attaches to that one, so there is never more
 # than one ssh between the device being typed on and the tmux on screen. tmux
@@ -48,7 +48,7 @@
 # device doing the ssh:
 #
 #   ~/.config/tmux-link/aliases   <identity> TAB <address>, written by hand
-#   ~/.config/tmux-link/peers     <identity> TAB <address>, kept by prefix+N
+#   ~/.config/tmux-link/peers     <identity> TAB <address>, kept by prefix+n
 #
 # and is the identity itself when neither has it.
 #

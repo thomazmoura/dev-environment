@@ -16,7 +16,7 @@ set -euo pipefail
 #   behind, so every connection after the first would come without them. This
 #   also stands in for xray.nvim's bin/xray-setup-server.
 #
-# MaxSessions 64 -- an ssh session in tmux (prefix+N) sends every pane, and the
+# MaxSessions 64 -- an ssh session in tmux (prefix+n) sends every pane, and the
 #   Git and Agents radars' queries, through one master connection per host
 #   (SSH_OPTS in modules/tmux/scripts/ssh-helpers.sh). sshd allows 10 sessions
 #   per connection by default, which a few ssh sessions fill: past that every

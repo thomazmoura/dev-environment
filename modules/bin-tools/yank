@@ -42,7 +42,7 @@ test -n "$DISPLAY" && alive xhost && {
 # A plain sequence, not wrapped in tmux's DCS passthrough: tmux has
 # set-clipboard on (modules/tmux/common.conf), so it takes the sequence itself,
 # keeps it as a paste buffer and forwards it to the terminal -- including when
-# it arrives from a remote over ssh (prefix+N). Outside tmux the terminal reads
+# it arrives from a remote over ssh (prefix+n). Outside tmux the terminal reads
 # it directly, which the wrapped form never worked for.
 #
 # Written to the terminal even when stdout is not one (`yank < file > log`, or

@@ -26,7 +26,7 @@ Refreshing in every session at once is affordable because this does not sample:
 Start-GitRadar.py runs the git commands for the whole machine and this reads what
 it published (git_feed.py). Opening a second feed pane costs a file read.
 
-ssh sessions (prefix+N) are listed too, and this pane is always local, even in
+ssh sessions (prefix+n) are listed too, and this pane is always local, even in
 one of them: their rows are asked of their host's own git-radar (git_remote),
 and f/p/P on such a row run on the host over ssh. A host that cannot be asked
 shows its row as offline, saying why. See the README's "ssh sessions".

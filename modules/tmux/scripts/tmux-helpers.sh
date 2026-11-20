@@ -208,7 +208,7 @@ pwsh_invocation() {
 
 # pane_command <pane> <command> [no-exit] [no-pwsh]
 # What a new pane split off <pane> should run: pwsh_invocation, or the same thing
-# over ssh when <pane> belongs to a session opened with prefix+N. Every
+# over ssh when <pane> belongs to a session opened with prefix+n. Every
 # pane-creating script builds its command through here, which is what lets the
 # bindings in common.conf stay unaware of ssh sessions.
 pane_command() {
@@ -315,7 +315,7 @@ replace_pane() {
 # --- Pane kinds ----------------------------------------------------------------
 # What the picker pane of the default layout offers (Select-PaneKind.sh), in
 # the order it lists them: the first is what Enter picks straight away.
-PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "Steward" "DadBod (database)" "Scripts")
+PANE_KINDS=("NeoVim" "Terminal" "Claude Code" "Copilot" "Codex" "Open Code" "Workhorse" "Workhorse (builds)" "Paperboy" "Steward" "Notes" "DadBod (database)" "Scripts")
 
 # pane_kind <pane> <kind>
 # Sets kind_command, kind_no_exit and kind_no_pwsh to what a pane of <kind> runs, ready for
@@ -348,12 +348,13 @@ pane_kind() {
       kind_no_pwsh="no-pwsh"
       ;;
     Notes)
-      # prefix+n and the layout's notes feed (Set-NeovimLayout.sh): NeoVim
-      # on the repository's .notes, with the notes profile (nvim-config/notes.lua) --
-      # bare but for tmux navigation and a transparent background -- or, on an
-      # ssh host without the modules, NORC. The root is found where the
-      # command runs, so the same string serves a local pane and a remote one.
-      # Not in PANE_KINDS either.
+      # The picker's Notes and the layout's notes pane (Set-NeovimLayout.sh):
+      # NeoVim on the repository's .notes, with the notes profile
+      # (nvim-config/notes.lua) -- bare but for tmux navigation and a
+      # transparent background; it creates the file when missing and deletes
+      # it on <Leader>d -- or, on an ssh host without the modules, NORC. The
+      # root is found where the command runs, so the same string serves a
+      # local pane and a remote one.
       local profile="~/.config/nvim/notes.lua"
       [ -n "$bare" ] && profile="NORC"
       kind_command="nvim -u $profile \"\$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.notes\""

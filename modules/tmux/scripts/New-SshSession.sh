@@ -2,7 +2,7 @@
 # Opens an ssh session: a tmux session in which every pane is a shell on a
 # remote host, in one working directory there.
 #
-# Bound to prefix+N as a popup command in modules/tmux/common.conf -- the remote
+# Bound to prefix+n as a popup command in modules/tmux/common.conf -- the remote
 # counterpart of prefix+/ (New-CodeSession.sh). It:
 #
 #   1. asks for user@host, or user@host:port (up-arrow recalls the ones used
@@ -38,9 +38,9 @@
 # pane_command in tmux-helpers.sh.
 #
 # Usage: New-SshSession.sh [-D] [-a | -t user@host -d /remote/dir [-n session name]]
-#   no options  ask both questions, as prefix+N does
+#   no options  ask both questions, as prefix+n does
 #   -a          ask for user@host[:port] even when every open ssh session is on
-#               one host, as prefix+C-n does: a session on another machine
+#               one host, as prefix+N does: a session on another machine
 #   -D          the same, into a local Docker container instead of a host, as
 #               prefix+D does: the first question picks one of the containers
 #               (`docker ps -a`), starting it when it is stopped, and the
@@ -353,7 +353,7 @@ else
     ask=ask_container other="container"
   else
     # The linked machines count as hosts too: with one link and no ssh session
-    # elsewhere, prefix+N goes straight to that machine's folders.
+    # elsewhere, prefix+n goes straight to that machine's folders.
     hosts="$({ tmux list-sessions -F '#{@ssh_target}' 2>/dev/null | sed '/^$/d;/^docker:/d'
                "$link_cli" --format=peers 2>/dev/null | cut -f2; } | sort -u)"
     ask=ask_target other="host"
@@ -385,7 +385,7 @@ name="$(ssh_session_name "$base" "$target" "$user")"
 # The remote's key, unlocked here once so that no pane has to ask for it (see
 # the shared agent in ssh-helpers.sh). Only on a dev-environment remote: that is
 # where the panes' profile would otherwise ask. Asked before the check below so
-# that prefix+N on an open directory is also the way to unlock the key again
+# that prefix+n on an open directory is also the way to unlock the key again
 # once it has expired; when the agent still holds it, nothing is asked.
 #
 # A password that was never given is not a reason to stop: each pane checks
@@ -411,7 +411,7 @@ if [ -n "${asked:-}" ] && [ "$kind" = devenv ] && ! is_docker_target "$target"; 
   fi
 fi
 
-# Re-running prefix+N for a directory that is already open takes you there, as
+# Re-running prefix+n for a directory that is already open takes you there, as
 # prefix+/ does. A session with the same name for somewhere else -- a local
 # one, or the same folder name elsewhere on that host -- is not ours to reuse.
 if tmux has-session -t "=$name" 2>/dev/null; then

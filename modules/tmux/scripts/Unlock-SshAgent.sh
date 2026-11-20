@@ -6,7 +6,7 @@
 #   Run by Add-SshKey (DevHelpers.psm1), from the pwsh profile, when the agent
 #   is not running. Also sent, as text, to an ssh session's host by
 #   remote_agent_unlock (ssh-helpers.sh), for New-SshSession.sh's popup
-#   (prefix+N), each new pane of the session (Unlock-RemoteKey.sh) and
+#   (prefix+n), each new pane of the session (Unlock-RemoteKey.sh) and
 #   git-radar's failure popup (Show-GitFailure.sh) -- as text so the host
 #   runs this version, whatever its checkout. So: POSIX sh, nothing sourced.
 #

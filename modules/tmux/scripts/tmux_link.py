@@ -1,7 +1,7 @@
 """Linked tmux servers: which machines this one is linked to, and what they hold.
 
 Each machine runs its own tmux server with its own sessions. Linking two of
-them (prefix+N, New-SshSession.sh) makes each show the other's sessions and
+them (prefix+n, New-SshSession.sh) makes each show the other's sessions and
 code folders beside its own -- in prefix+?, prefix+/ and the Git and Agents
 panes -- and choosing one moves the *client* to that machine's tmux
 (Switch-LinkSession.sh, Connect-Tmux.sh) instead of opening panes over ssh in

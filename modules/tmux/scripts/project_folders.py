@@ -1,6 +1,6 @@
 """The project folders the session pickers offer: what prefix+/ lists here, and
 what a peer is told this machine has (tmux_link.serve, for prefix+/ there and
-prefix+N on a linked host).
+prefix+n on a linked host).
 
 By default that is the first level of folders in the code folder. The settings
 file adds more, and steward.nvim (:Steward projects) is the screen that edits it:

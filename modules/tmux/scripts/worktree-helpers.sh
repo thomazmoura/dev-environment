@@ -16,7 +16,7 @@
 # which keeps them in the code folder (code-folder.sh: ~/code, or /Git), where
 # prefix+/ already finds them.
 #
-# A worktree also has a *host*. Fired from an ssh session (prefix+N), the
+# A worktree also has a *host*. Fired from an ssh session (prefix+n), the
 # bindings work on the machine that session's panes are on: the repository, the
 # worktree and its branch are all over there, and only the tmux session that
 # opens on it is here. Every function below therefore takes a target -- the

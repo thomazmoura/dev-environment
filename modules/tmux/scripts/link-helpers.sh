@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helpers for linked tmux servers (tmux_link.py), for the scripts that
-# make a link or open a session across one: New-SshSession.sh (prefix+N),
+# make a link or open a session across one: New-SshSession.sh (prefix+n),
 # New-CodeSession.sh (prefix+/) and Select-TmuxLink.sh (prefix+t,l). Sourced,
 # after tmux-helpers.sh, never run.
 
@@ -11,7 +11,7 @@ remote_link_cli='"$HOME/.modules/tmux/scripts/Get-TmuxLink.py"'
 # link_probe <address>
 # The identity (user@hostname) of the machine at <address> when it can be
 # linked: it has this dev-environment in a version that knows about links, and
-# is not this machine. Nothing otherwise, and prefix+N then opens an ssh
+# is not this machine. Nothing otherwise, and prefix+n then opens an ssh
 # session as it always has. Over the connection the caller has just made.
 link_probe() {
   local found

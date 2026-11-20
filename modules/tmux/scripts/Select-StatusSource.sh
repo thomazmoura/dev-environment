@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Choose which host the status bar's Workhorse and Paperboy segments describe:
-# this machine, or one of the hosts an ssh (prefix+N) or Docker (prefix+D)
+# this machine, or one of the hosts an ssh (prefix+n) or Docker (prefix+D)
 # session is open on. Bound to prefix+C-k as a popup command in
 # modules/tmux/common.conf.
 #

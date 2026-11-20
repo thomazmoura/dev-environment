@@ -1,6 +1,6 @@
 """Asks another machine's agent-radar which of our ssh panes hold an agent.
 
-An ssh session (prefix+N, modules/tmux/scripts/New-SshSession.sh) is a local
+An ssh session (prefix+n, modules/tmux/scripts/New-SshSession.sh) is a local
 tmux session whose panes are all ssh'd into one host. An agent started in one
 runs on that host, where this machine's `ps` cannot see it -- but its screen is
 right here, in the pane. So the split is the reverse of git-radar's: the host

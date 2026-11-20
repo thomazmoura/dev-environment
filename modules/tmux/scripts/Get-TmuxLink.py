@@ -5,7 +5,7 @@ a peer is answered with, and how a link is made or removed.
   Get-TmuxLink.py --identity               this machine's user@hostname
   Get-TmuxLink.py --serve                  this machine's sessions and folders,
                                            as JSON: run over ssh by a peer
-                                           (tmux_link.query), and by prefix+N to
+                                           (tmux_link.query), and by prefix+n to
                                            find out whether a host can be linked
   Get-TmuxLink.py --link <identity> <address>
   Get-TmuxLink.py --unlink <identity>      edit the peers file; run here and,

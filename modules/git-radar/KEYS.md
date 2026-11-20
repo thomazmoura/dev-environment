@@ -1,7 +1,7 @@
 # Git pane keys
 
 Every key acts on the selected row's repository. On a row of an ssh session
-(prefix+N), the popups run on that host.
+(prefix+n), the popups run on that host.
 
 A grey row named `host-session` may also be a session on a linked machine. The
 sync and look keys work there too; `Enter` moves you to that machine's tmux, `q`

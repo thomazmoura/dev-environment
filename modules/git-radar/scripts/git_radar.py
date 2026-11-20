@@ -160,7 +160,7 @@ def git(path: str, *args: str) -> tuple[int, str]:
 class Session:
     name: str
     path: str
-    # For an ssh session (prefix+N): its @ssh_target, and whether the host has
+    # For an ssh session (prefix+n): its @ssh_target, and whether the host has
     # this dev-environment -- and so a git-radar to ask. Empty for a local one.
     remote: str = ""
     devenv: bool = False
@@ -177,7 +177,7 @@ def list_sessions() -> list[Session]:
     shell in pane 2 happens to be sitting. pane_current_path is the fallback for
     sessions created without an explicit -c.
 
-    Sessions opened with prefix+N (New-SshSession.sh) have their repository on
+    Sessions opened with prefix+n (New-SshSession.sh) have their repository on
     another machine: their local session_path is only the home directory their
     ssh commands are typed from. Their directory is @ssh_dir instead, on the
     host in @ssh_target, and detect() asks that host about it.

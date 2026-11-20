@@ -1,7 +1,12 @@
--- The Notes pane's NeoVim (tmux layout, prefix+n): `nvim -u ~/.config/nvim/notes.lua`.
+-- The Notes pane's NeoVim (tmux layout, and Notes in the picker pane):
+-- `nvim -u ~/.config/nvim/notes.lua`.
 -- As bare as `nvim -u NORC`, plus a few things from the full config -- moving
 -- between tmux panes, auto-save, a transparent background and markview's
--- markdown rendering -- and without a status bar.
+-- markdown rendering -- and without a status bar. It writes a .notes that is
+-- not there yet, and <Leader>d deletes it and closes the pane.
+
+-- The full config's leader (init.lua)
+vim.g.mapleader = ' '
 
 -- No plugins but these three, from the full config's lazy.nvim install
 vim.o.loadplugins = false
@@ -103,3 +108,32 @@ vim.opt.shortmess:append('FWI')
 
 -- Ctrl+C in normal mode saves and closes the notes
 vim.keymap.set('n', '<C-c>', '<Cmd>wq<CR>')
+
+-- A .notes that is not there yet is written straight away, empty, so the
+-- layout's notes pane (prefix+v, Set-NeovimLayout.sh) finds it from now on
+vim.api.nvim_create_autocmd('VimEnter', {
+  callback = function()
+    local path = vim.api.nvim_buf_get_name(0)
+    if path ~= '' and vim.fn.filereadable(path) == 0
+        and vim.fn.isdirectory(vim.fn.fnamemodify(path, ':h')) == 1 then
+      vim.cmd('silent write')
+    end
+  end,
+})
+
+-- <Leader>d deletes the notes file and quits, which closes the pane -- asking
+-- first unless there is nothing in it. The buffer is turned into a scratch one
+-- before quitting so neither auto-save nor :wq can write it back.
+vim.keymap.set('n', '<Leader>d', function()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == '' then return end
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local empty = #lines == 1 and lines[1] == ''
+  if not empty and vim.fn.confirm('Delete ' .. vim.fn.fnamemodify(path, ':~:.') .. '?', '&Yes\n&No', 2) ~= 1 then
+    return
+  end
+  vim.fn.delete(path)
+  vim.bo.buftype = 'nofile'
+  vim.bo.modified = false
+  vim.cmd('qa!')
+end, { desc = 'Delete the notes file and close the pane' })

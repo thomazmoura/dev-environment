@@ -5,7 +5,7 @@
 # Usage, as the command of a display-popup (through Invoke-Popup.sh):
 #   Show-GitCommit.sh <session> <repo-root> [<ssh-target>]
 #
-# <ssh-target> is given for a row of an ssh session (prefix+N), whose repository
+# <ssh-target> is given for a row of an ssh session (prefix+n), whose repository
 # is on that host: the whole thing then runs there, over `ssh -t`, so the status
 # is the host's and the editor that opens is the host's.
 #

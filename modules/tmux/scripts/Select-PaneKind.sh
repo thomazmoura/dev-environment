@@ -4,7 +4,7 @@
 #
 # Without a kind it runs inside a pane: an fzf list of what the pane could be
 # (PANE_KINDS in tmux-helpers.sh -- NeoVim, Terminal, the coding agents,
-# Workhorse, Paperboy, Steward, the database UI, the script library), and the pane turns into whatever
+# Workhorse, Paperboy, Steward, the repository's .notes, the database UI, the script library), and the pane turns into whatever
 # is chosen -- Scripts into prefix+s's script picker, asking right here. Enter straight away picks NeoVim.
 # Enter on something that is not an option asks again; Esc or C-c closes the
 # pane, and Restore-PickerPane.sh puts a new picker back if that leaves the
@@ -15,8 +15,8 @@
 #
 # With a kind it splits a new pane off -t running that kind, the way
 # New-ToolPane.sh does -- prefix+e and prefix+- then e open NeoVim that way,
-# prefix+E and prefix+- then E a bare NeoVim (NORC), run by bash, not pwsh,
-# and prefix+n a nearly bare one (nvim-config/notes.lua) on the repository's .notes. The kind Picker splits off
+# prefix+E and prefix+- then E a bare NeoVim (NORC), run by bash, not pwsh.
+# The kind Picker splits off
 # a new pane that asks, the way the layout's picker does -- prefix+Space and
 # prefix+- then Space. With -w the new pane is a window of its own instead of
 # a split: prefix+c opens a picker that way, in place of tmux's bare new-window.
@@ -26,7 +26,7 @@
 # Besides -r, a new pane is the only way to get one outside a new session:
 # nothing types the picker into a pane that is already there.
 #
-# In an ssh session (prefix+N) the picker itself runs here, where fzf is, and
+# In an ssh session (prefix+n) the picker itself runs here, where fzf is, and
 # the chosen tool runs on the remote like every other pane (pane_command) --
 # but for Scripts, a picker too, which runs here and does that itself.
 #

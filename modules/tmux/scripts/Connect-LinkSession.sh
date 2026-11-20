@@ -7,7 +7,7 @@
 # Usage: Connect-LinkSession.sh [-c <client>] <host>:<session>
 #   -c   the client to move; the one this runs under when left out
 #
-# It connects as prefix+N does (New-SshSession.sh): without a terminal first,
+# It connects as prefix+n does (New-SshSession.sh): without a terminal first,
 # cancellable with Esc or Ctrl+C (run_cancellable), and with the popup's
 # terminal only when the batch try was turned away for a password or a host
 # key. A try that times out drops the master it went through, which may be one

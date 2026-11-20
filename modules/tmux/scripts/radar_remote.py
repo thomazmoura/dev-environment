@@ -1,6 +1,6 @@
 """Asking another machine's radar about an ssh session, shared by every radar.
 
-An ssh session (prefix+N, modules/tmux/scripts/New-SshSession.sh) is a local
+An ssh session (prefix+n, modules/tmux/scripts/New-SshSession.sh) is a local
 tmux session whose panes are all ssh'd into one host. What its panes are doing
 is partly on that host -- git-radar's repository, agent-radar's agent process --
 so each radar asks the host's own copy of itself, over ssh, with a `--serve`

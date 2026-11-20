@@ -184,7 +184,7 @@ class Pane:
     state: str = UNKNOWN
     detail: str = ""
     rule_id: str = ""
-    # For a pane of an ssh session (prefix+N): its session's @ssh_target, whose
+    # For a pane of an ssh session (prefix+n): its session's @ssh_target, whose
     # host the agent -- if any -- is running on, and whether that host has this
     # dev-environment and so an agent-radar to ask. Empty for a local pane.
     # `devenv` is not published, for the same reason `attached` is not.
@@ -541,7 +541,7 @@ def sweep_markers(live: set[str]) -> None:
 
 
 # --- Serving another machine's ssh panes ----------------------------------------
-# An ssh session (prefix+N) is a local tmux session whose panes are all ssh'd
+# An ssh session (prefix+n) is a local tmux session whose panes are all ssh'd
 # into one host. An agent started in one of them runs *here*, on that host, and
 # the machine the panes belong to cannot see it: its `ps` shows `ssh` in the
 # foreground. What it can see is the agent's screen -- the pane is relaying this

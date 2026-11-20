@@ -20,7 +20,7 @@ want. `--cached` reads the shared snapshot published by Start-AgentRadar.py
 instead, so a consumer costs a file read no matter how many consumers there are;
 see agent_feed.py. Every binding uses --cached.
 
-Panes of ssh sessions (prefix+N) are listed too, their agent identified by the
+Panes of ssh sessions (prefix+n) are listed too, their agent identified by the
 host they are on. `--serve <client>` is that question's other end: run over ssh
 by the asking machine's agent-radar (agent_remote.query), it prints which of
 <client>'s panes hold an agent on this machine, as JSON -- see

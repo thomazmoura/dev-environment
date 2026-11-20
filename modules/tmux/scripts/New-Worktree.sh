@@ -14,7 +14,7 @@
 #   3. hands over to Open-WorktreeSession.sh, which creates the session with the
 #      standard layout and switches to it from inside this popup.
 #
-# Fired from an ssh session (prefix+N) it does all of that on the host that
+# Fired from an ssh session (prefix+n) it does all of that on the host that
 # session's panes are on. The pane's current path is no use there -- it is the
 # local shell's, not the remote's -- so the repository is the one at the
 # session's @ssh_dir, the worktree is created beside it over ssh, and the

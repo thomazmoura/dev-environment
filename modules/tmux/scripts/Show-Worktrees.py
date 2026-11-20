@@ -7,7 +7,7 @@ worktrees prefix+t then w creates (New-Worktree.sh); the shell side of all of it
 -- registry, naming, removal -- is worktree-helpers.sh, and this defers to it
 for anything that changes something.
 
-The -L is what keeps it here in an ssh session (prefix+N), where every other
+The -L is what keeps it here in an ssh session (prefix+n), where every other
 pane runs on the remote: the registry it manages, and the sessions it opens and
 kills, belong to this tmux server. A worktree on another machine is asked about
 over ssh instead, the way the radar feeds ask a host about its own panes.

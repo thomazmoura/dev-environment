@@ -2,7 +2,7 @@
 # Pastes the image on this machine's clipboard into an ssh session's pane.
 #
 # Usage: Send-ClipboardImage.sh <pane_id>
-#   Bound to C-v in ssh sessions (prefix+N) in modules/tmux/common.conf.
+#   Bound to C-v in ssh sessions (prefix+n) in modules/tmux/common.conf.
 #
 # Claude Code takes an image with Ctrl+V by reading the clipboard itself, with
 # wl-paste or xclip. In an ssh session it runs on the remote, which has no

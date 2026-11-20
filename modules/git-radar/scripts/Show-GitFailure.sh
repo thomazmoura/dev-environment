@@ -6,7 +6,7 @@
 # Usage, as the command of a display-popup (through Invoke-Popup.sh):
 #   Show-GitFailure.sh <verb> <session> <repo-root> <message-file> [<ssh-target>]
 #
-# <ssh-target> is given for a row of an ssh session (prefix+N), whose repository
+# <ssh-target> is given for a row of an ssh session (prefix+n), whose repository
 # is on that host: the retry then runs there, over ssh, and the key offered is
 # the host's own -- the one the host would try for that remote, unlocked in its
 # shared agent the way the session's panes unlock theirs (remote_agent_unlock in

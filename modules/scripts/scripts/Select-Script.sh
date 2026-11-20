@@ -26,7 +26,7 @@
 # Structurally this is Select-Session.sh with a different action at the end:
 # same hidden-value-in-column-one rows, same ctrl-r reload through --list.
 #
-# In an ssh session (prefix+N) the pane runs on the remote, like every other
+# In an ssh session (prefix+n) the pane runs on the remote, like every other
 # pane there, so the list is the remote's library, not this one: a path from
 # here means nothing on the other host, and a script that is only here -- a
 # hidden one, or one not pulled there yet -- could not run. The rows come from

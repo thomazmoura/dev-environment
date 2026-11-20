@@ -29,7 +29,7 @@ summary filtered to that session, plus its idle agents -- 󰚩 1 󰚩 2 󰚩 1, 
 state -- so a row also says what is running in it and whether it wants you. The
 feed (Watch-GitFeed.py) always shows it; the picker asks for it.
 
-ssh sessions (prefix+N) are listed too, their state asked of the host they are
+ssh sessions (prefix+n) are listed too, their state asked of the host they are
 on. `--serve` is that question's other end: run over ssh by the asking
 machine's git-radar (git_remote.query), it reads directories on stdin and
 prints their rows as JSON, from this machine's snapshot -- see git_feed.serve.

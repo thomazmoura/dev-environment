@@ -17,7 +17,7 @@ An assignment's match is one of these (steward's themes/parse.lua reads them the
 same way):
 
     default            whatever nothing more specific matches (required)
-    default (ssh)      an ssh session (prefix+N) no @Host key matches; default
+    default (ssh)      an ssh session (prefix+n) no @Host key matches; default
                        (docker) the same for a Docker one (prefix+D). Blanks
                        around the name allowed, as steward writes it
     Directory          a local session whose directory is that folder or one under
@@ -26,7 +26,7 @@ same way):
     SessionName        a local session of that name, or of that prefix+$ label
                        (Set-SessionLabel.sh: dev-environment named ApolloEnv is
                        ApolloEnv). Anything not path-like
-    Directory@Host     an ssh/Docker session (prefix+N, prefix+D) whose @ssh_dir is
+    Directory@Host     an ssh/Docker session (prefix+n, prefix+D) whose @ssh_dir is
                        that folder or one under it. Absolute. Split at the first @
     SessionName@Host   an ssh/Docker session of that name (@ssh_name, its
                        prefix+$ label, or the session's own name)

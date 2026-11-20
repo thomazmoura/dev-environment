@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gives a tmux session the theme colour themes.json picks for it (themes.py,
 # edited with steward.nvim's :Steward themes): a colour of its own by name or
-# directory, and for an ssh session (prefix+N) or one in a Docker container
+# directory, and for an ssh session (prefix+n) or one in a Docker container
 # (prefix+D) by name or directory on that host, then by its connection's
 # default (default (ssh), default (docker)), then by default. With no
 # themes.json (or one with no default), an ssh or Docker session still gets a

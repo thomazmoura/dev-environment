@@ -117,7 +117,7 @@ name takes it off. It is only a label: the session keeps its real name, which
 everything that looks a session up goes by. The names are kept in
 `~/.cache/tmux/session-names`, keyed by the session's name without a `user@`
 (`apollo-dev-environment`), so a session opened on that folder again gets its
-name back -- and `prefix + /` and `prefix + N` list the named ones first. The
+name back -- and `prefix + /` and `prefix + n` list the named ones first. The
 sampler reads the name off tmux's `@session_label` session option along with
 the rest of `list-sessions`, and `label` is the one row field a snapshot or a
 `--serve` answer may lack (`OPTIONAL_FIELDS`), so an older radar on a host
@@ -326,7 +326,7 @@ A session whose directory is not a work tree still gets a row, dimmed, saying so
 where its branch would be. It shows no counters at all rather than zeros --
 "0 modified" would assert a clean work tree for a directory that has none.
 
-An ssh session (prefix+N) is the exception: its `session_path` is only the local
+An ssh session (prefix+n) is the exception: its `session_path` is only the local
 home its ssh commands are typed from. Its directory is `@ssh_dir`, on the host in
 `@ssh_target`, and the row is asked of that host -- see the next section.
 
@@ -420,7 +420,7 @@ checkout; until it is pulled, its rows say `git-radar outdated`.
 
 ## Linked machines
 
-A machine linked with `prefix + N` (`modules/tmux/scripts/tmux_link.py`) runs its
+A machine linked with `prefix + n` (`modules/tmux/scripts/tmux_link.py`) runs its
 own tmux, and its sessions are listed here after this machine's, in the same
 grey as an ssh session's. They are not sessions of this tmux:
 

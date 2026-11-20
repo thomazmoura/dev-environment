@@ -31,7 +31,7 @@ if [ -n "${TMUX_PANE:-}" ]; then
   # agent_radar.read_marker() applies the same transform in the other direction.
   marker="$cache/${TMUX_PANE#%}.json"
 elif [ -n "${AGENT_RADAR_PANE:-}" ]; then
-  # An ssh pane of another machine's tmux (prefix+N there), which exported
+  # An ssh pane of another machine's tmux (prefix+n there), which exported
   # AGENT_RADAR_PANE=<host>/%12 on its way in. Its markers are kept apart --
   # this machine's sweep_markers would take them for panes of its own tmux
   # that are gone -- and handed to that machine by agent_radar.serve, which

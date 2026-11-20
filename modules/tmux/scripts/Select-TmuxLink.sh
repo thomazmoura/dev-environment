@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Lists the machines this tmux is linked to (tmux_link.py), with whether each
 # answers and how many sessions it has, and removes the link of the one picked
-# -- on both machines, as prefix+N made it.
+# -- on both machines, as prefix+n made it.
 #
 # Bound to prefix+t,l as a popup command in modules/tmux/common.conf.
 #
 # Removing a link closes nothing: that machine's sessions go on in its own
-# tmux, they are only no longer listed here, and prefix+N to it links again.
+# tmux, they are only no longer listed here, and prefix+n to it links again.
 #
 # Usage: Select-TmuxLink.sh [--list]
 #   --list  print the rows and exit; what ctrl-r reloads from
@@ -31,7 +31,7 @@ fi
 require_tools tmux fzf
 
 rows="$(list_rows)"
-[ -n "$rows" ] || die "No linked machines. prefix+N links one."
+[ -n "$rows" ] || die "No linked machines. prefix+n links one."
 
 self="$(readlink -f "${BASH_SOURCE[0]}")"
 selection="$(

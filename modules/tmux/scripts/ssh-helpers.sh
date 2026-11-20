@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Shared helpers for ssh sessions. Sourced (by tmux-helpers.sh), never run.
 #
-# An ssh session is a tmux session opened with prefix+N (New-SshSession.sh):
+# An ssh session is a tmux session opened with prefix+n (New-SshSession.sh):
 # every pane in it is an ssh to one host, started in one working directory on
 # that host. The session remembers both as session options, which live in the
 # tmux server for as long as the session does:
 #
-#   @ssh_target   user@host, or ssh://user@host:port when prefix+N was given a
+#   @ssh_target   user@host, or ssh://user@host:port when prefix+n was given a
 #                 port -- ssh's own URI form, which every ssh takes as it is
 #                 (ssh_host and ssh_user take it apart)
 #   @ssh_dir      the working directory on the remote, absolute
@@ -38,7 +38,7 @@
 #
 # ServerAlive* because a master outlives its network: after a suspend or a VPN
 # dropping it still takes requests on its socket, and every ssh through it --
-# a new pane, prefix+N's connection -- hangs waiting for a host that is no
+# a new pane, prefix+n's connection -- hangs waiting for a host that is no
 # longer there, until TCP gives up hours later. With them the master sees the
 # link is gone within half a minute and exits, and the next ssh connects anew.
 #

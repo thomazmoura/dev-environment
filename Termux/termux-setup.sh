@@ -27,7 +27,7 @@ set -euo pipefail
 # in front of its tmux, through the same socket forwarded to the PC.
 #
 # Linked tmux servers: the dev machines each run their own tmux and list each
-# other's sessions (prefix+N there; modules/tmux/scripts/tmux_link.py). Picking
+# other's sessions (prefix+n there; modules/tmux/scripts/tmux_link.py). Picking
 # a session on another machine moves this terminal to it -- the ssh to the
 # first machine ends and one to the second starts -- which only something
 # running here can do: tmux-link, a copy of modules/tmux/scripts/Connect-Tmux.sh,

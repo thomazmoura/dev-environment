@@ -9,7 +9,7 @@
 #
 # A project that keeps a .notes file at the root of its repository gets a third
 # pane at the bottom of the radar column: that file in a nearly bare NeoVim (the Notes
-# pane kind, prefix+n). Both prefix+v and prefix+V bring it back when it is
+# pane kind, also in the picker). Both prefix+v and prefix+V bring it back when it is
 # missing, and take it away once the file is gone.
 #
 # A window zoomed with prefix+z keeps its zoom: only the radar column beside the
@@ -153,7 +153,7 @@ fi
 queue set -w -t "$top" @layout_window yes
 queue set -w -t "$top" remain-on-exit on
 
-# Every pane goes through pane_command, so in an ssh session (prefix+N) the
+# Every pane goes through pane_command, so in an ssh session (prefix+n) the
 # whole layout runs on the remote, in the session's working directory -- all but
 # the two feeds and the picker, which always run here: each feed lists the ssh
 # sessions' panes itself, beside the local ones, and asks their hosts (see the

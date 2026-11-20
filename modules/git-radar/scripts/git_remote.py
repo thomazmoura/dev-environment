@@ -1,6 +1,6 @@
 """Asks another machine's git-radar where an ssh session's repository stands.
 
-An ssh session (prefix+N, modules/tmux/scripts/New-SshSession.sh) is a local
+An ssh session (prefix+n, modules/tmux/scripts/New-SshSession.sh) is a local
 tmux session whose panes are all ssh'd into one host, so its repository is on
 that host and nothing here can run `git status` on it. What can be done is to
 ask the host's own git-radar, which is the same code as this one: `Get-GitState.py

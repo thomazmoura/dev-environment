@@ -14,7 +14,7 @@
 #                                            the named entries for a picker:
 #                                            the local ones when <target> is
 #                                            empty (prefix+/), else those on
-#                                            <target>'s host (prefix+N)
+#                                            <target>'s host (prefix+n)
 #
 # The name is only a label. The session keeps its real name -- <folder>, or
 # <host>-<folder> over ssh -- which is what every lookup (has-session, the home
@@ -28,7 +28,7 @@
 #
 #   <key> TAB <label> TAB <ssh target, empty for a local session> TAB <directory>
 #
-# The target and directory are there for -l: they let prefix+/ and prefix+N
+# The target and directory are there for -l: they let prefix+/ and prefix+n
 # offer a named session that is not open, and open it under its key again.
 #
 # tmux reads the label from the session option @session_label, which -s copies

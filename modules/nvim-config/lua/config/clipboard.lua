@@ -1,5 +1,5 @@
 -- "+ and "* as the clipboard of the device you're typing on: this machine's
--- display, the PC you ssh'd or linked from (prefix+N), or the phone. Asked on
+-- display, the PC you ssh'd or linked from (prefix+n), or the phone. Asked on
 -- every copy and paste (config/front_client.lua), since those take turns in
 -- front of the same tmux while NeoVim runs.
 --

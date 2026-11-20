@@ -18,7 +18,7 @@ is enabled, nobody reading is not a reason to stop. Detached is exactly when a
 "your agent is waiting" message is worth sending, so the sampler then lives as
 long as the tmux server does.
 
-Agents in the panes of ssh sessions (prefix+N) run on another host, where this
+Agents in the panes of ssh sessions (prefix+n) run on another host, where this
 machine cannot see them: each host is asked which of those panes holds an agent
 (agent_remote.py), from a thread of its own, and the screens are then read here
 like any other pane's.

@@ -5,7 +5,7 @@
 # Usage, as the command of a display-popup (through Invoke-Popup.sh):
 #   Show-GitStatus.sh <session> <repo-root> [<ssh-target>]
 #
-# <ssh-target> is given for a row of an ssh session (prefix+N), whose repository
+# <ssh-target> is given for a row of an ssh session (prefix+n), whose repository
 # is on that host: the status then runs there, over `ssh -t`.
 #
 # Read-only on purpose: this is `c` without the question, for when you only want
