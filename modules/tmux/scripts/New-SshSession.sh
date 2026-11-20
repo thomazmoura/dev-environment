@@ -138,15 +138,18 @@ ask_container() {
 devenv_test='if command -v pwsh >/dev/null 2>&1 && [ -d "$HOME/.modules" ]; then echo devenv; else echo plain; fi'
 
 # The remote's code folder, under sh: code-folder.sh's rule written out again,
-# since the remote may not have this dev-environment -- $CODE_FOLDER, else the
-# first of ~/code, ~/git and /Git there, else ~ -- and cd'd into with -P for
-# the real path, symlinks resolved. An ssh command's shell reads no profile, so
-# $CODE_FOLDER is there only when sshd or the shell's rc file sets it; when it
-# is not, the remote's tmux server is asked for its own (common.conf sets it
-# from the profile it was started with) before guessing, since a stray ~/code
-# left on a machine whose projects moved to /Git would otherwise win.
+# since the remote may not have this dev-environment -- steward.nvim's setting
+# (~/.config/dev-environment/code-folder), else $CODE_FOLDER, else the first of
+# ~/code, ~/git and /Git there, else ~ -- and cd'd into with -P for the real
+# path, symlinks resolved. An ssh command's shell reads no profile, so
+# $CODE_FOLDER is there only when sshd or the shell's rc file sets it (a
+# dev-environment host's ~/.bashrc does, code-folder-env.sh); when neither is
+# there, the remote's tmux server is asked for its own (common.conf sets it)
+# before guessing, since a stray ~/code left on a machine whose projects moved
+# to /Git would otherwise win.
 cd_code_folder='
-root="${CODE_FOLDER:-}"
+root="$(head -n 1 "${XDG_CONFIG_HOME:-$HOME/.config}/dev-environment/code-folder" 2>/dev/null)"
+[ -n "$root" ] || root="${CODE_FOLDER:-}"
 if [ -z "$root" ]; then
   root="$(tmux show-environment -g CODE_FOLDER 2>/dev/null)"
   case "$root" in CODE_FOLDER=*) root="${root#CODE_FOLDER=}" ;; *) root= ;; esac

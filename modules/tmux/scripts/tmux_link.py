@@ -164,15 +164,27 @@ def _tmux_code_folder() -> str:
     return line.removeprefix("CODE_FOLDER=") if line.startswith("CODE_FOLDER=") else ""
 
 
+def _code_folder_setting() -> str:
+    """The code folder steward.nvim's projects screen saved, empty when unset."""
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    try:
+        with open(os.path.join(config, "dev-environment", "code-folder"), encoding="utf-8") as file:
+            return file.readline().strip()
+    except OSError:
+        return ""
+
+
 def code_folder() -> str:
-    """Where the projects are: $CODE_FOLDER, else this machine's tmux server's,
-    else the first of the profile's own guesses that exists (kernel-profile.ps1,
-    code-folder.sh). Worked out again here because a peer asks over ssh, in a
-    shell with none of the profile's variables; tmux is asked before guessing
-    so that a stray ~/code left on a machine whose projects moved to /Git does
-    not win. The real path, as code-folder.sh gives it: a ~/code linked to
-    /Git is /Git to tmux and git."""
-    configured = os.environ.get("CODE_FOLDER") or _tmux_code_folder()
+    """Where the projects are: the setting steward.nvim's projects screen
+    writes (~/.config/dev-environment/code-folder, one line), else
+    $CODE_FOLDER, else this machine's tmux server's, else the first of the
+    profile's own guesses that exists (kernel-profile.ps1, code-folder.sh).
+    Worked out again here because a peer asks over ssh, in a shell that may
+    have none of the profile's variables; the file and tmux come before
+    guessing so that a stray ~/code left on a machine whose projects moved to
+    /Git does not win. The real path, as code-folder.sh gives it: a ~/code
+    linked to /Git is /Git to tmux and git."""
+    configured = _code_folder_setting() or os.environ.get("CODE_FOLDER") or _tmux_code_folder()
     candidates = [configured] if configured else []
     candidates += ["~/code", "~/git", "/Git"]
     for candidate in candidates:

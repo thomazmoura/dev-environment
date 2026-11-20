@@ -39,9 +39,11 @@
       5. moves Claude Code's per-project folders (~/.claude/projects, history
          and memory) to the new paths' names and rewrites ~/.claude.json;
       6. rewrites the old paths in the hand-written dotfiles (~/.profile,
-         ~/.profile.ps1, the user docker.service) and drops ~/.gitconfig's
-         includeIf for ~/code/, each with a .before-move-code-folder backup,
-         then lists any symlink or dotfile that still names ~/code.
+         ~/.profile.ps1, the user docker.service), sets the code folder
+         setting (~/.config/dev-environment/code-folder, which steward.nvim
+         edits) to the destination and drops ~/.gitconfig's includeIf for
+         ~/code/, each with a .before-move-code-folder backup, then lists any
+         symlink or dotfile that still names ~/code.
 
     Afterwards, by hand: log in again (or open a new login shell) so ~/.profile
     is re-read, restore/rebuild .NET projects (obj/ holds absolute paths),
@@ -290,6 +292,15 @@ foreach ($file in $dotfiles | Where-Object { Test-Path -LiteralPath $_ }) {
 if ($serviceChanged) {
   & systemctl --user daemon-reload 2>$null
   if ($LASTEXITCODE) { Write-Warning "systemctl --user daemon-reload failed (no user session bus?): run it by hand" }
+}
+
+# The code folder setting (steward.nvim's projects screen, code-folder-env.sh):
+# it comes before every guess, so it names the destination from now on.
+$codeFolderFile = "$(if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { "$HOME/.config" })/dev-environment/code-folder"
+$savedCodeFolder = if (Test-Path -LiteralPath $codeFolderFile) { [IO.File]::ReadAllText($codeFolderFile).Trim() }
+if ($savedCodeFolder -ne $Destination -and $PSCmdlet.ShouldProcess($codeFolderFile, "Set the code folder to $Destination")) {
+  New-Item -ItemType Directory -Force -Path (Split-Path $codeFolderFile) | Out-Null
+  [IO.File]::WriteAllText($codeFolderFile, "$Destination`n")
 }
 
 # git matches includeIf gitdir: against the real path, so a ~/code/ one can no

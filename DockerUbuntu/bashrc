@@ -1,3 +1,6 @@
+# $CODE_FOLDER from steward.nvim's code-folder setting (modules/tmux/scripts/code-folder-env.sh)
+[ -r "$HOME/.modules/tmux/scripts/code-folder-env.sh" ] && . "$HOME/.modules/tmux/scripts/code-folder-env.sh"
+
 # Check if there is any persisted bashrc on $HOME/.storage and load it if there is
 if [ -e "$HOME/.storage/bashrc" ]; then
   source "$HOME/.storage/bashrc"

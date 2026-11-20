@@ -257,6 +257,20 @@ $HOME/neovim/bin/nvim --headless "+Lazy! restore" +qa || $HOME/neovim/bin/nvim -
 # Spell files (needs the site symlink above, since it writes through it)
 pwsh -NoProfile -File $HOME/.modules/neovim-base/Install-SpellFiles.ps1
 
+# $CODE_FOLDER from steward.nvim's code-folder setting, for every shell and ssh
+# command (modules/tmux/scripts/code-folder-env.sh): on the first line of
+# ~/.bashrc, above its "not interactive, return" guard, which is where an
+# `ssh host cmd` still reads it.
+code_folder_env='[ -r "$HOME/.modules/tmux/scripts/code-folder-env.sh" ] && . "$HOME/.modules/tmux/scripts/code-folder-env.sh" # dev-environment: CODE_FOLDER'
+touch "$HOME/.bashrc"
+if ! grep -qF '# dev-environment: CODE_FOLDER' "$HOME/.bashrc"; then
+    if [ -s "$HOME/.bashrc" ]; then
+        sed -i "1i\\$code_folder_env" "$HOME/.bashrc"
+    else
+        echo "$code_folder_env" > "$HOME/.bashrc"
+    fi
+fi
+
 # User environment variables
 pwsh -NoProfile -Command "if ( ! (Test-Path $HOME/.profile.ps1) ) { New-Item -Path $HOME/.profile.ps1 }"
 powershell_profile="$HOME/.profile.ps1"

@@ -84,14 +84,19 @@ if (!$global:LeanProfile) {
   }, $true, $false, 1)
 }
 
-# Where the projects are: $CODE_FOLDER when set (tmux sets it for its panes),
-# else the first of ~/code, ~/git and /Git that exists -- the rule of
-# modules/tmux/scripts/code-folder.sh and tmux_link.py. Stored as the real,
+# Where the projects are: the setting steward.nvim's projects screen writes
+# (~/.config/dev-environment/code-folder, one line), else $CODE_FOLDER (tmux
+# sets it for its panes, ~/.bashrc for bash), else the first of ~/code, ~/git
+# and /Git that exists -- the rule of modules/tmux/scripts/code-folder.sh and
+# tmux_link.py. The file first, so a pwsh started from a shell that predates a
+# change of the setting doesn't keep the old folder. Stored as the real,
 # absolute path, so bash and Python read it as they find it, and a ~/code linked
 # to /Git (the folder Kaspersky leaves alone on the company's machines) is /Git,
 # as tmux and git see it. [IO.DirectoryInfo] rather than Resolve-Path, which
 # would import a module at startup.
-foreach ($candidate in @(($env:CODE_FOLDER -replace '^~', $HOME), "$HOME/code", "$HOME/git", "/Git")) {
+$codeFolderFile = "$(if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { "$HOME/.config" })/dev-environment/code-folder"
+$codeFolderSetting = if ([IO.File]::Exists($codeFolderFile)) { [IO.File]::ReadAllText($codeFolderFile).Trim() -replace '^~', $HOME }
+foreach ($candidate in @($codeFolderSetting, ($env:CODE_FOLDER -replace '^~', $HOME), "$HOME/code", "$HOME/git", "/Git")) {
   if ($candidate -and [IO.Directory]::Exists($candidate)) {
     $target = [IO.DirectoryInfo]::new($candidate).ResolveLinkTarget($true)
     $env:CODE_FOLDER = if ($target) { $target.FullName } else { $candidate }
