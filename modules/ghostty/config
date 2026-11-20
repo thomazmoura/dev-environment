@@ -24,8 +24,8 @@
 command = shell:$HOME/.modules/ghostty/scripts/Select-Shell.sh
 
 # --- Font (wezterm font_with_fallback + font_size) -------------------
-font-family = Cascadia Code
 font-family = CaskaydiaCove Nerd Font
+font-family = Cascadia Code
 font-size = 12
 
 # --- Theme -----------------------------------------------------------
