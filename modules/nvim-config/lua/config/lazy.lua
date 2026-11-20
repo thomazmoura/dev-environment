@@ -12,13 +12,17 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Where this machine keeps its projects: the first of $CODE_FOLDER, ~/code,
--- ~/git and /Git that exists, as modules/tmux/scripts/code-folder.sh decides.
--- $CODE_FOLDER alone is not enough: a shell can hand down one that does not
--- exist here (~/code on the company's machines, whose projects are in /Git),
--- and every plugin would then come from its old GitHub clone.
+-- Where this machine keeps its projects, as modules/tmux/scripts/code-folder.sh
+-- decides: the first that exists of the setting steward.nvim writes
+-- (~/.config/dev-environment/code-folder), $CODE_FOLDER, ~/code, ~/git and
+-- /Git. $CODE_FOLDER alone is not enough: a shell can hand down one that does
+-- not exist here (~/code on the company's machines, whose projects are in
+-- /Git), and every plugin would then come from its old GitHub clone.
 local function code_folder()
-  for _, candidate in ipairs({ vim.env.CODE_FOLDER or '', '~/code', '~/git', '/Git' }) do
+  local config = vim.env.XDG_CONFIG_HOME or vim.fn.expand('~/.config')
+  local ok, lines = pcall(vim.fn.readfile, config .. '/dev-environment/code-folder', '', 1)
+  local setting = ok and lines[1] or ''
+  for _, candidate in ipairs({ setting, vim.env.CODE_FOLDER or '', '~/code', '~/git', '/Git' }) do
     if candidate ~= '' then
       local path = vim.fn.expand(candidate)
       if vim.fn.isdirectory(path) == 1 then
