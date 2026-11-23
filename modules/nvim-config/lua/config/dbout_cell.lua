@@ -1,17 +1,15 @@
--- <Leader><CR> in dadbod's results (after/ftplugin/dbout.lua): the whole value under the cursor
--- in a read-only popup, titled with its column. JSON gets the json filetype, indented; HTML the
--- html filetype, and opens in the browser too, as paperboy's gb does: a page of its own with
--- no scripts, frames or forms, served as a URL over SSH when paperboy is loaded. In the popup,
--- <Esc> clears the search highlight, or closes it back on the cell when there is none, and z
--- zooms it to a tab (where <Esc> does the same).
+-- The whole value under the cursor in dadbod's results (after/ftplugin/dbout.lua), read-only and
+-- titled with its column: <CR> in a popup the size of <Leader>z's zoom float, <Leader><CR> alone
+-- in a tab, as <Leader>Z zooms (config/zoom.lua). JSON gets the json filetype, indented; HTML the
+-- html filetype, so gb there opens it in the browser (after/ftplugin/html.lua), as gb does on
+-- the cell itself (M.browse): a page of its own with no scripts, frames or forms
+-- (config/html_preview.lua). <Esc> clears the search highlight, or closes the popup or tab
+-- back on the cell when there is none; <Leader>Z also closes the tab, and z zooms the popup to
+-- one.
 --
 -- The value comes from config/dbout_compact.lua (SQL Server's and Postgres's results, line
 -- breaks and all), or, for results it did not lay out, from dadbod-ui's cell (as shown).
 local M = {}
-
--- Policy of the page HTML opens as (paperboy's message.BROWSER_CSP): a value from a database
--- runs no scripts. Images and styles still load
-local BROWSER_CSP = "script-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'"
 
 -- Tag names that make markup HTML rather than some XML
 local HTML_TAGS = {}
@@ -90,21 +88,6 @@ local function indent_json(text)
   return table.concat(out)
 end
 
-local function open_in_browser(html)
-  local path = vim.fn.tempname() .. '.html'
-  -- Ahead of the value, the <meta> tags land in the <head> the parser opens
-  local head = ('<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="%s">\n'):format(BROWSER_CSP)
-  vim.fn.writefile(vim.split(head .. html, '\n', { plain = true }), path)
-  local err
-  local ok, attachments = pcall(require, 'paperboy.attachments')
-  if ok then
-    err = attachments.open_path(path)
-  else
-    _, err = vim.ui.open(path)
-  end
-  if err then vim.notify('dadbod: failed to open the browser: ' .. err, vim.log.levels.ERROR) end
-end
-
 --- The value under the cursor, its column and the length it may have been cut at, from
 --- dadbod-ui's cell when dbout_compact has none
 local function cell()
@@ -123,21 +106,40 @@ local function cell()
   return table.concat(region, '\n')
 end
 
-function M.open()
+--- The value under the cursor, trimmed, with its column; nil off a cell
+local function trimmed_cell()
   local value, column, max = cell()
-  if not value then return end
-  local origin, cursor = vim.api.nvim_get_current_win(), vim.api.nvim_win_get_cursor(0)
+  if not value then return nil end
   value = vim.trim((value:gsub('\r\n?', '\n')))
   if max and vim.fn.strchars(value) >= max then
     vim.notify(('dadbod: the value may be cut at sqlcmd\'s %d characters'):format(max), vim.log.levels.WARN)
   end
+  return value, column
+end
+
+--- gb on a cell: its HTML in the browser
+function M.browse()
+  local value = trimmed_cell()
+  if not value then return end
+  if not is_html(value) then
+    vim.notify('dadbod: the cell is not HTML', vim.log.levels.WARN)
+    return
+  end
+  require('config.html_preview').open_text(value)
+end
+
+--- The value under the cursor in a popup, or zoomed to a tab
+---@param mode 'float'|'tab'
+function M.open(mode)
+  local origin, cursor = vim.api.nvim_get_current_win(), vim.api.nvim_win_get_cursor(0)
+  local value, column = trimmed_cell()
+  if not value then return end
 
   local filetype = 'text'
   if is_json(value) then
     filetype, value = 'json', indent_json(value)
   elseif is_html(value) then
     filetype = 'html'
-    open_in_browser(value)
   end
 
   local lines = vim.split(value, '\n', { plain = true })
@@ -148,38 +150,29 @@ function M.open()
   vim.bo[buf].modifiable = false
   vim.bo[buf].readonly = true
 
-  local widest = 1
-  for _, line in ipairs(lines) do
-    widest = math.max(widest, vim.api.nvim_strwidth(line))
+  local zoom = require('config.zoom')
+  local win, leave
+  if mode == 'tab' then
+    zoom.open_tab(buf, origin)
+    win = vim.api.nvim_get_current_win()
+  else
+    win = vim.api.nvim_open_win(buf, true, zoom.float_config(column or 'Cell'))
+    -- Left any other way, it goes too: a float out of focus only covers the results
+    leave = vim.api.nvim_create_autocmd('WinLeave', {
+      buffer = buf,
+      once = true,
+      callback = function()
+        if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
+      end,
+    })
   end
-  local width = math.min(math.max(widest, 40), math.floor(vim.o.columns * 0.8))
-  local height = math.min(#lines, math.floor(vim.o.lines * 0.8))
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    width = width,
-    height = height,
-    row = math.floor((vim.o.lines - height) / 2) - 1,
-    col = math.floor((vim.o.columns - width) / 2),
-    border = 'rounded',
-    title = column and (' %s '):format(column) or nil,
-    title_pos = column and 'center' or nil,
-  })
   vim.wo[win].wrap = true
   vim.wo[win].linebreak = true
-
-  -- Left any other way, it goes too: a float out of focus only covers the results
-  local leave = vim.api.nvim_create_autocmd('WinLeave', {
-    buffer = buf,
-    once = true,
-    callback = function()
-      if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
-    end,
-  })
 
   -- Closed with <Esc>, from the popup or its tab, back on the cell: on its own, NeoVim leaves
   -- a float for the first window, the query above dadbod's results
   vim.keymap.set('n', '<Plug>(DboutCellClose)', function()
-    pcall(vim.api.nvim_del_autocmd, leave)
+    if leave then pcall(vim.api.nvim_del_autocmd, leave) end
     vim.api.nvim_win_close(0, true)
     if vim.api.nvim_win_is_valid(origin) then
       vim.api.nvim_set_current_win(origin)
@@ -191,11 +184,12 @@ function M.open()
     return vim.v.hlsearch == 1 and '<cmd>nohlsearch<CR>' or '<Plug>(DboutCellClose)'
   end, { buffer = buf, expr = true, remap = true, desc = 'Clear the highlight, or close' })
 
-  -- z in the popup zooms it to a tab of its own. The popup closes only once the tab shows the
-  -- buffer, which goes with its last window. In the tab, z is NeoVim's again (zz, zt...)
+  -- z in the popup zooms it to a tab of its own, as <Leader><CR> opens it. The popup closes only
+  -- once the tab shows the buffer, which goes with its last window. In the tab, z is NeoVim's
+  -- again (zz, zt...)
   vim.keymap.set('n', '<Plug>(DboutCellZoom)', function()
-    pcall(vim.api.nvim_del_autocmd, leave)
-    vim.cmd.sbuffer({ buf, mods = { tab = vim.fn.tabpagenr() } })
+    if leave then pcall(vim.api.nvim_del_autocmd, leave) end
+    zoom.open_tab(buf, origin)
     vim.wo.wrap, vim.wo.linebreak = true, true
     vim.api.nvim_win_close(win, true)
   end, { buffer = buf })

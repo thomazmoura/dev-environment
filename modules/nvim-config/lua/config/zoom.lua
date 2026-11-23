@@ -7,7 +7,8 @@
 --   <Leader>Z - a tab with the buffer as its only window, for working in it a
 --               while (gd, splits, Telescope). The tabline is hidden meanwhile
 -- Either key, while zoomed in either way, zooms back out, handing the cursor
--- back to the original window.
+-- back to the original window. config/dbout_cell.lua opens its popup with
+-- M.float_config() and its tab with M.open_tab(), so both look and close alike.
 local M = {}
 
 local augroup = vim.api.nvim_create_augroup('Zoom', { clear = true })
@@ -31,16 +32,12 @@ local function close_float(win)
   pcall(vim.api.nvim_win_close, win, false)
 end
 
-local function open_float()
-  local origin = vim.api.nvim_get_current_win()
-  local view = vim.fn.winsaveview()
+--- The zoom float's window config: 90% of the screen, centered and rounded
+---@param title string
+function M.float_config(title)
   local columns, lines = vim.o.columns - 2, vim.o.lines - vim.o.cmdheight - 2
   local width, height = math.floor(columns * 0.9), math.floor(lines * 0.9)
-  local name = vim.fn.bufname()
-  local title = name ~= '' and vim.fn.fnamemodify(name, ':t') or '[No Name]'
-
-  -- Not style = 'minimal': the float keeps the window's options, as a split would
-  local win = vim.api.nvim_open_win(0, true, {
+  return {
     relative = 'editor',
     width = width,
     height = height,
@@ -49,7 +46,17 @@ local function open_float()
     border = 'rounded',
     title = ' ' .. title .. ' ',
     title_pos = 'center',
-  })
+  }
+end
+
+local function open_float()
+  local origin = vim.api.nvim_get_current_win()
+  local view = vim.fn.winsaveview()
+  local name = vim.fn.bufname()
+  local title = name ~= '' and vim.fn.fnamemodify(name, ':t') or '[No Name]'
+
+  -- Not style = 'minimal': the float keeps the window's options, as a split would
+  local win = vim.api.nvim_open_win(0, true, M.float_config(title))
   vim.w[win].zoom_origin = origin
   vim.fn.winrestview(view)
 
@@ -77,9 +84,17 @@ local function close_tab()
   pcall(vim.api.nvim_win_close, zoomed, false)
 end
 
-local function open_tab()
-  local origin = vim.api.nvim_get_current_win()
-  vim.cmd('tab split')
+--- Zooms to a tab: the current window's buffer, or buf, alone in it. Zooming out returns to
+--- origin, the current window unless given
+---@param buf integer|nil
+---@param origin integer|nil
+function M.open_tab(buf, origin)
+  origin = origin or vim.api.nvim_get_current_win()
+  if buf then
+    vim.cmd.sbuffer({ buf, mods = { tab = vim.fn.tabpagenr() } })
+  else
+    vim.cmd('tab split')
+  end
   vim.t.zoom_origin = origin
   if not saved_showtabline then
     saved_showtabline = vim.o.showtabline
@@ -121,7 +136,7 @@ function M.toggle_float()
 end
 
 function M.toggle_tab()
-  if not zoom_out() then open_tab() end
+  if not zoom_out() then M.open_tab() end
 end
 
 return M

@@ -46,10 +46,15 @@ end
 vim.keymap.set('n', 'J', 'j', { buffer = true, desc = 'Cell below' })
 vim.keymap.set('n', 'K', 'k', { buffer = true, desc = 'Cell above' })
 
--- The whole value under the cursor in a popup: JSON and HTML highlighted, HTML in the browser
--- too (config/dbout_cell.lua)
-vim.keymap.set('n', '<Leader><CR>', function() require('config.dbout_cell').open() end,
+-- The whole value under the cursor, JSON and HTML highlighted (config/dbout_cell.lua): <CR> in
+-- a popup as big as <Leader>z's zoom, <Leader><CR> alone in a tab as <Leader>Z's. gb opens an
+-- HTML cell in the browser, as gb does in the popup and in any html buffer
+vim.keymap.set('n', '<CR>', function() require('config.dbout_cell').open('float') end,
   { buffer = true, desc = 'Show the cell in a popup' })
+vim.keymap.set('n', '<Leader><CR>', function() require('config.dbout_cell').open('tab') end,
+  { buffer = true, desc = 'Show the cell zoomed to a tab' })
+vim.keymap.set('n', 'gb', function() require('config.dbout_cell').browse() end,
+  { buffer = true, desc = 'Open the HTML cell in the browser' })
 
 -- One of the earlier results of the query buffer these came from (config/dbout_history.lua)
 vim.keymap.set('n', '<Leader>d?', function() require('config.dbout_history').pick() end,
