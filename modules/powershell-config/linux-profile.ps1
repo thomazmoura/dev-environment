@@ -12,6 +12,12 @@ $env:PATH="$($env:PATH):$HOME/.local/bin:$HOME/.dotnet/tools/"
 if ([IO.Directory]::Exists("$env:NVS_HOME/default/bin") -and !$env:PATH.Contains("$env:NVS_HOME/default/bin")) {
   $env:PATH = "$env:NVS_HOME/default/bin:$($env:PATH)"
 }
+# The script library (modules/scripts/library, prefix,s), so its scripts also
+# run by name. ~/.bashrc gets the same from LinuxDevEnv/host-setup.sh and
+# DockerUbuntu/bashrc.
+if ([IO.Directory]::Exists("$HOME/.modules/scripts/library") -and !$env:PATH.Contains("$HOME/.modules/scripts/library")) {
+  $env:PATH = "$($env:PATH):$HOME/.modules/scripts/library"
+}
 if (!$env:SSL_CERT_DIR -and [IO.Directory]::Exists("$HOME/.aspnet/dev-certs/trust")) {
   $env:SSL_CERT_DIR = "$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
 }

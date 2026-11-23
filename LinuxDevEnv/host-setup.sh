@@ -275,6 +275,14 @@ if ! grep -qF '# dev-environment: CODE_FOLDER' "$HOME/.bashrc"; then
     fi
 fi
 
+# The script library (modules/scripts/library, prefix,s) on PATH, so its scripts
+# also run by name from any shell. First line of ~/.bashrc too, so an
+# `ssh host <script>` finds them. pwsh adds it in linux-profile.ps1.
+scripts_path='[ -d "$HOME/.modules/scripts/library" ] && export PATH="$PATH:$HOME/.modules/scripts/library" # dev-environment: scripts library'
+if ! grep -qF '# dev-environment: scripts library' "$HOME/.bashrc"; then
+    sed -i "1i\\$scripts_path" "$HOME/.bashrc"
+fi
+
 # User environment variables
 pwsh -NoProfile -Command "if ( ! (Test-Path $HOME/.profile.ps1) ) { New-Item -Path $HOME/.profile.ps1 }"
 powershell_profile="$HOME/.profile.ps1"
