@@ -10,9 +10,22 @@
 --   4. DEFAULT
 -- 3 and 4 are re-checked on InsertLeave and write. :SqlDialect auto (<Leader>da)
 -- drops the pin. The lualine shows the dialect, with a "?" when it is the default.
+--
+-- A server starting here shows "Starting" in noice's LSP progress until it has answered
+-- initialize (LspAttach), then "Ready": the .NET ones take a few seconds.
 local M = {}
 
 local DEFAULT = 'sqlserver'
+
+-- Ids of the clients started here that haven't answered initialize yet
+local starting = {}
+local PROGRESS_TOKEN = 'sql-dialect-start'
+
+--- A $/progress of our own for the client, through the handler noice draws
+local function progress(client_id, value)
+  vim.lsp.handlers['$/progress'](nil, { token = PROGRESS_TOKEN, value = value },
+    { client_id = client_id, method = '$/progress' })
+end
 
 local SERVERS = { sqlserver = { 'sqlserver_ls', 'sqlserver_assist' }, postgres = { 'postgres_lsp', 'postgres_assist' } }
 local NAMES = { sqlserver = 'SQL Server', postgres = 'Postgres' }
@@ -127,7 +140,14 @@ local function attach(buf, dialect)
       local config = vim.deepcopy(vim.lsp.config[name])
       local function start(root)
         config.root_dir = root
-        if vim.api.nvim_buf_is_valid(buf) then vim.lsp.start(config, { bufnr = buf }) end
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+        local id = vim.lsp.start(config, { bufnr = buf })
+        local client = id and vim.lsp.get_client_by_id(id)
+        -- One spinner per client: buffers under the same root share it
+        if client and not client.initialized and not starting[id] then
+          starting[id] = true
+          progress(id, { kind = 'begin', title = 'Starting' })
+        end
       end
       if type(config.root_dir) == 'function' then
         config.root_dir(buf, start)
@@ -196,6 +216,22 @@ function M.setup()
   require('config.sql_connection').setup()
 
   local group = vim.api.nvim_create_augroup('SqlDialect', { clear = true })
+
+  -- A client attaches only once it has answered initialize: ready for requests
+  vim.api.nvim_create_autocmd('LspAttach', {
+    group = group,
+    callback = function(args)
+      local id = args.data.client_id
+      if not starting[id] then return end
+      starting[id] = nil
+      progress(id, { kind = 'end', message = 'Ready' })
+    end,
+  })
+  -- One that exits first: noice drops its spinner along with the client
+  vim.api.nvim_create_autocmd('LspDetach', {
+    group = group,
+    callback = function(args) starting[args.data.client_id] = nil end,
+  })
 
   vim.api.nvim_create_autocmd('FileType', {
     group = group,

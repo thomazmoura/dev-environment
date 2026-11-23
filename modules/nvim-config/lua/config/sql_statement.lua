@@ -7,16 +7,48 @@
 -- with blank lines inside runs whole, and two on one line run apart. Between two statements,
 -- the cursor gets the one above, or on a comment line the one below, which the comment
 -- usually is about.
+--
+-- Pressed while sqlserver-assist is still starting (the .NET server takes a few seconds),
+-- the statement runs once it is ready, unless the buffer was changed or left meanwhile.
 local M = {}
 
 local ns = vim.api.nvim_create_namespace('sql_statement')
 
+-- How long <Leader>r waits for a starting sqlserver-assist
+local START_TIMEOUT_MS = 30000
+
 --- callback({{start, end}, ...}) with byte offsets, the end excluded, or callback(nil, error),
 --- given the buffer's text, its lines' start offsets and the cursor's (row, col)
-local SPLITTERS = {
+local SPLITTERS
+SPLITTERS = {
   sqlserver = function(buf, lines, starts, row, col, callback)
     local client = vim.lsp.get_clients({ bufnr = buf, name = 'sqlserver_assist' })[1]
-    if not client then return callback(nil, 'sqlserver-assist is not running for this buffer (:checkhealth vim.lsp)') end
+    if not client then
+      -- get_clients leaves out the clients that haven't answered initialize yet
+      local pending = vim.lsp.get_clients({ bufnr = buf, name = 'sqlserver_assist', _uninitialized = true })[1]
+      if not pending then
+        return callback(nil, 'sqlserver-assist is not running for this buffer (:checkhealth vim.lsp)')
+      end
+      vim.notify('Run statement: sqlserver-assist is starting, the statement runs when it is ready', vim.log.levels.INFO)
+      local done = false
+      local autocmd = vim.api.nvim_create_autocmd('LspAttach', {
+        buffer = buf,
+        callback = function(args)
+          if done or args.data.client_id ~= pending.id then return end
+          done = true
+          SPLITTERS.sqlserver(buf, lines, starts, row, col, callback)
+          return true
+        end,
+      })
+      vim.defer_fn(function()
+        if done then return end
+        done = true
+        pcall(vim.api.nvim_del_autocmd, autocmd)
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+        callback(nil, ('sqlserver-assist did not start within %d s'):format(START_TIMEOUT_MS / 1000))
+      end, START_TIMEOUT_MS)
+      return
+    end
     local position = { line = row - 1, character = vim.str_utfindex(lines[row], 'utf-16', col, false) }
     client:request('sqlserver/statements', { textDocument = { uri = vim.uri_from_bufnr(buf) }, position = position },
       function(err, ranges)
