@@ -34,6 +34,11 @@ RUN pwsh -NoProfile -File /home/developer/.modules/herdr/Install-Herdr.ps1
 COPY --chown=developer:developer modules/sqlcmd /home/developer/.modules/sqlcmd
 RUN pwsh -NoProfile -File /home/developer/.modules/sqlcmd/Install-Sqlcmd.ps1
 
+# pdf2md and pdfcat (PDFs as Markdown, in the terminal and in NeoVim)
+COPY --chown=developer:developer modules/pdf /home/developer/.modules/pdf
+RUN chmod +x /home/developer/.modules/pdf/pdf2md /home/developer/.modules/pdf/pdfcat \
+ && pwsh -NoProfile -File /home/developer/.modules/pdf/Install-PdfTools.ps1
+
 # agent-radar (reads each coding agent's screen to say which one is waiting on
 # you; bound to prefix + t then a/A, and summarised in the status bar). Nothing
 # to install -- it is bash plus python3, both already present.

@@ -36,6 +36,7 @@ sudo apt update \
     pipx \
     python3 \
     python3-pip \
+    python3-venv \
     ripgrep \
     silversearcher-ag \
     strace \
@@ -159,6 +160,9 @@ pwsh -NoProfile -File $HOME/.modules/herdr/Install-Herdr.ps1
 
 # sqlcmd (SQL Server command-line client; go-sqlcmd's release binary)
 pwsh -NoProfile -File $HOME/.modules/sqlcmd/Install-Sqlcmd.ps1
+
+# pdf2md and pdfcat (PDFs as Markdown, in the terminal and in NeoVim)
+pwsh -NoProfile -File $HOME/.modules/pdf/Install-PdfTools.ps1
 
 # agent-radar (reads each coding agent's screen to say which one is waiting on
 # you; bound to prefix + t then a/A, and summarised in the status bar). No

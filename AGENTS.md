@@ -12,6 +12,7 @@ Personal dotfiles + dev environment. Each tool is a folder in `modules/`, deploy
 | NeoVim, the Notes pane, Workhorse/Paperboy in NeoVim | `modules/nvim-config/` | `.claude/skills/nvim-config/SKILL.md` |
 | Dockerfiles, CI, `host-setup.sh`, symlinks, new modules/tools/LSP servers | `*Dockerfile`, `LinuxDevEnv/`, `modules/entrypoint-config/` | `.claude/skills/deploy/SKILL.md` |
 | PowerShell profile and its environment (`~/.profile.ps1`) | `modules/powershell-config/` | |
+| PDFs as Markdown (`pdfcat`, `pdf2md`, opening a `*.pdf` in NeoVim) | `modules/pdf/`, `modules/nvim-config/lua/config/pdf.lua` | the scripts' header comments |
 | Script library (`prefix,s`) | `modules/scripts/` | its `README.md` |
 | sql-assist, our SQL Server and Postgres language servers (Expand * and Toggle ; code actions, join/INSERT completion, `<Leader>r`'s statements) | `modules/sql-assist/` (C#: `sqlserver/`, `postgres/`, shared `common/`) | its `README.md` |
 | .NET debugging in NeoVim (`<Leader>dr`/`dR` projects, `<Leader>dt` tests, attaching to `dotnet watch`), netcoredbg | `modules/nvim-config/lua/config/dotnet_debug/`, `modules/debugging/` | its `README.md` |

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# pdfcat <file.pdf>...: opens PDFs read-only in NeoVim, which shows them as
+# rendered Markdown (nvim-config's lua/config/pdf.lua); no binding. Piped, it
+# prints pdf2md's Markdown instead.
+if [ $# -eq 0 ] || [ "$1" = -h ] || [ "$1" = --help ]; then
+  echo "usage: pdfcat <file.pdf>..." >&2
+  exit 2
+fi
+if [ ! -t 1 ]; then
+  exec "$(dirname "$(readlink -f "$0")")/pdf2md" -- "$1"
+fi
+exec nvim -R -- "$@"

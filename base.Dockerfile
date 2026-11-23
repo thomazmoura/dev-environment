@@ -33,6 +33,7 @@ RUN set -eux; \
     pipx \
     python3 \
     python3-pip \
+    python3-venv \
     ripgrep \
     silversearcher-ag \
     strace \
