@@ -5,22 +5,29 @@
 -- - A buffer it opens is a draft instead: moved to the location's .drafts/ (which its list,
 --   a glob of the folder, never sees) and taken off the list.
 -- - Running (<Leader>r, <Leader>R or a selection's <Leader>r, plugins/database.lua) compares
---   the whole buffer, comments and spacing aside, with what it held when it last ran. When
---   it differs, the buffer moves to a new file in the location, listed at the end of
---   Buffers, and the file it left gets back the query it ran: each different query run is
---   one entry, and the buffer is always the newest one. A draft's first run is its first
---   entry. An empty buffer (comments alone) never makes one.
+--   the whole buffer, comments and spacing aside, with what it held when it last ran
+--   without errors. When it differs and this run ends without errors too, the buffer moves
+--   to a new file in the location, listed at the end of Buffers, and the file it left gets
+--   back the query it ran: each different query that ran is one entry, and the buffer is
+--   always the newest one. A draft's first run is its first entry. A run with errors (Msg
+--   with a Level of 11 or more from sqlcmd, ERROR/FATAL from psql, or a cancelled one)
+--   changes nothing, nor does an empty buffer (comments alone).
 -- - A draft closed or left in NeoVim's exit with a query in it, never run, is kept as an
 --   entry rather than lost; an empty one is just deleted.
 --
 -- An entry opened from the list (<CR>, or <Tab>'s preview, after/ftplugin/dbui.lua) last ran
--- what its file holds. autoload/dbui_buffers.vim changes dadbod-ui's list in place.
+-- what its file holds. autoload/dbui_buffers.vim changes dadbod-ui's list in place, and
+-- points the result of a run at the file its buffer moved to, so R there runs that query.
 local M = {}
 
 -- Draft buffers (never run)
 local drafts = {}
--- Query buffer → what it last ran: { norm (normalized text), lines }
+-- Query buffer → what it last ran without errors: { norm (normalized text), lines }
 local last_run = {}
+-- Query buffer → the query its next run is to make an entry of: { tick (changedtick), norm, lines }
+local pending = {}
+-- Result file of a run under way → that query, with its buffer and the buffer's file then
+local running = {}
 
 local STAMP = '%-%d%d%d%d%-%d%d%-%d%d%-%d%d%-%d%d%-%d%d$'
 
@@ -139,6 +146,10 @@ local function make_draft(buf, file)
   local draft_dir = real .. '/.drafts'
   vim.fn.mkdir(draft_dir, 'p')
   rename(buf, draft_dir .. '/' .. name)
+  -- Written now, so that NeoVim reopens it in the language servers under its new name (on a
+  -- write), and config/sql_connection.lua connects that: else they would answer completion
+  -- and hover for a file they don't have until auto-save's first write
+  vim.api.nvim_buf_call(buf, function() vim.cmd('silent write') end)
   -- Written before the rename (auto-save), when it opened with a table helper's query
   if vim.uv.fs_stat(real .. '/' .. name) then os.remove(real .. '/' .. name) end
   drafts[buf] = true
@@ -162,41 +173,107 @@ local function settle_draft(buf, listing)
   os.remove(draft)
 end
 
---- Before a run in buf: a new entry when the query differs from the one it last ran
+--- Before a run in buf: notes the query, when it differs from the one it last ran, for an
+--- entry once it runs without errors (finished)
 function M.before_run(buf)
   buf = buf or vim.api.nvim_get_current_buf()
+  pending[buf] = nil
   local _, real = tmp_dir()
   local key = vim.b[buf].dbui_db_key_name
   if not real or not key or key == '' then return end
-  local file = vim.api.nvim_buf_get_name(buf)
-  local draft = drafts[buf]
   -- Saved queries and other files with a connection are left alone
-  if not draft and not entry_tail(file) then return end
+  if not drafts[buf] and not entry_tail(vim.api.nvim_buf_get_name(buf)) then return end
 
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local norm = normalize(lines)
   if norm == '' then return end
   local last = last_run[buf]
   if last and last.norm == norm then return end
-  last_run[buf] = { norm = norm, lines = lines }
+  pending[buf] = { tick = vim.b[buf].changedtick, norm = norm, lines = lines }
+end
+
+--- A run starting (dadbod's DBExecutePre) in the current buffer: the query noted for it, if
+--- the buffer has not changed since
+local function started(output)
+  local buf = vim.api.nvim_get_current_buf()
+  local query = pending[buf]
+  pending[buf] = nil
+  if not query or query.tick ~= vim.b[buf].changedtick then return end
+  query.buf, query.file = buf, vim.api.nvim_buf_get_name(buf)
+  running[output] = query
+end
+
+--- Whether a run's result says it failed: sqlcmd's errors (Level 11 and up: 10 and below are
+--- informational) and its own, psql's, a non-zero exit, or a cancel
+local function failed(output)
+  local result = buf_of(output)
+  local db = result and vim.b[result].db
+  if type(db) == 'table' and ((tonumber(db.exit_status) or 0) ~= 0 or (tonumber(db.canceled) or 0) ~= 0) then return true end
+  local file = io.open(output, 'r')
+  if not file then return false end
+  for line in file:lines() do
+    local level = line:match('^Msg %d+, Level (%d+), State %d+')
+    if (level and tonumber(level) >= 11) or line:find('^Sqlcmd: Error:')
+      or line:find('^psql:.-:%d+: ERROR:') or line:find('^psql:.-:%d+: FATAL:')
+      or line:find('^ERROR:  ') or line:find('^FATAL:  ') or line:find('^psql: error:') then
+      file:close()
+      return true
+    end
+  end
+  file:close()
+  return false
+end
+
+--- A run finished (dadbod's DBExecutePost): without errors, its query is the buffer's
+--- newest entry, the buffer moving to a new one when it had run another
+local function finished(output)
+  local query = running[output]
+  running[output] = nil
+  if not query or failed(output) then return end
+  local buf = query.buf
+  local _, real = tmp_dir()
+  -- Not if it was closed or renamed meanwhile
+  if not real or not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_get_name(buf) ~= query.file then return end
+  local key = vim.b[buf].dbui_db_key_name
+  local draft, last = drafts[buf], last_run[buf]
+  last_run[buf] = { norm = query.norm, lines = query.lines }
   -- An entry not known to have run anything (none read from disk) is this run's
   if not draft and not last then return end
 
-  local name = entry_name(file)
-  rename(buf, real .. '/' .. name)
+  local name = entry_name(query.file)
+  local entry = real .. '/' .. name
+  rename(buf, entry)
   vim.api.nvim_buf_call(buf, function() vim.cmd('silent write') end)
   if draft then
     drafts[buf] = nil
-    os.remove(file)
+    os.remove(query.file)
   else
     -- The entry it left holds the query it ran
-    vim.fn.writefile(last.lines, file)
+    vim.fn.writefile(last.lines, query.file)
   end
+  -- A whole buffer runs from its file: R in the result runs the file it moved to
+  local result = buf_of(output)
+  if result then pcall(vim.fn['dbui_buffers#retarget'], result, query.file, entry) end
   list('add', key, name)
 end
 
 function M.setup()
   local group = vim.api.nvim_create_augroup('DbuiBuffers', { clear = true })
+  -- dadbod's events are User <outfile>/DBExecutePre and /DBExecutePost
+  vim.api.nvim_create_autocmd('User', {
+    group = group,
+    pattern = '*DBExecutePre',
+    callback = function(args) started((args.match:gsub('/DBExecutePre$', ''))) end,
+  })
+  vim.api.nvim_create_autocmd('User', {
+    group = group,
+    pattern = '*DBExecutePost',
+    -- Scheduled: out of dadbod's job callback, as the Buffers list's redraw changes windows
+    callback = function(args)
+      local output = args.match:gsub('/DBExecutePost$', '')
+      vim.schedule(function() finished(output) end)
+    end,
+  })
   vim.api.nvim_create_autocmd('BufNewFile', {
     group = group,
     callback = function(args)
@@ -218,7 +295,7 @@ function M.setup()
     group = group,
     callback = function(args)
       settle_draft(args.buf, true)
-      if args.event == 'BufWipeout' then last_run[args.buf] = nil end
+      if args.event == 'BufWipeout' then last_run[args.buf], pending[args.buf] = nil, nil end
     end,
   })
   vim.api.nvim_create_autocmd('VimLeavePre', {

@@ -1,5 +1,6 @@
-" dadbod-ui's Buffers list for lua/config/dbui_buffers.lua. The list lives in the drawer's
-" dictionaries, which a call from Lua would only get a copy of, so it is changed from here.
+" dadbod-ui's Buffers list, and dadbod's query of a result, for lua/config/dbui_buffers.lua.
+" Both live in Vimscript dictionaries, which a call from Lua would only get a copy of, so they
+" are changed from here.
 
 " The drawer, or {} while DBUI was not opened yet
 function! s:drawer() abort
@@ -47,4 +48,14 @@ function! dbui_buffers#preview() abort
   let win = win_getid()
   call drawer.get_query().open(item, 'edit')
   call win_gotoid(win)
+endfunction
+
+" A run's result whose query buffer moved from file to another (lua/config/dbui_buffers.lua):
+" a whole buffer runs from its file, so R in the result would run the file it left, which gets
+" back the query before. Its b:db is dadbod's own query, shared with dadbod's s:inputs
+function! dbui_buffers#retarget(result, from, to) abort
+  let query = getbufvar(a:result, 'db', {})
+  if type(query) == v:t_dict && get(query, 'input', '') ==# a:from
+    let query.input = a:to
+  endif
 endfunction

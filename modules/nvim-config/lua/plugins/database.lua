@@ -41,8 +41,9 @@ return {
     vim.g.vim_dadbod_completion_source_limits = { tables = 5000, columns = 5000, functions = 5000, schemas = 1000 }
 
     -- <Leader>r runs the statement under the cursor (config/sql_statement.lua) or the
-    -- selection, <Leader>R the whole buffer, as in the VS Code profile. Each first makes the
-    -- buffer a new entry of DBUI's Buffers when its query changed (config/dbui_buffers.lua)
+    -- selection, <Leader>R the whole buffer, as in the VS Code profile. Each first notes a
+    -- changed query, which becomes a new entry of DBUI's Buffers if it runs without errors
+    -- (config/dbui_buffers.lua)
     vim.api.nvim_create_autocmd('FileType', {
       group = vim.api.nvim_create_augroup('SqlKeymaps', { clear = true }),
       pattern = 'sql',
