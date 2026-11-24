@@ -9,7 +9,8 @@
 -- postgres/connection, an Npgsql connection string, for the same features. postgres_lsp gets
 -- none (plugins/lsp.lua turns its connection off).
 -- config/sql_dialect.lua calls M.sync when it attaches the servers to a buffer, and LspAttach
--- does when one starts. The password comes from config/dadbod_locksmith.lua, as it does
+-- does when one starts. A write does too: a buffer written under a new name (dbui_buffers.lua
+-- moves query buffers) is reopened by NeoVim under its new URI, which the servers connect again. The password comes from config/dadbod_locksmith.lua, as it does
 -- for dadbod's queries. It goes over each server's stdin only, and never while the LSP log
 -- level is DEBUG or below, where NeoVim writes every message to lsp.log in plain text
 local M = {}
@@ -27,7 +28,7 @@ local METHODS = { SqlPassword = 'SqlLogin', ActiveDirectoryPassword = 'ActiveDir
 -- Optional: encrypted when the server asks for it, as sqlcmd does by default
 local ENCRYPT = { ['true'] = 'Mandatory', yes = 'Mandatory', mandatory = 'Mandatory', strict = 'Strict' }
 
--- client id → buffer → the URL it was connected to
+-- client id → buffer → { url, uri } it was connected to and under
 local connected = {}
 
 -- Whether the warning about the LSP log level was given this session
@@ -175,10 +176,11 @@ function M.sync(buf)
     local client = vim.lsp.get_clients({ bufnr = buf, name = name })[1]
     local target = dialect == DIALECT[name] and url or nil
     local buffers = client and (connected[client.id] or {})
-    if client and buffers[buf] ~= target then
+    local current = buffers and buffers[buf]
+    if client and ((current and current.url) ~= target or (current and current.uri ~= uri)) then
       connected[client.id] = buffers
-      if buffers[buf] then DISCONNECT[name](client, uri) end
-      buffers[buf] = target
+      if current then DISCONNECT[name](client, current.uri) end
+      buffers[buf] = target and { url = target, uri = uri } or nil
       if target then
         if opts == nil then opts = OPTIONS[dialect](target) or false end
         if opts and opts.password and logging_messages() then
@@ -205,7 +207,10 @@ function M.setup()
         -- errorMessage is null (vim.NIL, truthy) on success
         if not result or type(result.errorMessage) ~= 'string' then return end
         local buffers = connected[ctx.client_id]
-        if buffers then buffers[vim.uri_to_bufnr(result.ownerUri)] = nil end
+        -- By the URI it was connected under: the buffer may have been renamed since
+        for buf, current in pairs(buffers or {}) do
+          if current.uri == result.ownerUri then buffers[buf] = nil end
+        end
         vim.notify('SQL: no metadata, the language server could not connect: ' .. result.errorMessage,
           vim.log.levels.WARN)
       end,
@@ -218,6 +223,22 @@ function M.setup()
     callback = function(args)
       local client = vim.lsp.get_client_by_id(args.data.client_id)
       if client and DIALECT[client.name] then M.sync(args.buf) end
+    end,
+  })
+  -- Written under a new name: NeoVim's own BufWritePost reopens it in the servers under the
+  -- new URI, unconnected. Scheduled, so that it goes first
+  vim.api.nvim_create_autocmd('BufWritePost', {
+    group = group,
+    callback = function(args)
+      local uri = vim.uri_from_bufnr(args.buf)
+      for _, buffers in pairs(connected) do
+        local current = buffers[args.buf]
+        if current and current.uri ~= uri then
+          return vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(args.buf) then M.sync(args.buf) end
+          end)
+        end
+      end
     end,
   })
   -- gd on a table or view opens the CREATE script the server wrote to a temporary file:
@@ -238,11 +259,12 @@ function M.setup()
     callback = function(args)
       -- The other dialect's servers took the buffer over, or it was closed
       local buffers = connected[args.data.client_id]
-      if not buffers or not buffers[args.buf] then return end
+      local current = buffers and buffers[args.buf]
+      if not current then return end
       buffers[args.buf] = nil
       local client = vim.lsp.get_client_by_id(args.data.client_id)
       if client and not client:is_stopped() and DISCONNECT[client.name] then
-        DISCONNECT[client.name](client, vim.uri_from_bufnr(args.buf))
+        DISCONNECT[client.name](client, current.uri)
       end
     end,
   })
