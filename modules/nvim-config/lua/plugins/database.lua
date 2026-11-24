@@ -41,17 +41,29 @@ return {
     vim.g.vim_dadbod_completion_source_limits = { tables = 5000, columns = 5000, functions = 5000, schemas = 1000 }
 
     -- <Leader>r runs the statement under the cursor (config/sql_statement.lua) or the
-    -- selection, <Leader>R the whole buffer, as in the VS Code profile
+    -- selection, <Leader>R the whole buffer, as in the VS Code profile. Each first makes the
+    -- buffer a new entry of DBUI's Buffers when its query changed (config/dbui_buffers.lua)
     vim.api.nvim_create_autocmd('FileType', {
       group = vim.api.nvim_create_augroup('SqlKeymaps', { clear = true }),
       pattern = 'sql',
       callback = function(args)
-        vim.keymap.set('n', '<Leader>r', function() require('config.sql_statement').run() end,
-          { buffer = args.buf, desc = 'Run statement' })
-        vim.keymap.set('n', '<Leader>R', '<Plug>(DBUI_ExecuteQuery)', { buffer = args.buf, desc = 'Run query' })
-        -- A : from visual mode, not <cmd>: the '<,'> marks are only set on leaving it, so
-        -- <cmd> would run the previous selection
-        vim.keymap.set('v', '<Leader>r', ':DB<cr>', { buffer = args.buf, desc = 'Run selection' })
+        local function before_run() require('config.dbui_buffers').before_run(args.buf) end
+        vim.keymap.set('n', '<Leader>r', function()
+          before_run()
+          require('config.sql_statement').run()
+        end, { buffer = args.buf, desc = 'Run statement' })
+        vim.keymap.set('n', '<Leader>R', function()
+          before_run()
+          vim.api.nvim_feedkeys(vim.keycode('<Plug>(DBUI_ExecuteQuery)'), 'm', false)
+        end, { buffer = args.buf, desc = 'Run query' })
+        -- Out of visual mode first: the '<,'> marks are only set on leaving it, and the
+        -- Buffers list's redraw goes through the drawer's window
+        vim.keymap.set('v', '<Leader>r', function()
+          vim.cmd('normal! \27')
+          before_run()
+          require('lazy').load({ plugins = { 'vim-dadbod' } })
+          vim.cmd("'<,'>DB")
+        end, { buffer = args.buf, desc = 'Run selection' })
         -- One of the buffer's earlier results, in the results window (config/dbout_history.lua)
         vim.keymap.set('n', '<Leader>d?', function() require('config.dbout_history').pick() end,
           { buffer = args.buf, desc = 'Results history' })
@@ -70,5 +82,8 @@ return {
     -- Each query buffer keeps its results, and the results window follows the buffer entered
     -- (config/dbout_history.lua). Here, not in config: :DB runs before dadbod-ui loads
     require('config.dbout_history').setup()
+    -- DBUI's Buffers list holds the queries that ran, one entry per different query, not
+    -- every buffer opened (config/dbui_buffers.lua)
+    require('config.dbui_buffers').setup()
   end,
 }
